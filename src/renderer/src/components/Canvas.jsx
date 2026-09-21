@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 
 const ZOOM_MIN = 0.1
 const ZOOM_MAX = 4
 const GRADE = 20
 
 // Câmera: tela = mundo * z + (x, y)  |  mundo = (tela - (x, y)) / z
-export default function Canvas({ children }) {
+// A câmera mora no App (que precisa dela para criar nós no lugar certo); aqui só se lê e altera.
+export default function Canvas({ cam, setCam, children }) {
   const viewport = useRef(null)
   const arrastando = useRef(false)
-  const [cam, setCam] = useState({ x: 0, y: 0, z: 1 })
 
   // Pan: arrastar só começa se o clique foi no fundo, não num nó.
   function aoApertar(e) {
@@ -50,7 +50,7 @@ export default function Canvas({ children }) {
     }
     el.addEventListener('wheel', aoRolar, { passive: false })
     return () => el.removeEventListener('wheel', aoRolar)
-  }, [])
+  }, [setCam])
 
   return (
     <div

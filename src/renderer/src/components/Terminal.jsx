@@ -4,8 +4,15 @@ import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 
 // Um terminal de verdade: xterm.js desenha, o PTY no main executa.
-export default function Terminal({ cmd, args }) {
+export default function Terminal({ cmd, args, aoTerminar }) {
   const caixa = useRef(null)
+
+  // aoTerminar muda a cada render do pai. Se entrasse nas dependências do efeito abaixo,
+  // cada render mataria o PTY e criaria outro; guardado num ref, o efeito sempre lê o mais novo.
+  const aoTerminarRef = useRef(aoTerminar)
+  useEffect(() => {
+    aoTerminarRef.current = aoTerminar
+  })
 
   useEffect(() => {
     const term = new XTerm({ fontSize: 13, cursorBlink: true, theme: { background: '#0d0d10' } })
@@ -14,6 +21,7 @@ export default function Terminal({ cmd, args }) {
     term.open(caixa.current)
     corrigirMouseComZoom(term)
     fit.fit()
+    term.focus()
 
     let id = null
     let vivo = true
@@ -22,7 +30,10 @@ export default function Terminal({ cmd, args }) {
       if (de === id) term.write(dados)
     })
     const pararSaida = window.api.pty.aoSair((de, code) => {
-      if (de === id) term.write(`\r\n[fim] code=${code}\r\n`)
+      if (de !== id) return
+      // Saiu com sucesso (ex.: `exit`) fecha o nó; com erro, fica aberto para dar para ler o motivo.
+      if (code === 0) aoTerminarRef.current?.()
+      else term.write(`\r\n[fim] code=${code}\r\n`)
     })
 
     window.api.pty.criar({ cmd, args, cols: term.cols, rows: term.rows }).then((novo) => {

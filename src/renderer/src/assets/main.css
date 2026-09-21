@@ -76,3 +76,65 @@ body,
   cursor: nwse-resize;
   background: linear-gradient(135deg, transparent 50%, #3a3a45 50%);
 }
+
+.no-titulo {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.no-fechar {
+  width: 18px;
+  height: 18px;
+  margin-right: -6px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1;
+  color: inherit;
+  background: none;
+  cursor: pointer;
+}
+
+.no-fechar:hover {
+  color: #fff;
+  background: #c4314b;
+}
+
+/* Fica fora do .mundo: não sofre pan nem zoom. */
+.ferramentas {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1;
+}
+
+.ferramentas button {
+  padding: 6px 12px;
+  border: 1px solid #2a2a33;
+  border-radius: 6px;
+  font:
+    13px system-ui,
+    sans-serif;
+  color: #e6e6ec;
+  background: #16161b;
+  cursor: pointer;
+}
+
+.ferramentas button:hover {
+  background: #22222a;
+}
+
+.vazio {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font:
+    14px system-ui,
+    sans-serif;
+  color: #5c5c68;
+  pointer-events: none;
+}

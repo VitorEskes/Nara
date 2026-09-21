@@ -2,7 +2,7 @@ const LARGURA_MIN = 240
 const ALTURA_MIN = 120
 
 // Uma caixa no mundo: posição e tamanho em coordenadas do mundo, não da tela.
-export default function No({ x, y, w, h, camada, titulo, aoMudar, aoFocar, children }) {
+export default function No({ x, y, w, h, camada, titulo, aoMudar, aoFocar, aoFechar, children }) {
   function mover(e) {
     arrastar(e, (dx, dy) => aoMudar({ x: x + dx, y: y + dy }))
   }
@@ -21,7 +21,17 @@ export default function No({ x, y, w, h, camada, titulo, aoMudar, aoFocar, child
       onPointerDownCapture={aoFocar}
     >
       <div className="no-barra" onPointerDown={mover}>
-        {titulo}
+        <span className="no-titulo">{titulo}</span>
+        <button
+          className="no-fechar"
+          title="Fechar"
+          // Sem isto o pointerdown sobe para a barra, que captura o ponteiro para arrastar
+          // e o clique nunca chega no botão.
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={aoFechar}
+        >
+          ×
+        </button>
       </div>
       <div className="no-conteudo">{children}</div>
       <div className="no-alca" onPointerDown={redimensionar} />
