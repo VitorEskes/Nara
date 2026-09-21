@@ -39,11 +39,18 @@ body,
   padding: 0 10px;
   display: flex;
   align-items: center;
-  font: 12px system-ui, sans-serif;
+  font:
+    12px system-ui,
+    sans-serif;
   color: #9a9aa6;
   background: #16161b;
   border-bottom: 1px solid #2a2a33;
   user-select: none;
+  cursor: grab;
+}
+
+.no-barra:active {
+  cursor: grabbing;
 }
 
 /* min-height: 0 deixa o item flex encolher; sem ele o FitAddon mede uma caixa que cresce junto. */
@@ -57,4 +64,15 @@ body,
 .terminal {
   position: absolute;
   inset: 6px;
+}
+
+/* Canto inferior direito: arrastar redimensiona o nó. */
+.no-alca {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 50%, #3a3a45 50%);
 }

@@ -34,9 +34,15 @@ export default function Terminal({ cmd, args }) {
     const digitar = term.onData((dados) => id && window.api.pty.escrever(id, dados))
 
     // Mudou o tamanho da caixa -> recalcula cols/rows e avisa o PTY.
+    // Arrastando o canto, isto dispara a cada pixel; só avisa o PTY quando cols/rows mudam de fato,
+    // senão o programa lá dentro (Claude Code, vim) redesenha a tela à toa.
+    let ultimo = ''
     const observador = new ResizeObserver(() => {
       fit.fit()
-      if (id) window.api.pty.redimensionar(id, term.cols, term.rows)
+      const tamanho = `${term.cols}x${term.rows}`
+      if (!id || tamanho === ultimo) return
+      ultimo = tamanho
+      window.api.pty.redimensionar(id, term.cols, term.rows)
     })
     observador.observe(caixa.current)
 
