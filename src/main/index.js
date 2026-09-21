@@ -1,0 +1,59 @@
+import { app, shell, BrowserWindow } from 'electron'
+import { join } from 'path'
+import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import icon from '../../resources/icon.png?asset'
+import { registrarPty } from './pty'
+
+function createWindow() {
+  const mainWindow = new BrowserWindow({
+    width: 1280,
+    height: 800,
+    show: false,
+    backgroundColor: '#0d0d10',
+    autoHideMenuBar: true,
+    ...(process.platform === 'linux' ? { icon } : {}),
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false
+    }
+  })
+
+  registrarPty(mainWindow)
+
+  mainWindow.on('ready-to-show', () => {
+    mainWindow.show()
+  })
+
+  mainWindow.webContents.setWindowOpenHandler((details) => {
+    shell.openExternal(details.url)
+    return { action: 'deny' }
+  })
+
+  // Em dev o electron-vite serve o renderer com HMR; em produção carrega o html gerado.
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  } else {
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+  }
+}
+
+app.whenReady().then(() => {
+  electronApp.setAppUserModelId('dev.vitor.anbu')
+
+  // F12 abre o DevTools em dev; Ctrl+R é ignorado em produção.
+  app.on('browser-window-created', (_, window) => {
+    optimizer.watchWindowShortcuts(window)
+  })
+
+  createWindow()
+
+  app.on('activate', function () {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  })
+})
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit()
+  }
+})
