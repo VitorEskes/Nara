@@ -1,0 +1,16 @@
+{
+  "name": "anbu",
+  "version": "0.0.0",
+  "description": "Agentes de IA de programação num canvas infinito",
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "node-pty": "^1.1.0",
+    "ws": "^8.21.3"
+  }
+}

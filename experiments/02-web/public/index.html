@@ -1,0 +1,36 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>anbu</title>
+<link rel="stylesheet" href="/xterm.css">
+<style>
+  html, body { margin: 0; height: 100%; background: #0d0d10; }
+  #tela { position: absolute; inset: 8px; }
+</style>
+
+<div id="tela"></div>
+
+<script type="module">
+import { Terminal } from '/xterm.mjs';
+import { FitAddon } from '/addon-fit.mjs';
+
+const fit = new FitAddon();
+const ws = new WebSocket(`ws://${location.host}/${location.search}`);
+const term = new Terminal({ fontSize: 13, cursorBlink: true });
+
+term.loadAddon(fit);
+
+term.open(document.getElementById('tela'));
+
+function mandarTamanho() {
+  fit.fit();
+  ws.send(JSON.stringify({ t: 'resize', cols: term.cols, rows: term.rows }));
+}
+
+ws.onopen = () => mandarTamanho();
+addEventListener('resize', mandarTamanho);
+
+
+ws.onmessage = (ev) => term.write(ev.data);
+const encoder = new TextEncoder();
+term.onData((dados) => ws.send(encoder.encode(dados)));
+</script>
