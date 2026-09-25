@@ -26,6 +26,11 @@ export default function App() {
     camAtual.current = cam
   }, [cam])
 
+  // Quem entrega as mensagens entre agentes é o main, e ele precisa saber quem está ligado a quem.
+  useEffect(() => {
+    window.api.ligacoes.definir(ligacoes)
+  }, [ligacoes])
+
   function mudar(id, mudancas) {
     setNos((atuais) => atuais.map((no) => (no.id === id ? { ...no, ...mudancas } : no)))
   }
@@ -132,7 +137,7 @@ export default function App() {
             aoFechar={() => fechar(no.id)}
             aoLigar={(e) => ligar(no.id, e)}
           >
-            <Terminal aoTerminar={() => fechar(no.id)} />
+            <Terminal no={no.id} aoTerminar={() => fechar(no.id)} />
           </No>
         ))}
       </Canvas>

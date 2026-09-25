@@ -9,7 +9,11 @@ const api = {
     redimensionar: (id, cols, rows) => ipcRenderer.send('pty:redimensionar', id, cols, rows),
     matar: (id) => ipcRenderer.send('pty:matar', id),
     aoReceber: (fn) => ouvir('pty:dados', fn),
-    aoSair: (fn) => ouvir('pty:saiu', fn)
+    aoSair: (fn) => ouvir('pty:saiu', fn),
+    aoColar: (fn) => ouvir('pty:colar', fn)
+  },
+  ligacoes: {
+    definir: (lista) => ipcRenderer.send('ligacoes:definir', lista)
   }
 }
 

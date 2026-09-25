@@ -1,0 +1,5 @@
+#!/bin/sh
+# O comando `anbu` dos terminais do canvas: o app põe esta pasta no PATH de cada terminal.
+# Roda o cli.js com o próprio Electron em modo Node, então não depende de ter Node instalado.
+export ELECTRON_RUN_AS_NODE=1
+exec "$ANBU_ELECTRON" "$ANBU_CLI" "$@"

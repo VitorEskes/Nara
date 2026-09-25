@@ -3,8 +3,12 @@ import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 
+// Quanto esperar entre colar uma mensagem de outro agente e apertar o Enter.
+const ESPERA_ENTER = 500
+
 // Um terminal de verdade: xterm.js desenha, o PTY no main executa.
-export default function Terminal({ cmd, args, aoTerminar }) {
+// `no` é o id do nó do canvas; o main precisa dele para saber a quais ligações o PTY pertence.
+export default function Terminal({ no, cmd, args, aoTerminar }) {
   const caixa = useRef(null)
 
   // aoTerminar muda a cada render do pai. Se entrasse nas dependências do efeito abaixo,
@@ -36,7 +40,16 @@ export default function Terminal({ cmd, args, aoTerminar }) {
       else term.write(`\r\n[fim] code=${code}\r\n`)
     })
 
-    window.api.pty.criar({ cmd, args, cols: term.cols, rows: term.rows }).then((novo) => {
+    // Mensagem de outro agente (`anbu enviar`): entra como colagem, igual a Ctrl+V, e o Enter
+    // vai depois, separado. Se chegasse junto do texto, o agente poderia tomar o Enter como
+    // parte da colagem, e a mensagem ficaria parada no campo sem ser enviada.
+    const pararColar = window.api.pty.aoColar((de, texto) => {
+      if (de !== id) return
+      term.paste(texto)
+      setTimeout(() => vivo && term.input('\r', false), ESPERA_ENTER)
+    })
+
+    window.api.pty.criar({ no, cmd, args, cols: term.cols, rows: term.rows }).then((novo) => {
       // O StrictMode monta/desmonta duas vezes em dev: se já desmontou, mata o PTY órfão.
       if (!vivo) return window.api.pty.matar(novo)
       id = novo
@@ -63,10 +76,11 @@ export default function Terminal({ cmd, args, aoTerminar }) {
       digitar.dispose()
       pararDados()
       pararSaida()
+      pararColar()
       if (id) window.api.pty.matar(id)
       term.dispose()
     }
-  }, [cmd, args])
+  }, [no, cmd, args])
 
   return <div ref={caixa} className="terminal" />
 }
