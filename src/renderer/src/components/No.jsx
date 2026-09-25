@@ -2,7 +2,21 @@ const LARGURA_MIN = 240
 const ALTURA_MIN = 120
 
 // Uma caixa no mundo: posição e tamanho em coordenadas do mundo, não da tela.
-export default function No({ x, y, w, h, camada, titulo, aoMudar, aoFocar, aoFechar, children }) {
+export default function No({
+  id,
+  x,
+  y,
+  w,
+  h,
+  camada,
+  titulo,
+  alvo,
+  aoMudar,
+  aoFocar,
+  aoFechar,
+  aoLigar,
+  children
+}) {
   function mover(e) {
     arrastar(e, (dx, dy) => aoMudar({ x: x + dx, y: y + dy }))
   }
@@ -15,12 +29,19 @@ export default function No({ x, y, w, h, camada, titulo, aoMudar, aoFocar, aoFec
 
   return (
     <div
-      className="no"
+      className={alvo ? 'no alvo' : 'no'}
+      // O App acha o nó sob o cursor pelo DOM (elementFromPoint) e lê o id daqui.
+      data-id={id}
       style={{ left: x, top: y, width: w, height: h, zIndex: camada }}
       // Capture: roda antes de qualquer filho (inclusive o xterm) poder engolir o evento.
       onPointerDownCapture={aoFocar}
     >
       <div className="no-barra" onPointerDown={mover}>
+        <div
+          className="no-porta"
+          title="Arraste até outro terminal para ligar"
+          onPointerDown={aoLigar}
+        />
         <span className="no-titulo">{titulo}</span>
         <button
           className="no-fechar"

@@ -4,13 +4,10 @@ const ZOOM_MIN = 0.1
 const ZOOM_MAX = 4
 const GRADE = 20
 
-// Câmera: tela = mundo * z + (x, y)  |  mundo = (tela - (x, y)) / z
-// A câmera mora no App (que precisa dela para criar nós no lugar certo); aqui só se lê e altera.
 export default function Canvas({ cam, setCam, children }) {
   const viewport = useRef(null)
   const arrastando = useRef(false)
 
-  // Pan: arrastar só começa se o clique foi no fundo, não num nó.
   function aoApertar(e) {
     if (e.target !== e.currentTarget) return
     arrastando.current = true
@@ -19,7 +16,6 @@ export default function Canvas({ cam, setCam, children }) {
 
   function aoMover(e) {
     if (!arrastando.current) return
-    // movementX/Y já estão em px de tela, mesma unidade do translate: não divide por z.
     setCam((c) => ({ ...c, x: c.x + e.movementX, y: c.y + e.movementY }))
   }
 
@@ -31,7 +27,6 @@ export default function Canvas({ cam, setCam, children }) {
     const el = viewport.current
     const aoRolar = (e) => {
       if (e.ctrlKey) {
-        // Zoom (Ctrl+roda ou pinça do trackpad) mantendo o ponto sob o cursor parado.
         e.preventDefault()
         const caixa = el.getBoundingClientRect()
         const mx = e.clientX - caixa.left
@@ -42,8 +37,7 @@ export default function Canvas({ cam, setCam, children }) {
           const wy = (my - c.y) / c.z
           return { x: mx - wx * z, y: my - wy * z, z }
         })
-      } else if (e.target === el) {
-        // Roda no fundo = pan. Em cima de um terminal, deixa ele rolar o histórico.
+      } else if (e.target === el || e.target.closest('.ligacoes')) {
         e.preventDefault()
         setCam((c) => ({ ...c, x: c.x - e.deltaX, y: c.y - e.deltaY }))
       }

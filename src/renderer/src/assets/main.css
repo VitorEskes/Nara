@@ -138,3 +138,68 @@ body,
   color: #5c5c68;
   pointer-events: none;
 }
+
+/* Dentro do .mundo, atrás dos nós. O svg tem 1x1 e desenha tudo no overflow. */
+.ligacoes {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ligacao {
+  cursor: pointer;
+}
+
+/* O svg inteiro ignora o ponteiro; só este traço invisível recebe clique. */
+.ligacao-toque {
+  stroke: transparent;
+  stroke-width: 14;
+  pointer-events: stroke;
+}
+
+/* non-scaling-stroke: a espessura fica igual na tela em qualquer zoom. */
+.ligacao-linha,
+.ligacao-rascunho {
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.ligacao-linha {
+  stroke: #4a4a58;
+}
+
+.ligacao:hover .ligacao-linha {
+  stroke: #c4314b;
+}
+
+.ligacao-rascunho {
+  stroke: #5b8def;
+  stroke-dasharray: 6 4;
+}
+
+/* Bolinha na barra: arrastar dela até outro nó cria a ligação. */
+.no-porta {
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  flex-shrink: 0;
+  border: 2px solid #5c5c68;
+  border-radius: 50%;
+  cursor: crosshair;
+}
+
+.no-porta:hover {
+  border-color: #5b8def;
+  background: #5b8def;
+}
+
+/* Nó sob o cursor enquanto uma ligação é puxada. */
+.no.alvo {
+  border-color: #5b8def;
+  box-shadow:
+    0 0 0 2px #5b8def,
+    0 8px 24px rgb(0 0 0 / 40%);
+}
