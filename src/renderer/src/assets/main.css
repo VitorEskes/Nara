@@ -7,6 +7,24 @@ body,
   overflow: hidden;
 }
 
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* isolation keeps the nodes' ever-growing z-index from stacking above the tab bar's menu. */
+.workspaces {
+  position: relative;
+  flex: 1;
+  isolation: isolate;
+}
+
+.workspace {
+  position: absolute;
+  inset: 0;
+}
+
 .viewport {
   position: relative;
   width: 100%;
@@ -84,10 +102,11 @@ body,
   white-space: nowrap;
 }
 
-.node-close {
+.node-close,
+.tab-close {
   width: 18px;
   height: 18px;
-  margin-right: -6px;
+  flex-shrink: 0;
   padding: 0;
   border: 0;
   border-radius: 4px;
@@ -98,9 +117,14 @@ body,
   cursor: pointer;
 }
 
-.node-close:hover {
+.node-close:hover,
+.tab-close:hover {
   color: #fff;
   background: #c4314b;
+}
+
+.node-close {
+  margin-right: -6px;
 }
 
 /* Lives outside .world: not affected by pan or zoom. */
@@ -202,4 +226,134 @@ body,
   box-shadow:
     0 0 0 2px #5b8def,
     0 8px 24px rgb(0 0 0 / 40%);
+}
+
+.tabs {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  height: 34px;
+  flex-shrink: 0;
+  font:
+    12px system-ui,
+    sans-serif;
+  color: #9a9aa6;
+  background: #16161b;
+  border-bottom: 1px solid #2a2a33;
+  user-select: none;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 200px;
+  padding: 0 8px 0 12px;
+  border-right: 1px solid #2a2a33;
+  cursor: pointer;
+}
+
+.tab:hover,
+.tab.active {
+  color: #e6e6ec;
+}
+
+/* Same color as the canvas, and 1px taller to cover the bar's border: the tab joins its canvas. */
+.tab.active {
+  margin-bottom: -1px;
+  background: #0d0d10;
+}
+
+.tab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+input.tab-name {
+  width: 120px;
+  padding: 2px 4px;
+  border: 1px solid #5b8def;
+  border-radius: 4px;
+  outline: none;
+  font: inherit;
+  color: inherit;
+  background: #0d0d10;
+}
+
+.tabs-button {
+  width: 34px;
+  border: 0;
+  font-size: 16px;
+  color: inherit;
+  background: none;
+  cursor: pointer;
+}
+
+.tabs-button:hover {
+  color: #e6e6ec;
+  background: #22222a;
+}
+
+.closed-menu {
+  position: relative;
+  display: flex;
+  margin-left: auto;
+}
+
+.menu {
+  position: absolute;
+  top: 100%;
+  right: 4px;
+  min-width: 200px;
+  margin-top: 4px;
+  padding: 4px;
+  border: 1px solid #2a2a33;
+  border-radius: 6px;
+  background: #16161b;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 40%);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+}
+
+.menu-item:hover {
+  background: #22222a;
+}
+
+.menu-open {
+  flex: 1;
+  padding: 6px 8px;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  color: #e6e6ec;
+  background: none;
+  cursor: pointer;
+}
+
+.menu-remove {
+  width: 22px;
+  height: 22px;
+  margin-right: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #9a9aa6;
+  background: none;
+  cursor: pointer;
+}
+
+.menu-remove:hover {
+  color: #fff;
+  background: #c4314b;
+}
+
+.menu-empty {
+  padding: 6px 8px;
+  color: #5c5c68;
 }

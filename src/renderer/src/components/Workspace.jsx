@@ -9,7 +9,9 @@ const NODE_HEIGHT = 400
 
 // One canvas with its camera, nodes and links. `saved` is what was loaded from disk: from then on
 // this component owns the state, and main keeps a copy that it saves.
-export default function Workspace({ workspaceId, saved }) {
+// An inactive workspace is hidden, not unmounted, so its terminals keep running.
+export default function Workspace({ workspaceId, saved, active }) {
+  const container = useRef(null)
   const [cam, setCam] = useState(saved.camera)
   const [nodes, setNodes] = useState(saved.nodes)
   // Links have no direction for now: from/to only say which node the drag started on.
@@ -60,12 +62,10 @@ export default function Workspace({ workspaceId, saved }) {
     setNodes((current) => [...current, node])
   }
 
-  // Center of the window converted to world coordinates: world = (screen - (x, y)) / z.
+  // Center of the viewport converted to world coordinates: world = (screen - (x, y)) / z.
   function createNodeAtCenter() {
-    createNode({
-      x: (window.innerWidth / 2 - cam.x) / cam.z,
-      y: (window.innerHeight / 2 - cam.y) / cam.z
-    })
+    const { width, height } = container.current.getBoundingClientRect()
+    createNode({ x: (width / 2 - cam.x) / cam.z, y: (height / 2 - cam.y) / cam.z })
   }
 
   // Removing the node from state unmounts its <Terminal>, whose cleanup kills the PTY.
@@ -90,10 +90,14 @@ export default function Workspace({ workspaceId, saved }) {
       return id && id !== from ? id : null
     }
 
-    // The viewport fills the whole window, so clientX/Y are already screen coordinates.
+    // clientX/Y count from the window, and the viewport starts below the tab bar.
+    const viewport = container.current.getBoundingClientRect()
     function toWorld(ev) {
       const c = camRef.current
-      return { x: (ev.clientX - c.x) / c.z, y: (ev.clientY - c.y) / c.z }
+      return {
+        x: (ev.clientX - viewport.left - c.x) / c.z,
+        y: (ev.clientY - viewport.top - c.y) / c.z
+      }
     }
 
     function onMove(ev) {
@@ -126,7 +130,7 @@ export default function Workspace({ workspaceId, saved }) {
   }
 
   return (
-    <>
+    <div className="workspace" ref={container} hidden={!active}>
       <Canvas cam={cam} setCam={setCam}>
         <Links nodes={nodes} links={links} draft={draft} onRemove={removeLink} />
         {nodes.map((node) => (
@@ -154,7 +158,7 @@ export default function Workspace({ workspaceId, saved }) {
       </div>
 
       {nodes.length === 0 && <div className="empty">Click “+ Terminal” to open a terminal</div>}
-    </>
+    </div>
   )
 }
 

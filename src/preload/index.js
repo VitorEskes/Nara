@@ -13,8 +13,15 @@ const api = {
     onPaste: (fn) => listen('pty:paste', fn)
   },
   workspace: {
-    load: () => ipcRenderer.invoke('workspace:load'),
-    update: (id, layout) => ipcRenderer.send('workspace:update', id, layout)
+    session: () => ipcRenderer.invoke('workspace:session'),
+    saveSession: (session) => ipcRenderer.send('workspace:save-session', session),
+    list: () => ipcRenderer.invoke('workspace:list'),
+    load: (id) => ipcRenderer.invoke('workspace:load', id),
+    create: () => ipcRenderer.invoke('workspace:create'),
+    update: (id, layout) => ipcRenderer.send('workspace:update', id, layout),
+    rename: (id, name) => ipcRenderer.send('workspace:rename', id, name),
+    close: (id) => ipcRenderer.invoke('workspace:close', id),
+    remove: (id) => ipcRenderer.invoke('workspace:remove', id)
   }
 }
 
