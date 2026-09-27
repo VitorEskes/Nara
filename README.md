@@ -19,6 +19,7 @@ npm run dev
 - `src/main/workspaces.js` — keeps each open workspace in memory and saves it to `workspaces/<id>.json` in the app's data folder; `state.json` remembers the open tabs
 - `src/main/messages.js` — socket that takes requests from the `anbu` command, delivers messages between linked terminals and reads or writes linked notes
 - `src/main/cli.js` + `resources/bin/anbu` — the `anbu` command (`peers`, `send`, `note`) available inside every terminal
+- `src/main/agents.js` — the command that opens each agent; Claude Code gets a session id so a restored node resumes its conversation
 - `src/shared/agents.js` — the agents a node can open with (Claude Code, Codex), used by main and the renderer
 - `src/preload/index.js` — exposes `window.api.pty` and `window.api.workspace` to the renderer
 - `src/renderer/src/components/Terminal.jsx` — an xterm.js terminal connected to a PTY

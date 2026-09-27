@@ -3,6 +3,7 @@ import { execFileSync } from 'child_process'
 import { existsSync, readlinkSync } from 'fs'
 import * as pty from 'node-pty'
 import { AGENTS } from '../shared/agents'
+import { agentCommand } from './agents'
 
 // Each canvas terminal is a real PTY, identified by an id.
 // The renderer never touches node-pty: everything goes through IPC.
@@ -20,11 +21,11 @@ const exiting = new Set()
 // `extraEnv` holds the variables every terminal gets (the ones the `anbu` command uses).
 export function registerPty(win, extraEnv) {
   ipcMain.handle('pty:create', (_ev, options = {}) => {
-    const { workspaceId, nodeId, agent, cols = 80, rows = 24, cwd } = options
+    const { workspaceId, nodeId, agent, session, cols = 80, rows = 24, cwd } = options
     const id = nextId++
     // An agent runs inside the user's interactive shell (-i loads .zshrc/.bashrc), so it's found
     // on the same PATH as when typed in a terminal. When the agent quits, the shell ends with it.
-    const args = AGENTS[agent] ? ['-ic', AGENTS[agent].command] : []
+    const args = AGENTS[agent] ? ['-ic', agentCommand(agent, session)] : []
     const term = pty.spawn(process.env.SHELL || 'bash', args, {
       name: 'xterm-256color',
       cols,

@@ -92,10 +92,11 @@ export default function Workspace({ workspaceId, saved, active }) {
   }
 
   // An agent node is a terminal that opens straight into the agent. It keeps the "terminal N"
-  // title, since that's how other agents and `anbu send` refer to it.
+  // title, since that's how other agents and `anbu send` refer to it. The session id lets the
+  // node resume its conversation after a restart; agents that can't resume ignore it.
   async function createAgent(agent) {
     const cwd = await window.api.pty.pickFolder(agent)
-    if (cwd) createNodeAtCenter('terminal', { agent, cwd })
+    if (cwd) createNodeAtCenter('terminal', { agent, cwd, session: crypto.randomUUID() })
   }
 
   // Removing the node from state unmounts its <Terminal>, whose cleanup kills the PTY.
@@ -186,6 +187,7 @@ export default function Workspace({ workspaceId, saved, active }) {
                 workspaceId={workspaceId}
                 nodeId={node.id}
                 agent={node.agent}
+                session={node.session}
                 cwd={node.cwd}
                 onExit={() => closeNode(node.id)}
               />
