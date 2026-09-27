@@ -1,22 +1,22 @@
 # anbu
 
-Roda agentes de IA de programação (Claude Code, Codex) com canvas infinito
-como interface.
+Runs AI coding agents (Claude Code, Codex) with an infinite canvas as the
+interface.
 
-App desktop em Electron + React: cada nó do canvas é um terminal de verdade
-(`node-pty` no processo main, `xterm.js` no renderer, ligados por IPC).
+Desktop app built with Electron + React: each canvas node is a real terminal
+(`node-pty` in the main process, `xterm.js` in the renderer, connected over IPC).
 
-## Rodando
+## Running
 
 ```bash
-npm install   # o postinstall recompila o node-pty para o ABI do Electron
+npm install   # postinstall rebuilds node-pty for Electron's ABI
 npm run dev
 ```
 
-## Estrutura
+## Structure
 
-- `src/main/pty.js` — cria e gerencia os PTYs (`pty:criar`, `pty:escrever`, `pty:redimensionar`, `pty:matar`)
-- `src/main/messages.js` — socket que recebe os pedidos do comando `anbu` e entrega mensagens entre terminais ligados
-- `src/main/cli.js` + `resources/bin/anbu` — o comando `anbu` (`ligados`, `enviar`) disponível dentro de cada terminal
-- `src/preload/index.js` — expõe `window.api.pty` para o renderer
-- `src/renderer/src/components/Terminal.jsx` — um terminal xterm.js ligado a um PTY
+- `src/main/pty.js` — creates and manages the PTYs (`pty:create`, `pty:write`, `pty:resize`, `pty:kill`)
+- `src/main/messages.js` — socket that takes requests from the `anbu` command and delivers messages between linked terminals
+- `src/main/cli.js` + `resources/bin/anbu` — the `anbu` command (`peers`, `send`) available inside every terminal
+- `src/preload/index.js` — exposes `window.api.pty` and `window.api.links` to the renderer
+- `src/renderer/src/components/Terminal.jsx` — an xterm.js terminal connected to a PTY

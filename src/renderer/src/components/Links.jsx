@@ -1,33 +1,35 @@
-// Linhas entre nós, desenhadas num <svg> dentro do .mundo: as coordenadas já são as do mundo,
-// então pan e zoom vêm de graça pelo transform da câmera.
-// Fica atrás dos nós (z-index 0) e liga centro a centro: o trecho que passaria por dentro
-// de cada nó fica escondido, e a linha parece sair da borda sem precisar calcular a borda.
-export default function Ligacoes({ nos, ligacoes, rascunho, aoRemover }) {
-  const centros = new Map(nos.map((no) => [no.id, { x: no.x + no.w / 2, y: no.y + no.h / 2 }]))
+// Lines between nodes, drawn in an <svg> inside .world: coordinates are already in world space,
+// so pan and zoom come for free from the camera transform.
+// It sits behind the nodes (z-index 0) and connects center to center: the part that would cross
+// each node stays hidden, and the line seems to start at the edge without computing the edge.
+export default function Links({ nodes, links, draft, onRemove }) {
+  const centers = new Map(
+    nodes.map((node) => [node.id, { x: node.x + node.w / 2, y: node.y + node.h / 2 }])
+  )
 
   return (
-    <svg className="ligacoes" width="1" height="1">
-      {ligacoes.map((l) => {
-        const a = centros.get(l.de)
-        const b = centros.get(l.para)
+    <svg className="links" width="1" height="1">
+      {links.map((l) => {
+        const a = centers.get(l.from)
+        const b = centers.get(l.to)
         if (!a || !b) return null
         return (
-          <g key={l.id} className="ligacao" onClick={() => aoRemover(l.id)}>
-            <title>Clique para desligar</title>
-            {/* Traço largo e invisível: área de clique maior que a linha fina. */}
-            <line className="ligacao-toque" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
-            <line className="ligacao-linha" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
+          <g key={l.id} className="link" onClick={() => onRemove(l.id)}>
+            <title>Click to unlink</title>
+            {/* Wide invisible stroke: a bigger click target than the thin line. */}
+            <line className="link-hitbox" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
+            <line className="link-line" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
           </g>
         )
       })}
 
-      {rascunho && centros.has(rascunho.de) && (
+      {draft && centers.has(draft.from) && (
         <line
-          className="ligacao-rascunho"
-          x1={centros.get(rascunho.de).x}
-          y1={centros.get(rascunho.de).y}
-          x2={rascunho.x}
-          y2={rascunho.y}
+          className="link-draft"
+          x1={centers.get(draft.from).x}
+          y1={centers.get(draft.from).y}
+          x2={draft.x}
+          y2={draft.y}
         />
       )}
     </svg>

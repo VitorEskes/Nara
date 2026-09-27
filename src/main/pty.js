@@ -1,51 +1,52 @@
 import { ipcMain } from 'electron'
 import * as pty from 'node-pty'
 
-// Cada terminal do canvas é um PTY de verdade, identificado por um id.
-// O renderer nunca toca no node-pty: tudo passa por IPC.
-// Guarda também o nó do canvas dono do PTY: as ligações são entre nós, não entre PTYs.
-export const terminais = new Map()
-let proximoId = 1
+// Each canvas terminal is a real PTY, identified by an id.
+// The renderer never touches node-pty: everything goes through IPC.
+// Also stores the canvas node that owns the PTY: links are between nodes, not PTYs.
+export const terminals = new Map()
+let nextId = 1
 
-// `ambiente` são as variáveis extras de todo terminal (as que o comando `anbu` usa).
-export function registrarPty(janela, ambiente) {
-  ipcMain.handle('pty:criar', (_ev, { no, cmd, args = [], cols = 80, rows = 24, cwd } = {}) => {
-    const id = proximoId++
-    const term = pty.spawn(cmd || process.env.SHELL || 'bash', args, {
-      name: 'xterm-256color',
-      cols,
-      rows,
-      cwd: cwd || process.env.HOME,
-      // ANBU_PTY é como o `anbu` diz ao app de qual terminal a mensagem saiu.
-      env: { ...process.env, ...ambiente, ANBU_PTY: String(id) }
-    })
+// `extraEnv` holds the variables every terminal gets (the ones the `anbu` command uses).
+export function registerPty(win, extraEnv) {
+  ipcMain.handle(
+    'pty:create',
+    (_ev, { nodeId, cmd, args = [], cols = 80, rows = 24, cwd } = {}) => {
+      const id = nextId++
+      const term = pty.spawn(cmd || process.env.SHELL || 'bash', args, {
+        name: 'xterm-256color',
+        cols,
+        rows,
+        cwd: cwd || process.env.HOME,
+        // ANBU_PTY is how `anbu` tells the app which terminal the message came from.
+        env: { ...process.env, ...extraEnv, ANBU_PTY: String(id) }
+      })
 
-    term.onData((dados) => janela.webContents.send('pty:dados', id, dados))
-    term.onExit(({ exitCode }) => {
-      terminais.delete(id)
-      if (!janela.isDestroyed()) janela.webContents.send('pty:saiu', id, exitCode)
-    })
+      term.onData((data) => win.webContents.send('pty:data', id, data))
+      term.onExit(({ exitCode }) => {
+        terminals.delete(id)
+        if (!win.isDestroyed()) win.webContents.send('pty:exit', id, exitCode)
+      })
 
-    terminais.set(id, { no, term })
-    return id
-  })
-
-  ipcMain.on('pty:escrever', (_ev, id, dados) => terminais.get(id)?.term.write(dados))
-  ipcMain.on('pty:redimensionar', (_ev, id, cols, rows) =>
-    terminais.get(id)?.term.resize(cols, rows)
+      terminals.set(id, { nodeId, term })
+      return id
+    }
   )
-  ipcMain.on('pty:matar', (_ev, id) => matar(id))
 
-  janela.on('closed', () => {
-    for (const id of terminais.keys()) matar(id)
-    ipcMain.removeHandler('pty:criar')
-    ipcMain.removeAllListeners('pty:escrever')
-    ipcMain.removeAllListeners('pty:redimensionar')
-    ipcMain.removeAllListeners('pty:matar')
+  ipcMain.on('pty:write', (_ev, id, data) => terminals.get(id)?.term.write(data))
+  ipcMain.on('pty:resize', (_ev, id, cols, rows) => terminals.get(id)?.term.resize(cols, rows))
+  ipcMain.on('pty:kill', (_ev, id) => kill(id))
+
+  win.on('closed', () => {
+    for (const id of terminals.keys()) kill(id)
+    ipcMain.removeHandler('pty:create')
+    ipcMain.removeAllListeners('pty:write')
+    ipcMain.removeAllListeners('pty:resize')
+    ipcMain.removeAllListeners('pty:kill')
   })
 }
 
-function matar(id) {
-  terminais.get(id)?.term.kill()
-  terminais.delete(id)
+function kill(id) {
+  terminals.get(id)?.term.kill()
+  terminals.delete(id)
 }

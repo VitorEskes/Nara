@@ -1,73 +1,73 @@
 import { connect } from 'net'
 
-// O comando `anbu`, que roda dentro dos terminais do canvas. Não faz nada sozinho: manda o
-// pedido para o app pelo socket em ANBU_SOCK e mostra a resposta. Quem roda este arquivo é o
-// resources/bin/anbu, com o próprio Electron fazendo papel de Node.
+// The `anbu` command that runs inside canvas terminals. It does nothing on its own: it sends
+// the request to the app over the socket in ANBU_SOCK and prints the response. This file is run
+// by resources/bin/anbu, with Electron itself acting as Node.
 
-const AJUDA = `uso:
-  anbu ligados                    lista os terminais ligados a este
-  anbu enviar <terminal> <texto>  manda o texto para um terminal ligado
-  anbu enviar <terminal>          sem texto, lê a mensagem da entrada padrão
+const HELP = `usage:
+  anbu peers                    list the terminals linked to this one
+  anbu send <terminal> <text>   send the text to a linked terminal
+  anbu send <terminal>          with no text, read the message from stdin
 
-A mensagem chega no terminal de destino como se alguém tivesse digitado e apertado Enter.
-A resposta, se vier, chega neste terminal do mesmo jeito: não precisa esperar nem conferir.`
+The message arrives in the target terminal as if someone had typed it and pressed Enter.
+The reply, if any, arrives in this terminal the same way: no need to wait or check for it.`
 
-main().catch((erro) => {
-  console.error(`anbu: ${erro.message}`)
+main().catch((error) => {
+  console.error(`anbu: ${error.message}`)
   process.exit(1)
 })
 
 async function main() {
-  const [comando, alvo, ...palavras] = process.argv.slice(2)
+  const [command, target, ...words] = process.argv.slice(2)
 
-  if (!comando || comando === 'ajuda' || comando === '--help' || comando === '-h') {
-    console.log(AJUDA)
+  if (!command || command === 'help' || command === '--help' || command === '-h') {
+    console.log(HELP)
     return
   }
-  if (!process.env.ANBU_SOCK) throw new Error('rode este comando dentro de um terminal do anbu')
+  if (!process.env.ANBU_SOCK) throw new Error('run this command inside an anbu terminal')
 
-  if (comando === 'ligados') {
-    const { ligados } = await pedir({ comando })
-    if (ligados.length === 0) console.log('nenhum terminal ligado a este')
-    for (const { no, programa, aceita } of ligados) {
-      const aviso = aceita ? '' : '  (só o shell, não recebe mensagens)'
-      console.log(`terminal ${no}  ${programa}${aviso}`)
+  if (command === 'peers') {
+    const { peers } = await request({ command })
+    if (peers.length === 0) console.log('no terminals linked to this one')
+    for (const { nodeId, program, canReceive } of peers) {
+      const note = canReceive ? '' : "  (shell only, can't receive messages)"
+      console.log(`terminal ${nodeId}  ${program}${note}`)
     }
     return
   }
 
-  if (comando === 'enviar') {
-    // Aceita "2", "terminal 2" ou "terminal2": é o que aparece no título do nó.
-    const para = Number(alvo?.match(/\d+$/)?.[0])
-    if (!para) throw new Error('diga para qual terminal, ex.: anbu enviar 2 "oi"')
+  if (command === 'send') {
+    // Accepts "2", "terminal 2" or "terminal2": that's what the node title shows.
+    const to = Number(target?.match(/\d+$/)?.[0])
+    if (!to) throw new Error('which terminal? e.g. anbu send 2 "hi"')
 
-    let texto = palavras.join(' ')
-    if (!texto) {
-      if (process.stdin.isTTY) throw new Error('faltou a mensagem, ex.: anbu enviar 2 "oi"')
-      for await (const pedaco of process.stdin) texto += pedaco
+    let text = words.join(' ')
+    if (!text) {
+      if (process.stdin.isTTY) throw new Error('missing message, e.g. anbu send 2 "hi"')
+      for await (const chunk of process.stdin) text += chunk
     }
 
-    await pedir({ comando, para, texto })
-    console.log(`entregue ao terminal ${para}`)
+    await request({ command, to, text })
+    console.log(`delivered to terminal ${to}`)
     return
   }
 
-  throw new Error(`comando desconhecido: ${comando}\n\n${AJUDA}`)
+  throw new Error(`unknown command: ${command}\n\n${HELP}`)
 }
 
-function pedir(pedido) {
-  return new Promise((resolver, rejeitar) => {
+function request(body) {
+  return new Promise((resolve, reject) => {
     const socket = connect(process.env.ANBU_SOCK)
-    let resposta = ''
+    let response = ''
     socket.setEncoding('utf8')
-    socket.on('data', (pedaco) => (resposta += pedaco))
+    socket.on('data', (chunk) => (response += chunk))
     socket.on('end', () => {
-      const { erro, ...resto } = JSON.parse(resposta)
-      if (erro) rejeitar(new Error(erro))
-      else resolver(resto)
+      const { error, ...rest } = JSON.parse(response)
+      if (error) reject(new Error(error))
+      else resolve(rest)
     })
-    socket.on('error', () => rejeitar(new Error('o anbu não respondeu (o app foi fechado?)')))
-    // Fechar a escrita avisa o servidor que o pedido acabou.
-    socket.end(JSON.stringify({ de: process.env.ANBU_PTY, ...pedido }))
+    socket.on('error', () => reject(new Error('anbu did not respond (was the app closed?)')))
+    // Ending the write side tells the server the request is complete.
+    socket.end(JSON.stringify({ from: process.env.ANBU_PTY, ...body }))
   })
 }

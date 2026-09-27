@@ -1,7 +1,7 @@
 {
   "name": "anbu",
   "version": "0.0.0",
-  "description": "Agentes de IA de programação num canvas infinito",
+  "description": "AI coding agents on an infinite canvas",
   "main": "./out/main/index.js",
   "author": "Vitor",
   "license": "MIT",

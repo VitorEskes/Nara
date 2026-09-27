@@ -1,26 +1,26 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
-// A ponte entre o renderer (React) e o main (node-pty).
-// Os `on*` devolvem uma função que desfaz a inscrição.
+// The bridge between the renderer (React) and main (node-pty).
+// The `on*` functions return a function that unsubscribes.
 const api = {
   pty: {
-    criar: (opcoes) => ipcRenderer.invoke('pty:criar', opcoes),
-    escrever: (id, dados) => ipcRenderer.send('pty:escrever', id, dados),
-    redimensionar: (id, cols, rows) => ipcRenderer.send('pty:redimensionar', id, cols, rows),
-    matar: (id) => ipcRenderer.send('pty:matar', id),
-    aoReceber: (fn) => ouvir('pty:dados', fn),
-    aoSair: (fn) => ouvir('pty:saiu', fn),
-    aoColar: (fn) => ouvir('pty:colar', fn)
+    create: (options) => ipcRenderer.invoke('pty:create', options),
+    write: (id, data) => ipcRenderer.send('pty:write', id, data),
+    resize: (id, cols, rows) => ipcRenderer.send('pty:resize', id, cols, rows),
+    kill: (id) => ipcRenderer.send('pty:kill', id),
+    onData: (fn) => listen('pty:data', fn),
+    onExit: (fn) => listen('pty:exit', fn),
+    onPaste: (fn) => listen('pty:paste', fn)
   },
-  ligacoes: {
-    definir: (lista) => ipcRenderer.send('ligacoes:definir', lista)
+  links: {
+    set: (list) => ipcRenderer.send('links:set', list)
   }
 }
 
-function ouvir(canal, fn) {
-  const ouvinte = (_ev, ...args) => fn(...args)
-  ipcRenderer.on(canal, ouvinte)
-  return () => ipcRenderer.removeListener(canal, ouvinte)
+function listen(channel, fn) {
+  const listener = (_ev, ...args) => fn(...args)
+  ipcRenderer.on(channel, listener)
+  return () => ipcRenderer.removeListener(channel, listener)
 }
 
 contextBridge.exposeInMainWorld('api', api)

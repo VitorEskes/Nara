@@ -6,7 +6,7 @@ export default defineConfig({
   main: {
     build: {
       rollupOptions: {
-        // cli.js é o comando `anbu` dos terminais; sai como arquivo separado em out/main.
+        // cli.js is the `anbu` command run inside terminals; built as its own file in out/main.
         input: {
           index: resolve('src/main/index.js'),
           cli: resolve('src/main/cli.js')

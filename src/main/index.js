@@ -2,8 +2,8 @@ import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { registrarMensagens } from './messages'
-import { registrarPty } from './pty'
+import { registerMessages } from './messages'
+import { registerPty } from './pty'
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -19,7 +19,7 @@ function createWindow() {
     }
   })
 
-  registrarPty(mainWindow, registrarMensagens(mainWindow))
+  registerPty(mainWindow, registerMessages(mainWindow))
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -30,7 +30,7 @@ function createWindow() {
     return { action: 'deny' }
   })
 
-  // Em dev o electron-vite serve o renderer com HMR; em produção carrega o html gerado.
+  // In dev electron-vite serves the renderer with HMR; in production it loads the built html.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -41,7 +41,7 @@ function createWindow() {
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('dev.vitor.anbu')
 
-  // F12 abre o DevTools em dev; Ctrl+R é ignorado em produção.
+  // F12 opens DevTools in dev; Ctrl+R is ignored in production.
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })

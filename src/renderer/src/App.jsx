@@ -1,154 +1,153 @@
 import { useEffect, useRef, useState } from 'react'
 import Canvas from './components/Canvas'
-import Ligacoes from './components/Links'
-import No from './components/CanvasNode'
+import Links from './components/Links'
+import CanvasNode from './components/CanvasNode'
 import Terminal from './components/Terminal'
 
-const LARGURA = 640
-const ALTURA = 400
+const NODE_WIDTH = 640
+const NODE_HEIGHT = 400
 
 export default function App() {
   const [cam, setCam] = useState({ x: 0, y: 0, z: 1 })
-  const [nos, setNos] = useState([
-    { id: 1, x: 80, y: 80, w: LARGURA, h: ALTURA, camada: 1, titulo: 'terminal 1' }
+  const [nodes, setNodes] = useState([
+    { id: 1, x: 80, y: 80, w: NODE_WIDTH, h: NODE_HEIGHT, layer: 1, title: 'terminal 1' }
   ])
-  // Ligações não têm direção por enquanto: de/para só dizem de qual nó o arrasto saiu.
-  const [ligacoes, setLigacoes] = useState([])
-  // Linha que está sendo puxada: nó de origem, ponta no mundo e o nó válido sob o cursor (ou null).
-  const [rascunho, setRascunho] = useState(null)
-  const proximoId = useRef(2)
-  const proximaLigacao = useRef(1)
-  const topo = useRef(1)
-  // O arrasto de ligação lê a câmera pelos listeners; o ref evita pegar uma câmera velha
-  // se o usuário der zoom no meio do arrasto.
-  const camAtual = useRef(cam)
+  // Links have no direction for now: from/to only say which node the drag started on.
+  const [links, setLinks] = useState([])
+  // Link being dragged: source node, tip in world coordinates and the valid node under the
+  // cursor (or null).
+  const [draft, setDraft] = useState(null)
+  const nextId = useRef(2)
+  const nextLinkId = useRef(1)
+  const topLayer = useRef(1)
+  // The link drag reads the camera from its listeners; the ref avoids using a stale camera
+  // if the user zooms mid-drag.
+  const camRef = useRef(cam)
   useEffect(() => {
-    camAtual.current = cam
+    camRef.current = cam
   }, [cam])
 
-  // Quem entrega as mensagens entre agentes é o main, e ele precisa saber quem está ligado a quem.
+  // Main delivers the messages between agents, so it needs to know who is linked to whom.
   useEffect(() => {
-    window.api.ligacoes.definir(ligacoes)
-  }, [ligacoes])
+    window.api.links.set(links)
+  }, [links])
 
-  function mudar(id, mudancas) {
-    setNos((atuais) => atuais.map((no) => (no.id === id ? { ...no, ...mudancas } : no)))
+  function updateNode(id, changes) {
+    setNodes((current) => current.map((node) => (node.id === id ? { ...node, ...changes } : node)))
   }
 
-  // Traz para frente mudando só o z-index. Reordenar o array faria o React mover o elemento
-  // no DOM, e o terminal lá dentro perderia o foco.
-  function focar(id) {
-    const no = nos.find((n) => n.id === id)
-    if (no.camada === topo.current) return
-    mudar(id, { camada: ++topo.current })
+  // Brings a node to the front by changing only its z-index. Reordering the array would make
+  // React move the element in the DOM, and the terminal inside would lose focus.
+  function raise(id) {
+    const node = nodes.find((n) => n.id === id)
+    if (node.layer === topLayer.current) return
+    updateNode(id, { layer: ++topLayer.current })
   }
 
-  // Cria um terminal centralizado no ponto (em coordenadas do mundo), já na frente dos outros.
-  function criar(centro) {
-    const id = proximoId.current++
-    const novo = {
+  // Creates a terminal centered on the point (in world coordinates), in front of the others.
+  function createNode(center) {
+    const id = nextId.current++
+    const node = {
       id,
-      x: Math.round(centro.x - LARGURA / 2),
-      y: Math.round(centro.y - ALTURA / 2),
-      w: LARGURA,
-      h: ALTURA,
-      camada: ++topo.current,
-      titulo: `terminal ${id}`
+      x: Math.round(center.x - NODE_WIDTH / 2),
+      y: Math.round(center.y - NODE_HEIGHT / 2),
+      w: NODE_WIDTH,
+      h: NODE_HEIGHT,
+      layer: ++topLayer.current,
+      title: `terminal ${id}`
     }
-    setNos((atuais) => [...atuais, novo])
+    setNodes((current) => [...current, node])
   }
 
-  // Centro da janela convertido para o mundo: mundo = (tela - (x, y)) / z.
-  function criarNoCentro() {
-    criar({
+  // Center of the window converted to world coordinates: world = (screen - (x, y)) / z.
+  function createNodeAtCenter() {
+    createNode({
       x: (window.innerWidth / 2 - cam.x) / cam.z,
       y: (window.innerHeight / 2 - cam.y) / cam.z
     })
   }
 
-  // Tirar o nó do estado desmonta o <Terminal>, e a limpeza dele mata o PTY.
-  function fechar(id) {
-    setNos((atuais) => atuais.filter((no) => no.id !== id))
-    setLigacoes((atuais) => atuais.filter((l) => l.de !== id && l.para !== id))
+  // Removing the node from state unmounts its <Terminal>, whose cleanup kills the PTY.
+  function closeNode(id) {
+    setNodes((current) => current.filter((node) => node.id !== id))
+    setLinks((current) => current.filter((l) => l.from !== id && l.to !== id))
   }
 
-  // Arrastar da porta de um nó até outro nó cria uma ligação entre os dois.
-  function ligar(de, e) {
+  // Dragging from a node's port to another node creates a link between the two.
+  function startLink(from, e) {
     if (e.button !== 0) return
-    // Sem isto o pointerdown sobe para a barra e o nó começa a ser movido.
+    // Without this the pointerdown bubbles up to the bar and the node starts moving.
     e.stopPropagation()
-    const porta = e.currentTarget
-    porta.setPointerCapture(e.pointerId)
+    const port = e.currentTarget
+    port.setPointerCapture(e.pointerId)
 
-    // Com o ponteiro capturado, o alvo dos eventos é sempre a porta; para saber o que está
-    // embaixo do cursor é preciso perguntar ao documento.
-    function noSob(ev) {
-      const el = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.no')
+    // With the pointer captured, events always target the port; to find out what is under
+    // the cursor we have to ask the document.
+    function nodeUnder(ev) {
+      const el = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.node')
       const id = Number(el?.dataset.id)
-      return id && id !== de ? id : null
+      return id && id !== from ? id : null
     }
 
-    // O viewport ocupa a janela toda, então clientX/Y já são coordenadas de tela.
-    function paraMundo(ev) {
-      const c = camAtual.current
+    // The viewport fills the whole window, so clientX/Y are already screen coordinates.
+    function toWorld(ev) {
+      const c = camRef.current
       return { x: (ev.clientX - c.x) / c.z, y: (ev.clientY - c.y) / c.z }
     }
 
-    function aoMover(ev) {
-      setRascunho({ de, ...paraMundo(ev), alvo: noSob(ev) })
+    function onMove(ev) {
+      setDraft({ from, ...toWorld(ev), target: nodeUnder(ev) })
     }
 
-    function aoSoltar(ev) {
-      porta.removeEventListener('pointermove', aoMover)
-      porta.removeEventListener('pointerup', aoSoltar)
-      porta.removeEventListener('pointercancel', aoSoltar)
-      setRascunho(null)
+    function onRelease(ev) {
+      port.removeEventListener('pointermove', onMove)
+      port.removeEventListener('pointerup', onRelease)
+      port.removeEventListener('pointercancel', onRelease)
+      setDraft(null)
 
-      const para = ev.type === 'pointerup' ? noSob(ev) : null
-      if (!para) return
-      setLigacoes((atuais) => {
-        const repetida = atuais.some(
-          (l) => (l.de === de && l.para === para) || (l.de === para && l.para === de)
+      const to = ev.type === 'pointerup' ? nodeUnder(ev) : null
+      if (!to) return
+      setLinks((current) => {
+        const exists = current.some(
+          (l) => (l.from === from && l.to === to) || (l.from === to && l.to === from)
         )
-        return repetida ? atuais : [...atuais, { id: proximaLigacao.current++, de, para }]
+        return exists ? current : [...current, { id: nextLinkId.current++, from, to }]
       })
     }
 
-    porta.addEventListener('pointermove', aoMover)
-    porta.addEventListener('pointerup', aoSoltar)
-    porta.addEventListener('pointercancel', aoSoltar)
+    port.addEventListener('pointermove', onMove)
+    port.addEventListener('pointerup', onRelease)
+    port.addEventListener('pointercancel', onRelease)
   }
 
-  function desligar(id) {
-    setLigacoes((atuais) => atuais.filter((l) => l.id !== id))
+  function removeLink(id) {
+    setLinks((current) => current.filter((l) => l.id !== id))
   }
 
   return (
     <>
       <Canvas cam={cam} setCam={setCam}>
-        <Ligacoes nos={nos} ligacoes={ligacoes} rascunho={rascunho} aoRemover={desligar} />
-        {nos.map((no) => (
-          <No
-            key={no.id}
-            {...no}
-            alvo={rascunho?.alvo === no.id}
-            aoMudar={(mudancas) => mudar(no.id, mudancas)}
-            aoFocar={() => focar(no.id)}
-            aoFechar={() => fechar(no.id)}
-            aoLigar={(e) => ligar(no.id, e)}
+        <Links nodes={nodes} links={links} draft={draft} onRemove={removeLink} />
+        {nodes.map((node) => (
+          <CanvasNode
+            key={node.id}
+            {...node}
+            isLinkTarget={draft?.target === node.id}
+            onChange={(changes) => updateNode(node.id, changes)}
+            onRaise={() => raise(node.id)}
+            onClose={() => closeNode(node.id)}
+            onLinkStart={(e) => startLink(node.id, e)}
           >
-            <Terminal no={no.id} aoTerminar={() => fechar(no.id)} />
-          </No>
+            <Terminal nodeId={node.id} onExit={() => closeNode(node.id)} />
+          </CanvasNode>
         ))}
       </Canvas>
 
-      <div className="ferramentas">
-        <button onClick={criarNoCentro}>+ Terminal</button>
+      <div className="toolbar">
+        <button onClick={createNodeAtCenter}>+ Terminal</button>
       </div>
 
-      {nos.length === 0 && (
-        <div className="vazio">Clique em “+ Terminal” para abrir um terminal</div>
-      )}
+      {nodes.length === 0 && <div className="empty">Click “+ Terminal” to open a terminal</div>}
     </>
   )
 }

@@ -4,53 +4,53 @@ import { createServer } from 'net'
 import { tmpdir } from 'os'
 import { basename, delimiter, dirname, join } from 'path'
 import anbu from '../../resources/bin/anbu?asset'
-import { terminais } from './pty'
+import { terminals } from './pty'
 
-// Agentes conversam rodando o comando `anbu` no próprio terminal. O comando fala com este
-// servidor por um socket, e o servidor cola a mensagem no terminal do outro lado da ligação
-// como se alguém tivesse digitado. O agente de lá responde do mesmo jeito.
-// O pid no nome deixa dois anbu abertos ao mesmo tempo sem um roubar o socket do outro.
+// Agents talk by running the `anbu` command in their own terminal. The command talks to this
+// server over a socket, and the server pastes the message into the terminal on the other end of
+// the link as if someone had typed it. The agent there replies the same way.
+// The pid in the name lets two anbu instances run at once without one stealing the other's socket.
 const SOCKET = join(tmpdir(), `anbu-${process.pid}.sock`)
 
-// Terminal com só o shell em primeiro plano não recebe mensagem: o Enter no fim executaria
-// o texto como comando.
+// A terminal with only the shell in the foreground doesn't get messages: the Enter at the end
+// would run the text as a command.
 const SHELLS = new Set(['sh', 'bash', 'zsh', 'fish', 'dash', 'ksh', 'tcsh', 'csh', 'nu', 'pwsh'])
 
-// As ligações moram no renderer; ele manda a lista inteira de novo a cada mudança.
-let ligacoes = []
+// Links live in the renderer; it sends the whole list again on every change.
+let links = []
 
-export function registrarMensagens(janela) {
-  ipcMain.on('ligacoes:definir', (_ev, novas) => {
-    ligacoes = novas
+export function registerMessages(win) {
+  ipcMain.on('links:set', (_ev, next) => {
+    links = next
   })
 
-  // Um pedido por conexão: o `anbu` escreve o JSON e fecha a escrita; a resposta volta
-  // depois do 'end'. allowHalfOpen deixa o servidor escrever depois que o cliente fechou o lado dele.
-  const servidor = createServer({ allowHalfOpen: true }, (conexao) => {
-    let pedido = ''
-    conexao.setEncoding('utf8')
-    conexao.on('data', (pedaco) => (pedido += pedaco))
-    conexao.on('end', () => {
-      let resposta
+  // One request per connection: `anbu` writes the JSON and ends its write side; the response
+  // goes back after 'end'. allowHalfOpen lets the server write after the client closed its side.
+  const server = createServer({ allowHalfOpen: true }, (conn) => {
+    let request = ''
+    conn.setEncoding('utf8')
+    conn.on('data', (chunk) => (request += chunk))
+    conn.on('end', () => {
+      let response
       try {
-        resposta = atender(JSON.parse(pedido), janela)
-      } catch (erro) {
-        resposta = { erro: erro.message }
+        response = handle(JSON.parse(request), win)
+      } catch (error) {
+        response = { error: error.message }
       }
-      conexao.end(JSON.stringify(resposta))
+      conn.end(JSON.stringify(response))
     })
-    conexao.on('error', () => {})
+    conn.on('error', () => {})
   })
-  // Socket de uma execução que morreu sem fechar direito impede o listen.
+  // A socket left behind by a run that died without cleaning up would make listen fail.
   rmSync(SOCKET, { force: true })
-  servidor.listen(SOCKET)
+  server.listen(SOCKET)
 
-  janela.on('closed', () => {
-    servidor.close()
-    ipcMain.removeAllListeners('ligacoes:definir')
+  win.on('closed', () => {
+    server.close()
+    ipcMain.removeAllListeners('links:set')
   })
 
-  // O que cada terminal precisa ter no ambiente para o `anbu` funcionar lá dentro.
+  // What every terminal needs in its environment for `anbu` to work inside it.
   return {
     PATH: `${dirname(anbu)}${delimiter}${process.env.PATH}`,
     ANBU_SOCK: SOCKET,
@@ -59,60 +59,60 @@ export function registrarMensagens(janela) {
   }
 }
 
-function atender({ de, comando, para, texto }, janela) {
-  const origem = terminais.get(Number(de))
-  if (!origem) throw new Error('este terminal não existe mais no anbu')
+function handle({ from, command, to, text }, win) {
+  const sender = terminals.get(Number(from))
+  if (!sender) throw new Error('this terminal no longer exists in anbu')
 
-  // Ligação não tem direção: vale tanto de→para quanto para→de.
-  const vizinhos = ligacoes.flatMap((l) =>
-    l.de === origem.no ? [l.para] : l.para === origem.no ? [l.de] : []
+  // Links have no direction: from→to works the same as to→from.
+  const peers = links.flatMap((l) =>
+    l.from === sender.nodeId ? [l.to] : l.to === sender.nodeId ? [l.from] : []
   )
 
-  if (comando === 'ligados') {
+  if (command === 'peers') {
     return {
-      ligados: vizinhos.map((no) => {
-        const alvo = acharNo(no)
-        const programa = alvo && programaDe(alvo)
-        return { no, programa, aceita: !SHELLS.has(programa) }
+      peers: peers.map((nodeId) => {
+        const target = findTerminal(nodeId)
+        const program = target && foregroundProgram(target)
+        return { nodeId, program, canReceive: !SHELLS.has(program) }
       })
     }
   }
 
-  if (comando === 'enviar') {
-    if (!vizinhos.includes(para)) throw new Error(`o terminal ${para} não está ligado a este`)
-    const alvo = acharNo(para)
-    if (!alvo) throw new Error(`o terminal ${para} não existe mais`)
-    if (SHELLS.has(programaDe(alvo))) {
-      throw new Error(`o terminal ${para} não está rodando nenhum agente, só o shell`)
+  if (command === 'send') {
+    if (!peers.includes(to)) throw new Error(`terminal ${to} is not linked to this one`)
+    const target = findTerminal(to)
+    if (!target) throw new Error(`terminal ${to} no longer exists`)
+    if (SHELLS.has(foregroundProgram(target))) {
+      throw new Error(`terminal ${to} is not running an agent, only a shell`)
     }
-    const limpo = limpar(texto)
-    if (!limpo.trim()) throw new Error('mensagem vazia')
+    const clean = stripControlChars(text)
+    if (!clean.trim()) throw new Error('empty message')
 
-    // O cabeçalho diz ao agente de lá quem mandou e como responder.
-    const cabecalho = `[anbu · mensagem do terminal ${origem.no} · responda com: anbu enviar ${origem.no} "..."]`
-    janela.webContents.send('pty:colar', alvo.id, `${cabecalho} ${limpo}`)
+    // The header tells the agent on the other side who sent it and how to reply.
+    const header = `[anbu · message from terminal ${sender.nodeId} · reply with: anbu send ${sender.nodeId} "..."]`
+    win.webContents.send('pty:paste', target.id, `${header} ${clean}`)
     return { ok: true }
   }
 
-  throw new Error(`comando desconhecido: ${comando}`)
+  throw new Error(`unknown command: ${command}`)
 }
 
-// Programa em primeiro plano no terminal (o agente, ou o próprio shell se nada estiver rodando).
-// O node-pty devolve o argv[0], que às vezes vem com caminho: /usr/bin/zsh.
-function programaDe({ term }) {
+// Program in the terminal's foreground (the agent, or the shell itself if nothing is running).
+// node-pty returns argv[0], which sometimes includes a path: /usr/bin/zsh.
+function foregroundProgram({ term }) {
   return basename(term.process)
 }
 
-function acharNo(no) {
-  for (const [id, terminal] of terminais) {
-    if (terminal.no === no) return { id, ...terminal }
+function findTerminal(nodeId) {
+  for (const [id, terminal] of terminals) {
+    if (terminal.nodeId === nodeId) return { id, ...terminal }
   }
   return null
 }
 
-// Tira caracteres de controle (menos \n e \t). Um ESC no texto viraria sequência de teclas
-// no terminal de destino: fecharia a colagem no meio e o resto chegaria como digitação.
-function limpar(texto = '') {
+// Strips control characters (except \n and \t). An ESC in the text would become a key sequence
+// in the target terminal: it would end the paste halfway and the rest would arrive as typing.
+function stripControlChars(text = '') {
   // eslint-disable-next-line no-control-regex
-  return String(texto).replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, '')
+  return String(text).replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, '')
 }

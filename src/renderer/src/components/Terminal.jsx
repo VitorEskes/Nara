@@ -3,111 +3,111 @@ import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 
-// Quanto esperar entre colar uma mensagem de outro agente e apertar o Enter.
-const ESPERA_ENTER = 500
+// How long to wait between pasting a message from another agent and pressing Enter.
+const ENTER_DELAY = 500
 
-// Um terminal de verdade: xterm.js desenha, o PTY no main executa.
-// `no` é o id do nó do canvas; o main precisa dele para saber a quais ligações o PTY pertence.
-export default function Terminal({ no, cmd, args, aoTerminar }) {
-  const caixa = useRef(null)
+// A real terminal: xterm.js draws it, the PTY in main runs it.
+// `nodeId` is the canvas node's id; main needs it to know which links the PTY belongs to.
+export default function Terminal({ nodeId, cmd, args, onExit }) {
+  const container = useRef(null)
 
-  // aoTerminar muda a cada render do pai. Se entrasse nas dependências do efeito abaixo,
-  // cada render mataria o PTY e criaria outro; guardado num ref, o efeito sempre lê o mais novo.
-  const aoTerminarRef = useRef(aoTerminar)
+  // onExit changes on every parent render. If it were a dependency of the effect below, every
+  // render would kill the PTY and spawn another; kept in a ref, the effect always reads the latest.
+  const onExitRef = useRef(onExit)
   useEffect(() => {
-    aoTerminarRef.current = aoTerminar
+    onExitRef.current = onExit
   })
 
   useEffect(() => {
     const term = new XTerm({ fontSize: 13, cursorBlink: true, theme: { background: '#0d0d10' } })
     const fit = new FitAddon()
     term.loadAddon(fit)
-    term.open(caixa.current)
-    corrigirMouseComZoom(term)
+    term.open(container.current)
+    fixMouseUnderZoom(term)
     fit.fit()
     term.focus()
 
     let id = null
-    let vivo = true
+    let alive = true
 
-    const pararDados = window.api.pty.aoReceber((de, dados) => {
-      if (de === id) term.write(dados)
+    const offData = window.api.pty.onData((from, data) => {
+      if (from === id) term.write(data)
     })
-    const pararSaida = window.api.pty.aoSair((de, code) => {
-      if (de !== id) return
-      // Saiu com sucesso (ex.: `exit`) fecha o nó; com erro, fica aberto para dar para ler o motivo.
-      if (code === 0) aoTerminarRef.current?.()
-      else term.write(`\r\n[fim] code=${code}\r\n`)
-    })
-
-    // Mensagem de outro agente (`anbu enviar`): entra como colagem, igual a Ctrl+V, e o Enter
-    // vai depois, separado. Se chegasse junto do texto, o agente poderia tomar o Enter como
-    // parte da colagem, e a mensagem ficaria parada no campo sem ser enviada.
-    const pararColar = window.api.pty.aoColar((de, texto) => {
-      if (de !== id) return
-      term.paste(texto)
-      setTimeout(() => vivo && term.input('\r', false), ESPERA_ENTER)
+    const offExit = window.api.pty.onExit((from, code) => {
+      if (from !== id) return
+      // A clean exit (e.g. `exit`) closes the node; on error it stays open to show why.
+      if (code === 0) onExitRef.current?.()
+      else term.write(`\r\n[process exited with code ${code}]\r\n`)
     })
 
-    window.api.pty.criar({ no, cmd, args, cols: term.cols, rows: term.rows }).then((novo) => {
-      // O StrictMode monta/desmonta duas vezes em dev: se já desmontou, mata o PTY órfão.
-      if (!vivo) return window.api.pty.matar(novo)
-      id = novo
+    // Message from another agent (`anbu send`): it comes in as a paste, like Ctrl+V, and the
+    // Enter follows separately. If it arrived with the text, the agent could take the Enter as
+    // part of the paste, and the message would sit in the input without being sent.
+    const offPaste = window.api.pty.onPaste((from, text) => {
+      if (from !== id) return
+      term.paste(text)
+      setTimeout(() => alive && term.input('\r', false), ENTER_DELAY)
     })
 
-    const digitar = term.onData((dados) => id && window.api.pty.escrever(id, dados))
+    window.api.pty.create({ nodeId, cmd, args, cols: term.cols, rows: term.rows }).then((newId) => {
+      // StrictMode mounts/unmounts twice in dev: if already unmounted, kill the orphan PTY.
+      if (!alive) return window.api.pty.kill(newId)
+      id = newId
+    })
 
-    // Mudou o tamanho da caixa -> recalcula cols/rows e avisa o PTY.
-    // Arrastando o canto, isto dispara a cada pixel; só avisa o PTY quando cols/rows mudam de fato,
-    // senão o programa lá dentro (Claude Code, vim) redesenha a tela à toa.
-    let ultimo = ''
-    const observador = new ResizeObserver(() => {
+    const input = term.onData((data) => id && window.api.pty.write(id, data))
+
+    // Container size changed -> recompute cols/rows and tell the PTY.
+    // While dragging the corner this fires on every pixel; the PTY is only told when cols/rows
+    // actually change, otherwise the program inside (Claude Code, vim) redraws for nothing.
+    let lastSize = ''
+    const observer = new ResizeObserver(() => {
       fit.fit()
-      const tamanho = `${term.cols}x${term.rows}`
-      if (!id || tamanho === ultimo) return
-      ultimo = tamanho
-      window.api.pty.redimensionar(id, term.cols, term.rows)
+      const size = `${term.cols}x${term.rows}`
+      if (!id || size === lastSize) return
+      lastSize = size
+      window.api.pty.resize(id, term.cols, term.rows)
     })
-    observador.observe(caixa.current)
+    observer.observe(container.current)
 
     return () => {
-      vivo = false
-      observador.disconnect()
-      digitar.dispose()
-      pararDados()
-      pararSaida()
-      pararColar()
-      if (id) window.api.pty.matar(id)
+      alive = false
+      observer.disconnect()
+      input.dispose()
+      offData()
+      offExit()
+      offPaste()
+      if (id) window.api.pty.kill(id)
       term.dispose()
     }
-  }, [no, cmd, args])
+  }, [nodeId, cmd, args])
 
-  return <div ref={caixa} className="terminal" />
+  return <div ref={container} className="terminal" />
 }
 
-// O xterm calcula a célula sob o mouse como (clientX - rect.left) / larguraDaCélula: a distância
-// vem em px de tela (já com o scale do canvas) e a célula em px de layout (sem scale). Aqui o
-// evento é "des-escalado" antes de chegar nele. Usa API privada (_core), por isso a versão do
-// @xterm/xterm está fixada no package.json — ao atualizar, conferir se isto ainda vale.
-function corrigirMouseComZoom(term) {
+// xterm computes the cell under the mouse as (clientX - rect.left) / cellWidth: the distance is
+// in screen px (already including the canvas scale) and the cell in layout px (without it). Here
+// the event is "unscaled" before it reaches xterm. This uses a private API (_core), which is why
+// @xterm/xterm is pinned in package.json — check that this still holds when upgrading.
+function fixMouseUnderZoom(term) {
   const mouse = term._core._mouseService
 
-  function desescalar(evento, elemento) {
-    const rect = elemento.getBoundingClientRect()
-    const escala = rect.width / elemento.offsetWidth || 1
+  function unscale(event, element) {
+    const rect = element.getBoundingClientRect()
+    const scale = rect.width / element.offsetWidth || 1
     return {
-      clientX: rect.left + (evento.clientX - rect.left) / escala,
-      clientY: rect.top + (evento.clientY - rect.top) / escala
+      clientX: rect.left + (event.clientX - rect.left) / scale,
+      clientY: rect.top + (event.clientY - rect.top) / scale
     }
   }
 
-  // Seleção de texto.
+  // Text selection.
   const getCoords = mouse.getCoords.bind(mouse)
-  mouse.getCoords = (evento, elemento, ...resto) =>
-    getCoords(desescalar(evento, elemento), elemento, ...resto)
+  mouse.getCoords = (event, element, ...rest) =>
+    getCoords(unscale(event, element), element, ...rest)
 
-  // Cliques repassados a programas que usam o mouse (Claude Code, htop, vim).
+  // Clicks forwarded to programs that use the mouse (Claude Code, htop, vim).
   const getMouseReportCoords = mouse.getMouseReportCoords.bind(mouse)
-  mouse.getMouseReportCoords = (evento, elemento) =>
-    getMouseReportCoords(desescalar(evento, elemento), elemento)
+  mouse.getMouseReportCoords = (event, element) =>
+    getMouseReportCoords(unscale(event, element), element)
 }

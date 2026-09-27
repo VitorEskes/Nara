@@ -15,14 +15,14 @@ body,
   background-image: radial-gradient(circle, #2a2a33 1px, transparent 1px);
 }
 
-.mundo {
+.world {
   position: absolute;
   top: 0;
   left: 0;
   transform-origin: 0 0;
 }
 
-.no {
+.node {
   position: absolute;
   display: flex;
   flex-direction: column;
@@ -33,7 +33,7 @@ body,
   box-shadow: 0 8px 24px rgb(0 0 0 / 40%);
 }
 
-.no-barra {
+.node-bar {
   height: 24px;
   flex-shrink: 0;
   padding: 0 10px;
@@ -49,25 +49,25 @@ body,
   cursor: grab;
 }
 
-.no-barra:active {
+.node-bar:active {
   cursor: grabbing;
 }
 
-/* min-height: 0 deixa o item flex encolher; sem ele o FitAddon mede uma caixa que cresce junto. */
-.no-conteudo {
+/* min-height: 0 lets the flex item shrink; without it FitAddon measures a box that grows too. */
+.node-body {
   position: relative;
   flex: 1;
   min-height: 0;
 }
 
-/* Sem padding aqui: o FitAddon mede este elemento. A margem vem do inset. */
+/* No padding here: FitAddon measures this element. The margin comes from inset. */
 .terminal {
   position: absolute;
   inset: 6px;
 }
 
-/* Canto inferior direito: arrastar redimensiona o nó. */
-.no-alca {
+/* Bottom-right corner: dragging it resizes the node. */
+.node-resize {
   position: absolute;
   right: 0;
   bottom: 0;
@@ -77,14 +77,14 @@ body,
   background: linear-gradient(135deg, transparent 50%, #3a3a45 50%);
 }
 
-.no-titulo {
+.node-title {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.no-fechar {
+.node-close {
   width: 18px;
   height: 18px;
   margin-right: -6px;
@@ -98,20 +98,20 @@ body,
   cursor: pointer;
 }
 
-.no-fechar:hover {
+.node-close:hover {
   color: #fff;
   background: #c4314b;
 }
 
-/* Fica fora do .mundo: não sofre pan nem zoom. */
-.ferramentas {
+/* Lives outside .world: not affected by pan or zoom. */
+.toolbar {
   position: absolute;
   top: 12px;
   left: 12px;
   z-index: 1;
 }
 
-.ferramentas button {
+.toolbar button {
   padding: 6px 12px;
   border: 1px solid #2a2a33;
   border-radius: 6px;
@@ -123,11 +123,11 @@ body,
   cursor: pointer;
 }
 
-.ferramentas button:hover {
+.toolbar button:hover {
   background: #22222a;
 }
 
-.vazio {
+.empty {
   position: absolute;
   inset: 0;
   display: grid;
@@ -139,8 +139,8 @@ body,
   pointer-events: none;
 }
 
-/* Dentro do .mundo, atrás dos nós. O svg tem 1x1 e desenha tudo no overflow. */
-.ligacoes {
+/* Inside .world, behind the nodes. The svg is 1x1 and draws everything in its overflow. */
+.links {
   position: absolute;
   top: 0;
   left: 0;
@@ -149,39 +149,39 @@ body,
   pointer-events: none;
 }
 
-.ligacao {
+.link {
   cursor: pointer;
 }
 
-/* O svg inteiro ignora o ponteiro; só este traço invisível recebe clique. */
-.ligacao-toque {
+/* The whole svg ignores the pointer; only this invisible stroke receives clicks. */
+.link-hitbox {
   stroke: transparent;
   stroke-width: 14;
   pointer-events: stroke;
 }
 
-/* non-scaling-stroke: a espessura fica igual na tela em qualquer zoom. */
-.ligacao-linha,
-.ligacao-rascunho {
+/* non-scaling-stroke: the width stays the same on screen at any zoom. */
+.link-line,
+.link-draft {
   stroke-width: 2;
   vector-effect: non-scaling-stroke;
 }
 
-.ligacao-linha {
+.link-line {
   stroke: #4a4a58;
 }
 
-.ligacao:hover .ligacao-linha {
+.link:hover .link-line {
   stroke: #c4314b;
 }
 
-.ligacao-rascunho {
+.link-draft {
   stroke: #5b8def;
   stroke-dasharray: 6 4;
 }
 
-/* Bolinha na barra: arrastar dela até outro nó cria a ligação. */
-.no-porta {
+/* Dot on the bar: dragging from it to another node creates a link. */
+.node-port {
   width: 8px;
   height: 8px;
   margin-right: 8px;
@@ -191,13 +191,13 @@ body,
   cursor: crosshair;
 }
 
-.no-porta:hover {
+.node-port:hover {
   border-color: #5b8def;
   background: #5b8def;
 }
 
-/* Nó sob o cursor enquanto uma ligação é puxada. */
-.no.alvo {
+/* Node under the cursor while a link is being dragged. */
+.node.link-target {
   border-color: #5b8def;
   box-shadow:
     0 0 0 2px #5b8def,
