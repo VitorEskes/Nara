@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Canvas from './components/Canvas'
-import Ligacoes from './components/Ligacoes'
-import No from './components/No'
+import Ligacoes from './components/Links'
+import No from './components/CanvasNode'
 import Terminal from './components/Terminal'
 
 const LARGURA = 640
