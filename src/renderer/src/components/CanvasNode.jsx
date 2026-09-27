@@ -2,8 +2,10 @@ const MIN_WIDTH = 240
 const MIN_HEIGHT = 120
 
 // A box in the world: position and size are in world coordinates, not screen coordinates.
+// Without onLinkStart the node has no port, so links can't start from it.
 export default function CanvasNode({
   id,
+  type,
   x,
   y,
   w,
@@ -32,16 +34,19 @@ export default function CanvasNode({
       className={isLinkTarget ? 'node link-target' : 'node'}
       // App finds the node under the cursor via the DOM (elementFromPoint) and reads its id here.
       data-id={id}
+      data-type={type}
       style={{ left: x, top: y, width: w, height: h, zIndex: layer }}
       // Capture: runs before any child (including xterm) gets a chance to swallow the event.
       onPointerDownCapture={onRaise}
     >
       <div className="node-bar" onPointerDown={move}>
-        <div
-          className="node-port"
-          title="Drag to another terminal to link them"
-          onPointerDown={onLinkStart}
-        />
+        {onLinkStart && (
+          <div
+            className="node-port"
+            title="Drag to another terminal to link them"
+            onPointerDown={onLinkStart}
+          />
+        )}
         <span className="node-title">{title}</span>
         <button
           className="node-close"

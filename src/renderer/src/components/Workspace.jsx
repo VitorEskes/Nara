@@ -3,9 +3,13 @@ import Canvas from './Canvas'
 import Links from './Links'
 import CanvasNode from './CanvasNode'
 import Terminal from './Terminal'
+import Note from './Note'
 
-const NODE_WIDTH = 640
-const NODE_HEIGHT = 400
+// Size of a new node of each type.
+const SIZES = {
+  terminal: { w: 640, h: 400 },
+  note: { w: 280, h: 200 }
+}
 
 // One canvas with its camera, nodes and links. `saved` is what was loaded from disk: from then on
 // this component owns the state, and main keeps a copy that it saves.
@@ -47,25 +51,30 @@ export default function Workspace({ workspaceId, saved, active }) {
     updateNode(id, { layer: ++topLayer.current })
   }
 
-  // Creates a terminal centered on the point (in world coordinates), in front of the others.
-  function createNode(center) {
+  // Creates a node centered on the point (in world coordinates), in front of the others.
+  // Terminals and notes share the id sequence: the id is what `anbu send` takes, and it has to
+  // be unique across the whole workspace.
+  function createNode(type, center) {
     const id = nextId.current++
+    const { w, h } = SIZES[type]
     const node = {
       id,
-      x: Math.round(center.x - NODE_WIDTH / 2),
-      y: Math.round(center.y - NODE_HEIGHT / 2),
-      w: NODE_WIDTH,
-      h: NODE_HEIGHT,
+      type,
+      x: Math.round(center.x - w / 2),
+      y: Math.round(center.y - h / 2),
+      w,
+      h,
       layer: ++topLayer.current,
-      title: `terminal ${id}`
+      title: `${type} ${id}`
     }
+    if (type === 'note') node.text = ''
     setNodes((current) => [...current, node])
   }
 
   // Center of the viewport converted to world coordinates: world = (screen - (x, y)) / z.
-  function createNodeAtCenter() {
+  function createNodeAtCenter(type) {
     const { width, height } = container.current.getBoundingClientRect()
-    createNode({ x: (width / 2 - cam.x) / cam.z, y: (height / 2 - cam.y) / cam.z })
+    createNode(type, { x: (width / 2 - cam.x) / cam.z, y: (height / 2 - cam.y) / cam.z })
   }
 
   // Removing the node from state unmounts its <Terminal>, whose cleanup kills the PTY.
@@ -74,7 +83,8 @@ export default function Workspace({ workspaceId, saved, active }) {
     setLinks((current) => current.filter((l) => l.from !== id && l.to !== id))
   }
 
-  // Dragging from a node's port to another node creates a link between the two.
+  // Dragging from a node's port to another node creates a link between the two. Only terminals
+  // have a port and only terminals accept a link: a link is how agents send each other messages.
   function startLink(from, e) {
     if (e.button !== 0) return
     // Without this the pointerdown bubbles up to the bar and the node starts moving.
@@ -87,7 +97,8 @@ export default function Workspace({ workspaceId, saved, active }) {
     function nodeUnder(ev) {
       const el = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.node')
       const id = Number(el?.dataset.id)
-      return id && id !== from ? id : null
+      const node = nodes.find((n) => n.id === id)
+      return node?.type === 'terminal' && id !== from ? id : null
     }
 
     // clientX/Y count from the window, and the viewport starts below the tab bar.
@@ -141,23 +152,30 @@ export default function Workspace({ workspaceId, saved, active }) {
             onChange={(changes) => updateNode(node.id, changes)}
             onRaise={() => raise(node.id)}
             onClose={() => closeNode(node.id)}
-            onLinkStart={(e) => startLink(node.id, e)}
+            onLinkStart={node.type === 'terminal' ? (e) => startLink(node.id, e) : undefined}
           >
-            <Terminal
-              workspaceId={workspaceId}
-              nodeId={node.id}
-              cwd={node.cwd}
-              onExit={() => closeNode(node.id)}
-            />
+            {node.type === 'note' ? (
+              <Note text={node.text} onChange={(text) => updateNode(node.id, { text })} />
+            ) : (
+              <Terminal
+                workspaceId={workspaceId}
+                nodeId={node.id}
+                cwd={node.cwd}
+                onExit={() => closeNode(node.id)}
+              />
+            )}
           </CanvasNode>
         ))}
       </Canvas>
 
       <div className="toolbar">
-        <button onClick={createNodeAtCenter}>+ Terminal</button>
+        <button onClick={() => createNodeAtCenter('terminal')}>+ Terminal</button>
+        <button onClick={() => createNodeAtCenter('note')}>+ Note</button>
       </div>
 
-      {nodes.length === 0 && <div className="empty">Click “+ Terminal” to open a terminal</div>}
+      {nodes.length === 0 && (
+        <div className="empty">Click “+ Terminal” to open a terminal, or “+ Note” to write one</div>
+      )}
     </div>
   )
 }

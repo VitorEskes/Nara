@@ -117,7 +117,9 @@ function read(id) {
     const { version, name, camera, nodes, links } = JSON.parse(json)
     if (version !== VERSION) throw new Error(`unsupported version ${version}`)
     if (!Array.isArray(nodes) || !Array.isArray(links)) throw new Error('malformed file')
-    return { json, workspace: { name, camera, nodes, links } }
+    // Files saved before notes existed have no type: back then every node was a terminal.
+    const typed = nodes.map((node) => ({ type: 'terminal', ...node }))
+    return { json, workspace: { name, camera, nodes: typed, links } }
   } catch (error) {
     console.error(`anbu: could not read workspace ${id}: ${error.message}`)
     return null
@@ -161,7 +163,9 @@ function save(id) {
       name,
       camera,
       // The renderer doesn't know where each shell has cd'd to since it started; the OS does.
-      nodes: nodes.map((node) => ({ ...node, cwd: currentCwd(id, node.id) ?? node.cwd })),
+      nodes: nodes.map((node) =>
+        node.type === 'terminal' ? { ...node, cwd: currentCwd(id, node.id) ?? node.cwd } : node
+      ),
       links
     },
     null,
