@@ -12,6 +12,10 @@ export const terminals = new Map()
 let nextId = 1
 // Where the folder picker opens: the folder of the last agent opened.
 let lastFolder = process.env.HOME
+// How long a killed terminal gets to exit on its own before it's killed outright.
+const KILL_GRACE = 2000
+// Exits still pending from kill().
+const exiting = new Set()
 
 // `extraEnv` holds the variables every terminal gets (the ones the `anbu` command uses).
 export function registerPty(win, extraEnv) {
@@ -31,7 +35,11 @@ export function registerPty(win, extraEnv) {
       env: { ...process.env, ...extraEnv, ANBU_PTY: String(id) }
     })
 
-    term.onData((data) => win.webContents.send('pty:data', id, data))
+    // A killed program can still write on its way out (Claude Code restores the terminal), and
+    // by then the window may be gone: sending to it would throw in main.
+    term.onData((data) => {
+      if (!win.isDestroyed()) win.webContents.send('pty:data', id, data)
+    })
     term.onExit(({ exitCode }) => {
       terminals.delete(id)
       if (!win.isDestroyed()) win.webContents.send('pty:exit', id, exitCode)
@@ -96,7 +104,34 @@ export function currentCwd(workspaceId, nodeId) {
   return undefined
 }
 
+// Resolves once every killed terminal is gone. Electron can't quit while a PTY's process is
+// alive (node-pty waits for it), so index.js holds the quit until then.
+export function terminalsExited() {
+  return Promise.all(exiting)
+}
+
 function kill(id) {
-  terminals.get(id)?.term.kill()
+  const terminal = terminals.get(id)
+  if (!terminal) return
   terminals.delete(id)
+  const { term } = terminal
+
+  // SIGHUP, as when a terminal window closes: a shell saves its history and exits. A program
+  // that ignores it would keep running with no terminal (and keep anbu from quitting), so
+  // whatever is still there after the grace period gets SIGKILL.
+  term.kill()
+  const force = setTimeout(() => {
+    try {
+      process.kill(term.pid, 'SIGKILL')
+    } catch {
+      // Already gone.
+    }
+  }, KILL_GRACE)
+
+  const exited = new Promise((resolve) => term.onExit(resolve))
+  exiting.add(exited)
+  exited.then(() => {
+    clearTimeout(force)
+    exiting.delete(exited)
+  })
 }

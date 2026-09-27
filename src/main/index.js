@@ -3,7 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { registerMessages } from './messages'
-import { registerPty } from './pty'
+import { registerPty, terminalsExited } from './pty'
 import { registerWorkspaces } from './workspaces'
 
 function createWindow() {
@@ -59,4 +59,16 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+// Closing the window kills the terminals, but Electron hangs if it quits while one of them is
+// still running. The first quit waits for them to exit; the second one goes through.
+let terminalsDone = false
+app.on('will-quit', (event) => {
+  if (terminalsDone) return
+  event.preventDefault()
+  terminalsExited().then(() => {
+    terminalsDone = true
+    app.quit()
+  })
 })
