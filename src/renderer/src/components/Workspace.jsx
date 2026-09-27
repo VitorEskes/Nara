@@ -4,6 +4,8 @@ import Links from './Links'
 import CanvasNode from './CanvasNode'
 import Terminal from './Terminal'
 import Note from './Note'
+import Drawings from './Drawings'
+import { touches } from '../drawing'
 import { AGENTS } from '../../../shared/agents'
 
 // Size of a new node of each type.
@@ -12,7 +14,14 @@ const SIZES = {
   note: { w: 280, h: 200 }
 }
 
-// One canvas with its camera, nodes and links. `saved` is what was loaded from disk: from then on
+// Drawing sizes, in screen pixels at the zoom in use: a stroke drawn zoomed out is as thick on
+// screen as one drawn up close, and both scale with the canvas afterwards.
+const STROKE_WIDTH = 3
+// A new point is only recorded this far from the last one, which keeps the saved file small.
+const MIN_STEP = 2
+const ERASER_RADIUS = 8
+
+// One canvas with its camera, nodes, links and drawings. `saved` is what was loaded from disk: from then on
 // this component owns the state, and main keeps a copy that it saves.
 // An inactive workspace is hidden, not unmounted, so its terminals keep running.
 export default function Workspace({ workspaceId, saved, active }) {
@@ -24,9 +33,18 @@ export default function Workspace({ workspaceId, saved, active }) {
   // Link being dragged: source node, tip in world coordinates and the valid node under the
   // cursor (or null).
   const [draft, setDraft] = useState(null)
+  const [strokes, setStrokes] = useState(saved.strokes)
+  // 'draw', 'erase' or null (the pointer works on the nodes as usual).
+  const [tool, setTool] = useState(null)
+  // Stroke being drawn. The ref is what the handlers build on: pointerup can arrive before React
+  // renders the last move, and the state would still have the old points.
+  const [sketch, setSketch] = useState(null)
+  const sketchRef = useRef(null)
+  const lastErase = useRef(null)
   // Counters pick up after the saved ids and layers.
   const nextId = useRef(highest(saved.nodes, 'id') + 1)
   const nextLinkId = useRef(highest(saved.links, 'id') + 1)
+  const nextStrokeId = useRef(highest(saved.strokes, 'id') + 1)
   const topLayer = useRef(highest(saved.nodes, 'layer'))
   // The link drag reads the camera from its listeners; the ref avoids using a stale camera
   // if the user zooms mid-drag.
@@ -37,8 +55,8 @@ export default function Workspace({ workspaceId, saved, active }) {
 
   // Main saves the workspace to disk and delivers agent messages along its links.
   useEffect(() => {
-    window.api.workspace.update(workspaceId, { camera: cam, nodes, links })
-  }, [workspaceId, cam, nodes, links])
+    window.api.workspace.update(workspaceId, { camera: cam, nodes, links, strokes })
+  }, [workspaceId, cam, nodes, links, strokes])
 
   // An agent wrote to a note with `anbu note`. Main has already changed its own copy; this
   // brings the screen in line with it.
@@ -165,9 +183,60 @@ export default function Workspace({ workspaceId, saved, active }) {
     setLinks((current) => current.filter((l) => l.id !== id))
   }
 
+  function toolStart(point) {
+    if (tool === 'draw') {
+      updateSketch({ width: round(STROKE_WIDTH / cam.z, 100), points: [roundPoint(point)] })
+    } else {
+      lastErase.current = point
+      erase(point, point)
+    }
+  }
+
+  function toolMove(point) {
+    if (tool === 'draw') {
+      const current = sketchRef.current
+      const [lx, ly] = current.points[current.points.length - 1]
+      if (Math.hypot(point.x - lx, point.y - ly) < MIN_STEP / cam.z) return
+      updateSketch({ ...current, points: [...current.points, roundPoint(point)] })
+    } else {
+      erase(lastErase.current, point)
+      lastErase.current = point
+    }
+  }
+
+  function toolEnd() {
+    const current = sketchRef.current
+    updateSketch(null)
+    if (!current) return
+    const stroke = { id: nextStrokeId.current++, ...current }
+    setStrokes((all) => [...all, stroke])
+  }
+
+  function updateSketch(next) {
+    sketchRef.current = next
+    setSketch(next)
+  }
+
+  // The eraser removes whole strokes: any stroke it touches on its way from `from` to `to`.
+  function erase(from, to) {
+    const radius = ERASER_RADIUS / cam.z
+    setStrokes((all) => {
+      const kept = all.filter((stroke) => !touches(stroke, from, to, radius))
+      return kept.length === all.length ? all : kept
+    })
+  }
+
   return (
     <div className="workspace" ref={container} hidden={!active}>
-      <Canvas cam={cam} setCam={setCam}>
+      <Canvas
+        cam={cam}
+        setCam={setCam}
+        tool={tool}
+        onToolStart={toolStart}
+        onToolMove={toolMove}
+        onToolEnd={toolEnd}
+        overlay={<Drawings strokes={strokes} sketch={sketch} />}
+      >
         <Links nodes={nodes} links={links} draft={draft} onRemove={removeLink} />
         {nodes.map((node) => (
           <CanvasNode
@@ -204,9 +273,20 @@ export default function Workspace({ workspaceId, saved, active }) {
           </button>
         ))}
         <button onClick={() => createNodeAtCenter('note', { text: '' })}>+ Note</button>
+        <span className="toolbar-divider" />
+        {['draw', 'erase'].map((name) => (
+          <button
+            key={name}
+            className={tool === name ? 'active' : undefined}
+            // Clicking the active tool turns it off.
+            onClick={() => setTool((current) => (current === name ? null : name))}
+          >
+            {name === 'draw' ? 'Draw' : 'Erase'}
+          </button>
+        ))}
       </div>
 
-      {nodes.length === 0 && (
+      {nodes.length === 0 && strokes.length === 0 && (
         <div className="empty">Open a terminal, an agent or a note from the toolbar</div>
       )}
     </div>
@@ -215,4 +295,13 @@ export default function Workspace({ workspaceId, saved, active }) {
 
 function highest(items, key) {
   return items.reduce((max, item) => Math.max(max, item[key]), 0)
+}
+
+// Points are saved to a tenth of a world unit: enough detail up close, and a shorter file.
+function roundPoint({ x, y }) {
+  return [round(x, 10), round(y, 10)]
+}
+
+function round(value, factor) {
+  return Math.round(value * factor) / factor
 }

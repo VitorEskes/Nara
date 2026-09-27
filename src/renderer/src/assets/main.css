@@ -40,6 +40,41 @@ body,
   transform-origin: 0 0;
 }
 
+/* Same camera as .world, painted after it: what's here sits above every node. */
+.world-overlay {
+  pointer-events: none;
+}
+
+/* With a drawing tool on, nothing in the world takes the pointer (not even link hitboxes or
+   xterm's own elements), so every drag lands on the viewport. */
+.viewport[data-tool] .world,
+.viewport[data-tool] .world * {
+  pointer-events: none;
+}
+
+.viewport[data-tool='draw'] {
+  cursor: crosshair;
+}
+
+.viewport[data-tool='erase'] {
+  cursor: cell;
+}
+
+/* 1x1 like .links, drawing everything in its overflow. */
+.drawings {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+}
+
+.drawings path {
+  fill: none;
+  stroke: #e8e8ee;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .node {
   position: absolute;
   display: flex;
@@ -196,6 +231,18 @@ body,
 
 .toolbar button:hover {
   background: #22222a;
+}
+
+.toolbar button.active {
+  color: #b3c3f2;
+  border-color: #5b8def;
+  background: #1e2540;
+}
+
+.toolbar-divider {
+  width: 1px;
+  margin: 4px 2px;
+  background: #2a2a33;
 }
 
 .empty {

@@ -24,3 +24,4 @@ npm run dev
 - `src/preload/index.js` — exposes `window.api.pty` and `window.api.workspace` to the renderer
 - `src/renderer/src/components/Terminal.jsx` — an xterm.js terminal connected to a PTY
 - `src/renderer/src/components/Note.jsx` — a sticky note, whose text is saved with the workspace
+- `src/renderer/src/components/Drawings.jsx` + `src/renderer/src/drawing.js` — freehand strokes drawn over the canvas, and the geometry behind them

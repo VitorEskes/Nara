@@ -4,23 +4,53 @@ const ZOOM_MIN = 0.1
 const ZOOM_MAX = 4
 const GRID = 20
 
-export default function Canvas({ cam, setCam, children }) {
+// `children` live in the world, `overlay` too but drawn above them (and never taking the pointer).
+// With a `tool` on, the nodes ignore the pointer and a left-button drag anywhere goes to
+// onToolStart/Move/End, in world coordinates; the other buttons and the wheel still pan.
+export default function Canvas({
+  cam,
+  setCam,
+  tool,
+  onToolStart,
+  onToolMove,
+  onToolEnd,
+  overlay,
+  children
+}) {
   const viewport = useRef(null)
-  const panning = useRef(false)
+  // What the current drag does: 'pan', 'tool' or nothing.
+  const drag = useRef(null)
+
+  // world = (screen - (x, y)) / z, with screen counted from the viewport's corner.
+  function toWorld(e) {
+    const rect = viewport.current.getBoundingClientRect()
+    return { x: (e.clientX - rect.left - cam.x) / cam.z, y: (e.clientY - rect.top - cam.y) / cam.z }
+  }
 
   function onPointerDown(e) {
     if (e.target !== e.currentTarget) return
-    panning.current = true
     e.currentTarget.setPointerCapture(e.pointerId)
+    if (tool && e.button === 0) {
+      drag.current = 'tool'
+      onToolStart(toWorld(e))
+    } else {
+      drag.current = 'pan'
+    }
   }
 
   function onPointerMove(e) {
-    if (!panning.current) return
-    setCam((c) => ({ ...c, x: c.x + e.movementX, y: c.y + e.movementY }))
+    if (drag.current === 'pan') {
+      setCam((c) => ({ ...c, x: c.x + e.movementX, y: c.y + e.movementY }))
+    } else if (drag.current === 'tool') {
+      // The browser hands over one pointermove per frame; the coalesced events are every sample
+      // in between, which keeps quick strokes from turning into straight segments.
+      for (const sample of e.nativeEvent.getCoalescedEvents?.() ?? [e]) onToolMove(toWorld(sample))
+    }
   }
 
   function onPointerUp() {
-    panning.current = false
+    if (drag.current === 'tool') onToolEnd()
+    drag.current = null
   }
 
   useEffect(() => {
@@ -46,10 +76,13 @@ export default function Canvas({ cam, setCam, children }) {
     return () => el.removeEventListener('wheel', onWheel)
   }, [setCam])
 
+  const transform = `translate(${cam.x}px, ${cam.y}px) scale(${cam.z})`
+
   return (
     <div
       ref={viewport}
       className="viewport"
+      data-tool={tool || undefined}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -59,11 +92,11 @@ export default function Canvas({ cam, setCam, children }) {
         backgroundPosition: `${cam.x}px ${cam.y}px`
       }}
     >
-      <div
-        className="world"
-        style={{ transform: `translate(${cam.x}px, ${cam.y}px) scale(${cam.z})` }}
-      >
+      <div className="world" style={{ transform }}>
         {children}
+      </div>
+      <div className="world world-overlay" style={{ transform }}>
+        {overlay}
       </div>
     </div>
   )

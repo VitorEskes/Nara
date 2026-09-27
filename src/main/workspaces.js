@@ -114,12 +114,14 @@ function load(id) {
 function read(id) {
   try {
     const json = readFileSync(workspacePath(id), 'utf8')
-    const { version, name, camera, nodes, links } = JSON.parse(json)
+    const { version, name, camera, nodes, links, strokes = [] } = JSON.parse(json)
     if (version !== VERSION) throw new Error(`unsupported version ${version}`)
-    if (!Array.isArray(nodes) || !Array.isArray(links)) throw new Error('malformed file')
+    if (![nodes, links, strokes].every(Array.isArray)) throw new Error('malformed file')
     // Files saved before notes existed have no type: back then every node was a terminal.
     const typed = nodes.map((node) => ({ type: 'terminal', ...node }))
-    return { json, workspace: { name, camera, nodes: typed, links } }
+    // Older files have no strokes at all, which the default above covers.
+    const drawn = strokes.filter((stroke) => typeof stroke.points === 'string').map(unpackStroke)
+    return { json, workspace: { name, camera, nodes: typed, links, strokes: drawn } }
   } catch (error) {
     console.error(`anbu: could not read workspace ${id}: ${error.message}`)
     return null
@@ -129,7 +131,7 @@ function read(id) {
 function create() {
   const id = randomUUID()
   const name = nextName()
-  workspaces.set(id, { name, camera: { x: 0, y: 0, z: 1 }, nodes: [], links: [] })
+  workspaces.set(id, { name, camera: { x: 0, y: 0, z: 1 }, nodes: [], links: [], strokes: [] })
   save(id)
   return { id, name }
 }
@@ -166,7 +168,7 @@ function save(id) {
   clearTimeout(timers.get(id))
   timers.delete(id)
 
-  const { name, camera, nodes, links } = workspaces.get(id)
+  const { name, camera, nodes, links, strokes } = workspaces.get(id)
   const json = JSON.stringify(
     {
       version: VERSION,
@@ -176,7 +178,8 @@ function save(id) {
       nodes: nodes.map((node) =>
         node.type === 'terminal' ? { ...node, cwd: currentCwd(id, node.id) ?? node.cwd } : node
       ),
-      links
+      links,
+      strokes: strokes.map(packStroke)
     },
     null,
     2
@@ -188,6 +191,19 @@ function save(id) {
     written.set(id, json)
   } catch (error) {
     console.error(`anbu: could not save workspace ${id}: ${error.message}`)
+  }
+}
+
+// On disk a stroke's points are one "x,y x,y ..." string, the format of SVG's `points`: as
+// arrays, the indented JSON would spend four lines on every point.
+function packStroke(stroke) {
+  return { ...stroke, points: stroke.points.map((point) => point.join(',')).join(' ') }
+}
+
+function unpackStroke(stroke) {
+  return {
+    ...stroke,
+    points: stroke.points.split(' ').map((point) => point.split(',').map(Number))
   }
 }
 
