@@ -84,6 +84,17 @@ body,
   inset: 6px;
 }
 
+/* Which agent the terminal opened with. */
+.node-badge {
+  flex-shrink: 0;
+  margin: 0 8px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #b3c3f2;
+  background: #1e2540;
+}
+
 /* Warm tones set notes apart from terminals at a glance. */
 .node[data-type='note'] {
   border-color: #3d3722;

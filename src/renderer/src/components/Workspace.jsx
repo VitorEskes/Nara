@@ -4,6 +4,7 @@ import Links from './Links'
 import CanvasNode from './CanvasNode'
 import Terminal from './Terminal'
 import Note from './Note'
+import { AGENTS } from '../../../shared/agents'
 
 // Size of a new node of each type.
 const SIZES = {
@@ -64,10 +65,10 @@ export default function Workspace({ workspaceId, saved, active }) {
     updateNode(id, { layer: ++topLayer.current })
   }
 
-  // Creates a node centered on the point (in world coordinates), in front of the others.
-  // Terminals and notes share the id sequence: the id is what `anbu send` takes, and it has to
-  // be unique across the whole workspace.
-  function createNode(type, center) {
+  // Creates a node centered on the point (in world coordinates), in front of the others, with any
+  // extra `fields` its type needs. Terminals and notes share the id sequence: the id is what
+  // `anbu send` takes, and it has to be unique across the whole workspace.
+  function createNode(type, center, fields) {
     const id = nextId.current++
     const { w, h } = SIZES[type]
     const node = {
@@ -78,16 +79,23 @@ export default function Workspace({ workspaceId, saved, active }) {
       w,
       h,
       layer: ++topLayer.current,
-      title: `${type} ${id}`
+      title: `${type} ${id}`,
+      ...fields
     }
-    if (type === 'note') node.text = ''
     setNodes((current) => [...current, node])
   }
 
   // Center of the viewport converted to world coordinates: world = (screen - (x, y)) / z.
-  function createNodeAtCenter(type) {
+  function createNodeAtCenter(type, fields) {
     const { width, height } = container.current.getBoundingClientRect()
-    createNode(type, { x: (width / 2 - cam.x) / cam.z, y: (height / 2 - cam.y) / cam.z })
+    createNode(type, { x: (width / 2 - cam.x) / cam.z, y: (height / 2 - cam.y) / cam.z }, fields)
+  }
+
+  // An agent node is a terminal that opens straight into the agent. It keeps the "terminal N"
+  // title, since that's how other agents and `anbu send` refer to it.
+  async function createAgent(agent) {
+    const cwd = await window.api.pty.pickFolder(agent)
+    if (cwd) createNodeAtCenter('terminal', { agent, cwd })
   }
 
   // Removing the node from state unmounts its <Terminal>, whose cleanup kills the PTY.
@@ -164,6 +172,7 @@ export default function Workspace({ workspaceId, saved, active }) {
           <CanvasNode
             key={node.id}
             {...node}
+            badge={AGENTS[node.agent]?.label}
             isLinkTarget={draft?.target === node.id}
             onChange={(changes) => updateNode(node.id, changes)}
             onRaise={() => raise(node.id)}
@@ -176,6 +185,7 @@ export default function Workspace({ workspaceId, saved, active }) {
               <Terminal
                 workspaceId={workspaceId}
                 nodeId={node.id}
+                agent={node.agent}
                 cwd={node.cwd}
                 onExit={() => closeNode(node.id)}
               />
@@ -186,11 +196,16 @@ export default function Workspace({ workspaceId, saved, active }) {
 
       <div className="toolbar">
         <button onClick={() => createNodeAtCenter('terminal')}>+ Terminal</button>
-        <button onClick={() => createNodeAtCenter('note')}>+ Note</button>
+        {Object.entries(AGENTS).map(([agent, { label }]) => (
+          <button key={agent} onClick={() => createAgent(agent)}>
+            + {label}
+          </button>
+        ))}
+        <button onClick={() => createNodeAtCenter('note', { text: '' })}>+ Note</button>
       </div>
 
       {nodes.length === 0 && (
-        <div className="empty">Click “+ Terminal” to open a terminal, or “+ Note” to write one</div>
+        <div className="empty">Open a terminal, an agent or a note from the toolbar</div>
       )}
     </div>
   )

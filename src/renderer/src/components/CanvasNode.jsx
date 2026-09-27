@@ -11,6 +11,7 @@ export default function CanvasNode({
   h,
   layer,
   title,
+  badge,
   isLinkTarget,
   onChange,
   onRaise,
@@ -45,6 +46,7 @@ export default function CanvasNode({
           onPointerDown={onLinkStart}
         />
         <span className="node-title">{title}</span>
+        {badge && <span className="node-badge">{badge}</span>}
         <button
           className="node-close"
           title="Close"

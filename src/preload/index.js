@@ -5,6 +5,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 const api = {
   pty: {
     create: (options) => ipcRenderer.invoke('pty:create', options),
+    pickFolder: (agent) => ipcRenderer.invoke('pty:pick-folder', agent),
     write: (id, data) => ipcRenderer.send('pty:write', id, data),
     resize: (id, cols, rows) => ipcRenderer.send('pty:resize', id, cols, rows),
     kill: (id) => ipcRenderer.send('pty:kill', id),
