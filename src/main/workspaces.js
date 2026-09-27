@@ -142,6 +142,16 @@ function nextName() {
   return `workspace ${n}`
 }
 
+// Changes a node in main's copy, for edits that don't start in the renderer (an agent writing to
+// a note). The copy has to change right away: two agents appending to the same note build on
+// what's here, and waiting for the renderer to echo the first write would lose it.
+export function updateNode(id, nodeId, changes) {
+  const workspace = workspaces.get(id)
+  if (!workspace) return
+  const nodes = workspace.nodes.map((node) => (node.id === nodeId ? { ...node, ...changes } : node))
+  change(id, { nodes })
+}
+
 function change(id, patch) {
   if (!workspaces.has(id)) return
   workspaces.set(id, { ...workspaces.get(id), ...patch })

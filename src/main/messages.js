@@ -4,11 +4,12 @@ import { tmpdir } from 'os'
 import { basename, delimiter, dirname, join } from 'path'
 import anbu from '../../resources/bin/anbu?asset'
 import { findTerminal, terminals } from './pty'
-import { workspaces } from './workspaces'
+import { updateNode, workspaces } from './workspaces'
 
 // Agents talk by running the `anbu` command in their own terminal. The command talks to this
 // server over a socket, and the server pastes the message into the terminal on the other end of
 // the link as if someone had typed it. The agent there replies the same way.
+// A note on the other end of a link works as a shared scratchpad: the agent reads and writes it.
 // The pid in the name lets two anbu instances run at once without one stealing the other's socket.
 const SOCKET = join(tmpdir(), `anbu-${process.pid}.sock`)
 
@@ -49,27 +50,32 @@ export function registerMessages(win) {
   }
 }
 
-function handle({ from, command, to, text }, win) {
+function handle({ from, command, action, to, text }, win) {
   const sender = terminals.get(Number(from))
   if (!sender) throw new Error('this terminal no longer exists in anbu')
   const { workspaceId, nodeId } = sender
 
   // Links have no direction: from→to works the same as to→from.
-  const links = workspaces.get(workspaceId)?.links ?? []
+  const { nodes = [], links = [] } = workspaces.get(workspaceId) ?? {}
   const peers = links.flatMap((l) => (l.from === nodeId ? [l.to] : l.to === nodeId ? [l.from] : []))
+  const nodeOf = (id) => nodes.find((node) => node.id === id)
 
   if (command === 'peers') {
     return {
       peers: peers.map((peerId) => {
+        if (nodeOf(peerId)?.type === 'note') return { nodeId: peerId, type: 'note' }
         const target = findTerminal(workspaceId, peerId)
         const program = target && foregroundProgram(target)
-        return { nodeId: peerId, program, canReceive: !SHELLS.has(program) }
+        return { nodeId: peerId, type: 'terminal', program, canReceive: !SHELLS.has(program) }
       })
     }
   }
 
   if (command === 'send') {
     if (!peers.includes(to)) throw new Error(`terminal ${to} is not linked to this one`)
+    if (nodeOf(to)?.type === 'note') {
+      throw new Error(`${to} is a note, not a terminal: use anbu note write ${to} "..."`)
+    }
     const target = findTerminal(workspaceId, to)
     if (!target) throw new Error(`terminal ${to} no longer exists`)
     if (SHELLS.has(foregroundProgram(target))) {
@@ -84,7 +90,34 @@ function handle({ from, command, to, text }, win) {
     return { ok: true }
   }
 
+  if (command === 'note') {
+    if (!peers.includes(to)) throw new Error(`note ${to} is not linked to this terminal`)
+    const note = nodeOf(to)
+    if (note?.type !== 'note') {
+      throw new Error(`${to} is a terminal, not a note: use anbu send ${to} "..."`)
+    }
+    if (action === 'read') return { text: note.text ?? '' }
+
+    // A note is just text in a textarea, but control characters would show up there as junk.
+    const clean = stripControlChars(text)
+    let next
+    if (action === 'write') next = clean
+    else if (action === 'append') {
+      if (!clean) throw new Error('empty text')
+      next = appendLine(note.text ?? '', clean)
+    } else throw new Error(`unknown note action: ${action}`)
+
+    updateNode(workspaceId, to, { text: next })
+    win.webContents.send('workspace:note-written', workspaceId, to, next)
+    return { ok: true }
+  }
+
   throw new Error(`unknown command: ${command}`)
+}
+
+// Appended text starts on a line of its own.
+function appendLine(text, line) {
+  return text && !text.endsWith('\n') ? `${text}\n${line}` : text + line
 }
 
 // Program in the terminal's foreground (the agent, or the shell itself if nothing is running).

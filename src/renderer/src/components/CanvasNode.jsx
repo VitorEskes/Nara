@@ -2,7 +2,6 @@ const MIN_WIDTH = 240
 const MIN_HEIGHT = 120
 
 // A box in the world: position and size are in world coordinates, not screen coordinates.
-// Without onLinkStart the node has no port, so links can't start from it.
 export default function CanvasNode({
   id,
   type,
@@ -40,13 +39,11 @@ export default function CanvasNode({
       onPointerDownCapture={onRaise}
     >
       <div className="node-bar" onPointerDown={move}>
-        {onLinkStart && (
-          <div
-            className="node-port"
-            title="Drag to another terminal to link them"
-            onPointerDown={onLinkStart}
-          />
-        )}
+        <div
+          className="node-port"
+          title="Drag onto another node to link them"
+          onPointerDown={onLinkStart}
+        />
         <span className="node-title">{title}</span>
         <button
           className="node-close"

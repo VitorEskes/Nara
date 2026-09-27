@@ -5,12 +5,17 @@ import { connect } from 'net'
 // by resources/bin/anbu, with Electron itself acting as Node.
 
 const HELP = `usage:
-  anbu peers                    list the terminals linked to this one
-  anbu send <terminal> <text>   send the text to a linked terminal
-  anbu send <terminal>          with no text, read the message from stdin
+  anbu peers                        list the terminals and notes linked to this one
+  anbu send <terminal> <text>       send the text to a linked terminal
+  anbu note read <note>             print the text of a linked note
+  anbu note write <note> <text>     replace the note's text
+  anbu note append <note> <text>    add the text to the end of the note, on a new line
 
-The message arrives in the target terminal as if someone had typed it and pressed Enter.
-The reply, if any, arrives in this terminal the same way: no need to wait or check for it.`
+Without <text>, send, write and append read it from stdin.
+
+A message arrives in the target terminal as if someone had typed it and pressed Enter.
+The reply, if any, arrives in this terminal the same way: no need to wait or check for it.
+A note is shared text on the canvas: anyone linked to it can read it, and so can the user.`
 
 main().catch((error) => {
   console.error(`anbu: ${error.message}`)
@@ -18,7 +23,7 @@ main().catch((error) => {
 })
 
 async function main() {
-  const [command, target, ...words] = process.argv.slice(2)
+  const [command, ...args] = process.argv.slice(2)
 
   if (!command || command === 'help' || command === '--help' || command === '-h') {
     console.log(HELP)
@@ -28,31 +33,66 @@ async function main() {
 
   if (command === 'peers') {
     const { peers } = await request({ command })
-    if (peers.length === 0) console.log('no terminals linked to this one')
-    for (const { nodeId, program, canReceive } of peers) {
-      const note = canReceive ? '' : "  (shell only, can't receive messages)"
-      console.log(`terminal ${nodeId}  ${program}${note}`)
+    if (peers.length === 0) console.log('nothing linked to this terminal')
+    for (const { nodeId, type, program, canReceive } of peers) {
+      if (type === 'note') {
+        console.log(`note ${nodeId}`)
+        continue
+      }
+      const warning = canReceive ? '' : "  (shell only, can't receive messages)"
+      console.log(`terminal ${nodeId}  ${program}${warning}`)
     }
     return
   }
 
   if (command === 'send') {
-    // Accepts "2", "terminal 2" or "terminal2": that's what the node title shows.
-    const to = Number(target?.match(/\d+$/)?.[0])
-    if (!to) throw new Error('which terminal? e.g. anbu send 2 "hi"')
-
-    let text = words.join(' ')
-    if (!text) {
-      if (process.stdin.isTTY) throw new Error('missing message, e.g. anbu send 2 "hi"')
-      for await (const chunk of process.stdin) text += chunk
-    }
-
+    const [target, ...words] = args
+    const to = nodeNumber(target, 'which terminal? e.g. anbu send 2 "hi"')
+    const text = await readText(words, 'missing message, e.g. anbu send 2 "hi"')
     await request({ command, to, text })
     console.log(`delivered to terminal ${to}`)
     return
   }
 
+  if (command === 'note') {
+    const [action, target, ...words] = args
+    if (!['read', 'write', 'append'].includes(action)) {
+      throw new Error('usage: anbu note <read|write|append> <note> [text]')
+    }
+    const to = nodeNumber(target, `which note? e.g. anbu note ${action} 2`)
+
+    if (action === 'read') {
+      const { text } = await request({ command, action, to })
+      // The text alone goes to stdout, so it can be piped or redirected as it is.
+      if (!text) console.error(`note ${to} is empty`)
+      else process.stdout.write(text.endsWith('\n') ? text : `${text}\n`)
+      return
+    }
+
+    const text = await readText(words, `missing text, e.g. anbu note ${action} 2 "hi"`)
+    await request({ command, action, to, text })
+    console.log(action === 'write' ? `wrote note ${to}` : `appended to note ${to}`)
+    return
+  }
+
   throw new Error(`unknown command: ${command}\n\n${HELP}`)
+}
+
+// Accepts "2", "terminal 2" or "note2": the number is what the node title shows.
+function nodeNumber(target, hint) {
+  const id = Number(target?.match(/\d+$/)?.[0])
+  if (!id) throw new Error(hint)
+  return id
+}
+
+// The text given as arguments or, with none, whatever comes in on stdin. An empty argument
+// counts: `anbu note write 2 ""` clears the note.
+async function readText(words, hint) {
+  if (words.length > 0) return words.join(' ')
+  if (process.stdin.isTTY) throw new Error(hint)
+  let text = ''
+  for await (const chunk of process.stdin) text += chunk
+  return text
 }
 
 function request(body) {

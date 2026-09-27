@@ -17,8 +17,8 @@ npm run dev
 
 - `src/main/pty.js` — creates and manages the PTYs (`pty:create`, `pty:write`, `pty:resize`, `pty:kill`)
 - `src/main/workspaces.js` — keeps each open workspace in memory and saves it to `workspaces/<id>.json` in the app's data folder; `state.json` remembers the open tabs
-- `src/main/messages.js` — socket that takes requests from the `anbu` command and delivers messages between linked terminals
-- `src/main/cli.js` + `resources/bin/anbu` — the `anbu` command (`peers`, `send`) available inside every terminal
+- `src/main/messages.js` — socket that takes requests from the `anbu` command, delivers messages between linked terminals and reads or writes linked notes
+- `src/main/cli.js` + `resources/bin/anbu` — the `anbu` command (`peers`, `send`, `note`) available inside every terminal
 - `src/preload/index.js` — exposes `window.api.pty` and `window.api.workspace` to the renderer
 - `src/renderer/src/components/Terminal.jsx` — an xterm.js terminal connected to a PTY
 - `src/renderer/src/components/Note.jsx` — a sticky note, whose text is saved with the workspace

@@ -21,7 +21,8 @@ const api = {
     update: (id, layout) => ipcRenderer.send('workspace:update', id, layout),
     rename: (id, name) => ipcRenderer.send('workspace:rename', id, name),
     close: (id) => ipcRenderer.invoke('workspace:close', id),
-    remove: (id) => ipcRenderer.invoke('workspace:remove', id)
+    remove: (id) => ipcRenderer.invoke('workspace:remove', id),
+    onNoteWritten: (fn) => listen('workspace:note-written', fn)
   }
 }
 

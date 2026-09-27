@@ -39,6 +39,19 @@ export default function Workspace({ workspaceId, saved, active }) {
     window.api.workspace.update(workspaceId, { camera: cam, nodes, links })
   }, [workspaceId, cam, nodes, links])
 
+  // An agent wrote to a note with `anbu note`. Main has already changed its own copy; this
+  // brings the screen in line with it.
+  useEffect(
+    () =>
+      window.api.workspace.onNoteWritten((id, nodeId, text) => {
+        if (id !== workspaceId) return
+        setNodes((current) =>
+          current.map((node) => (node.id === nodeId ? { ...node, text } : node))
+        )
+      }),
+    [workspaceId]
+  )
+
   function updateNode(id, changes) {
     setNodes((current) => current.map((node) => (node.id === id ? { ...node, ...changes } : node)))
   }
@@ -83,22 +96,25 @@ export default function Workspace({ workspaceId, saved, active }) {
     setLinks((current) => current.filter((l) => l.from !== id && l.to !== id))
   }
 
-  // Dragging from a node's port to another node creates a link between the two. Only terminals
-  // have a port and only terminals accept a link: a link is how agents send each other messages.
+  // Dragging from a node's port to another node creates a link between the two. Two linked
+  // terminals can message each other; a terminal linked to a note can read and write it. Two
+  // notes can't be linked: there would be no agent on either end.
   function startLink(from, e) {
     if (e.button !== 0) return
     // Without this the pointerdown bubbles up to the bar and the node starts moving.
     e.stopPropagation()
     const port = e.currentTarget
     port.setPointerCapture(e.pointerId)
+    const source = nodes.find((n) => n.id === from)
 
     // With the pointer captured, events always target the port; to find out what is under
     // the cursor we have to ask the document.
     function nodeUnder(ev) {
       const el = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.node')
       const id = Number(el?.dataset.id)
-      const node = nodes.find((n) => n.id === id)
-      return node?.type === 'terminal' && id !== from ? id : null
+      const target = nodes.find((n) => n.id === id)
+      if (!target || id === from) return null
+      return target.type === 'terminal' || source.type === 'terminal' ? id : null
     }
 
     // clientX/Y count from the window, and the viewport starts below the tab bar.
@@ -152,7 +168,7 @@ export default function Workspace({ workspaceId, saved, active }) {
             onChange={(changes) => updateNode(node.id, changes)}
             onRaise={() => raise(node.id)}
             onClose={() => closeNode(node.id)}
-            onLinkStart={node.type === 'terminal' ? (e) => startLink(node.id, e) : undefined}
+            onLinkStart={(e) => startLink(node.id, e)}
           >
             {node.type === 'note' ? (
               <Note text={node.text} onChange={(text) => updateNode(node.id, { text })} />
