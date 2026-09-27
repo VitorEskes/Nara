@@ -7,8 +7,8 @@ import '@xterm/xterm/css/xterm.css'
 const ENTER_DELAY = 500
 
 // A real terminal: xterm.js draws it, the PTY in main runs it.
-// `nodeId` is the canvas node's id; main needs it to know which links the PTY belongs to.
-export default function Terminal({ nodeId, cmd, args, onExit }) {
+// `workspaceId` and `nodeId` say which canvas node the PTY belongs to, and so which links apply.
+export default function Terminal({ workspaceId, nodeId, cmd, args, cwd, onExit }) {
   const container = useRef(null)
 
   // onExit changes on every parent render. If it were a dependency of the effect below, every
@@ -49,7 +49,8 @@ export default function Terminal({ nodeId, cmd, args, onExit }) {
       setTimeout(() => alive && term.input('\r', false), ENTER_DELAY)
     })
 
-    window.api.pty.create({ nodeId, cmd, args, cols: term.cols, rows: term.rows }).then((newId) => {
+    const options = { workspaceId, nodeId, cmd, args, cwd, cols: term.cols, rows: term.rows }
+    window.api.pty.create(options).then((newId) => {
       // StrictMode mounts/unmounts twice in dev: if already unmounted, kill the orphan PTY.
       if (!alive) return window.api.pty.kill(newId)
       id = newId
@@ -80,7 +81,7 @@ export default function Terminal({ nodeId, cmd, args, onExit }) {
       if (id) window.api.pty.kill(id)
       term.dispose()
     }
-  }, [nodeId, cmd, args])
+  }, [workspaceId, nodeId, cmd, args, cwd])
 
   return <div ref={container} className="terminal" />
 }

@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { registerMessages } from './messages'
 import { registerPty } from './pty'
+import { registerWorkspaces } from './workspaces'
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -19,6 +20,7 @@ function createWindow() {
     }
   })
 
+  registerWorkspaces(mainWindow)
   registerPty(mainWindow, registerMessages(mainWindow))
 
   mainWindow.on('ready-to-show', () => {

@@ -12,8 +12,9 @@ const api = {
     onExit: (fn) => listen('pty:exit', fn),
     onPaste: (fn) => listen('pty:paste', fn)
   },
-  links: {
-    set: (list) => ipcRenderer.send('links:set', list)
+  workspace: {
+    load: () => ipcRenderer.invoke('workspace:load'),
+    update: (id, layout) => ipcRenderer.send('workspace:update', id, layout)
   }
 }
 

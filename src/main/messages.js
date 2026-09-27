@@ -1,10 +1,10 @@
-import { ipcMain } from 'electron'
 import { rmSync } from 'fs'
 import { createServer } from 'net'
 import { tmpdir } from 'os'
 import { basename, delimiter, dirname, join } from 'path'
 import anbu from '../../resources/bin/anbu?asset'
-import { terminals } from './pty'
+import { findTerminal, terminals } from './pty'
+import { workspaces } from './workspaces'
 
 // Agents talk by running the `anbu` command in their own terminal. The command talks to this
 // server over a socket, and the server pastes the message into the terminal on the other end of
@@ -16,14 +16,7 @@ const SOCKET = join(tmpdir(), `anbu-${process.pid}.sock`)
 // would run the text as a command.
 const SHELLS = new Set(['sh', 'bash', 'zsh', 'fish', 'dash', 'ksh', 'tcsh', 'csh', 'nu', 'pwsh'])
 
-// Links live in the renderer; it sends the whole list again on every change.
-let links = []
-
 export function registerMessages(win) {
-  ipcMain.on('links:set', (_ev, next) => {
-    links = next
-  })
-
   // One request per connection: `anbu` writes the JSON and ends its write side; the response
   // goes back after 'end'. allowHalfOpen lets the server write after the client closed its side.
   const server = createServer({ allowHalfOpen: true }, (conn) => {
@@ -45,10 +38,7 @@ export function registerMessages(win) {
   rmSync(SOCKET, { force: true })
   server.listen(SOCKET)
 
-  win.on('closed', () => {
-    server.close()
-    ipcMain.removeAllListeners('links:set')
-  })
+  win.on('closed', () => server.close())
 
   // What every terminal needs in its environment for `anbu` to work inside it.
   return {
@@ -62,25 +52,25 @@ export function registerMessages(win) {
 function handle({ from, command, to, text }, win) {
   const sender = terminals.get(Number(from))
   if (!sender) throw new Error('this terminal no longer exists in anbu')
+  const { workspaceId, nodeId } = sender
 
   // Links have no direction: from→to works the same as to→from.
-  const peers = links.flatMap((l) =>
-    l.from === sender.nodeId ? [l.to] : l.to === sender.nodeId ? [l.from] : []
-  )
+  const links = workspaces.get(workspaceId)?.links ?? []
+  const peers = links.flatMap((l) => (l.from === nodeId ? [l.to] : l.to === nodeId ? [l.from] : []))
 
   if (command === 'peers') {
     return {
-      peers: peers.map((nodeId) => {
-        const target = findTerminal(nodeId)
+      peers: peers.map((peerId) => {
+        const target = findTerminal(workspaceId, peerId)
         const program = target && foregroundProgram(target)
-        return { nodeId, program, canReceive: !SHELLS.has(program) }
+        return { nodeId: peerId, program, canReceive: !SHELLS.has(program) }
       })
     }
   }
 
   if (command === 'send') {
     if (!peers.includes(to)) throw new Error(`terminal ${to} is not linked to this one`)
-    const target = findTerminal(to)
+    const target = findTerminal(workspaceId, to)
     if (!target) throw new Error(`terminal ${to} no longer exists`)
     if (SHELLS.has(foregroundProgram(target))) {
       throw new Error(`terminal ${to} is not running an agent, only a shell`)
@@ -89,7 +79,7 @@ function handle({ from, command, to, text }, win) {
     if (!clean.trim()) throw new Error('empty message')
 
     // The header tells the agent on the other side who sent it and how to reply.
-    const header = `[anbu · message from terminal ${sender.nodeId} · reply with: anbu send ${sender.nodeId} "..."]`
+    const header = `[anbu · message from terminal ${nodeId} · reply with: anbu send ${nodeId} "..."]`
     win.webContents.send('pty:paste', target.id, `${header} ${clean}`)
     return { ok: true }
   }
@@ -101,13 +91,6 @@ function handle({ from, command, to, text }, win) {
 // node-pty returns argv[0], which sometimes includes a path: /usr/bin/zsh.
 function foregroundProgram({ term }) {
   return basename(term.process)
-}
-
-function findTerminal(nodeId) {
-  for (const [id, terminal] of terminals) {
-    if (terminal.nodeId === nodeId) return { id, ...terminal }
-  }
-  return null
 }
 
 // Strips control characters (except \n and \t). An ESC in the text would become a key sequence
