@@ -5,7 +5,7 @@ import { connect } from 'net'
 // by resources/bin/anbu, with Electron itself acting as Node.
 
 const HELP = `usage:
-  anbu peers                        list the terminals and notes linked to this one
+  anbu peers                        list the terminals and notes linked to this one, with roles
   anbu send <terminal> <text>       send the text to a linked terminal
   anbu note read <note>             print the text of a linked note
   anbu note write <note> <text>     replace the note's text
@@ -34,13 +34,14 @@ async function main() {
   if (command === 'peers') {
     const { peers } = await request({ command })
     if (peers.length === 0) console.log('nothing linked to this terminal')
-    for (const { nodeId, type, program, canReceive } of peers) {
+    for (const { nodeId, type, program, role, canReceive } of peers) {
       if (type === 'note') {
         console.log(`note ${nodeId}`)
         continue
       }
+      const roleName = role ? `  (${role})` : ''
       const warning = canReceive ? '' : "  (shell only, can't receive messages)"
-      console.log(`terminal ${nodeId}  ${program}${warning}`)
+      console.log(`terminal ${nodeId}  ${program}${roleName}${warning}`)
     }
     return
   }

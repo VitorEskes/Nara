@@ -9,8 +9,9 @@ const ENTER_DELAY = 500
 // A real terminal: xterm.js draws it, the PTY in main runs it.
 // `workspaceId` and `nodeId` say which canvas node the PTY belongs to, and so which links apply.
 // With `agent` (a key of AGENTS), the PTY opens straight into that agent instead of a shell, and
-// `session` is the id its conversation is saved under.
-export default function Terminal({ workspaceId, nodeId, agent, session, cwd, onExit }) {
+// `session` is the id its conversation is saved under. `role` (a key of ROLES) goes into the
+// prompt the agent opens with.
+export default function Terminal({ workspaceId, nodeId, agent, session, role, cwd, onExit }) {
   const container = useRef(null)
 
   // onExit changes on every parent render. If it were a dependency of the effect below, every
@@ -51,7 +52,16 @@ export default function Terminal({ workspaceId, nodeId, agent, session, cwd, onE
       setTimeout(() => alive && term.input('\r', false), ENTER_DELAY)
     })
 
-    const options = { workspaceId, nodeId, agent, session, cwd, cols: term.cols, rows: term.rows }
+    const options = {
+      workspaceId,
+      nodeId,
+      agent,
+      session,
+      role,
+      cwd,
+      cols: term.cols,
+      rows: term.rows
+    }
     window.api.pty.create(options).then((newId) => {
       // StrictMode mounts/unmounts twice in dev: if already unmounted, kill the orphan PTY.
       if (!alive) return window.api.pty.kill(newId)
@@ -83,7 +93,7 @@ export default function Terminal({ workspaceId, nodeId, agent, session, cwd, onE
       if (id) window.api.pty.kill(id)
       term.dispose()
     }
-  }, [workspaceId, nodeId, agent, session, cwd])
+  }, [workspaceId, nodeId, agent, session, role, cwd])
 
   return <div ref={container} className="terminal" />
 }

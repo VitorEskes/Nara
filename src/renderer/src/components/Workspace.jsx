@@ -5,8 +5,10 @@ import CanvasNode from './CanvasNode'
 import Terminal from './Terminal'
 import Note from './Note'
 import Drawings from './Drawings'
+import AgentButton from './AgentButton'
 import { touches } from '../drawing'
 import { AGENTS } from '../../../shared/agents'
+import { ROLES } from '../../../shared/roles'
 
 // Size of a new node of each type.
 const SIZES = {
@@ -111,10 +113,17 @@ export default function Workspace({ workspaceId, saved, active }) {
 
   // An agent node is a terminal that opens straight into the agent. It keeps the "terminal N"
   // title, since that's how other agents and `anbu send` refer to it. The session id lets the
-  // node resume its conversation after a restart; agents that can't resume ignore it.
-  async function createAgent(agent) {
+  // node resume its conversation after a restart; agents that can't resume ignore it. The role,
+  // if any, is fixed for the node's lifetime: it's part of the prompt the conversation began with.
+  async function createAgent(agent, role) {
     const cwd = await window.api.pty.pickFolder(agent)
-    if (cwd) createNodeAtCenter('terminal', { agent, cwd, session: crypto.randomUUID() })
+    if (!cwd) return
+    createNodeAtCenter('terminal', {
+      agent,
+      cwd,
+      session: crypto.randomUUID(),
+      ...(role && { role })
+    })
   }
 
   // Removing the node from state unmounts its <Terminal>, whose cleanup kills the PTY.
@@ -242,7 +251,7 @@ export default function Workspace({ workspaceId, saved, active }) {
           <CanvasNode
             key={node.id}
             {...node}
-            badge={AGENTS[node.agent]?.label}
+            badge={badge(node)}
             isLinkTarget={draft?.target === node.id}
             onChange={(changes) => updateNode(node.id, changes)}
             onRaise={() => raise(node.id)}
@@ -257,6 +266,7 @@ export default function Workspace({ workspaceId, saved, active }) {
                 nodeId={node.id}
                 agent={node.agent}
                 session={node.session}
+                role={node.role}
                 cwd={node.cwd}
                 onExit={() => closeNode(node.id)}
               />
@@ -267,10 +277,8 @@ export default function Workspace({ workspaceId, saved, active }) {
 
       <div className="toolbar">
         <button onClick={() => createNodeAtCenter('terminal')}>+ Terminal</button>
-        {Object.entries(AGENTS).map(([agent, { label }]) => (
-          <button key={agent} onClick={() => createAgent(agent)}>
-            + {label}
-          </button>
+        {Object.keys(AGENTS).map((agent) => (
+          <AgentButton key={agent} agent={agent} onCreate={(role) => createAgent(agent, role)} />
         ))}
         <button onClick={() => createNodeAtCenter('note', { text: '' })}>+ Note</button>
         <span className="toolbar-divider" />
@@ -291,6 +299,12 @@ export default function Workspace({ workspaceId, saved, active }) {
       )}
     </div>
   )
+}
+
+// Which agent a terminal opened with, and in which role.
+function badge({ agent, role }) {
+  if (!AGENTS[agent]) return undefined
+  return ROLES[role] ? `${AGENTS[agent].label} · ${ROLES[role].label}` : AGENTS[agent].label
 }
 
 function highest(items, key) {

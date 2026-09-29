@@ -3,6 +3,7 @@ import { createServer } from 'net'
 import { tmpdir } from 'os'
 import { basename, delimiter, dirname, join } from 'path'
 import anbu from '../../resources/bin/anbu?asset'
+import { ROLES } from '../shared/roles'
 import { findTerminal, terminals } from './pty'
 import { updateNode, workspaces } from './workspaces'
 
@@ -66,7 +67,8 @@ function handle({ from, command, action, to, text }, win) {
         if (nodeOf(peerId)?.type === 'note') return { nodeId: peerId, type: 'note' }
         const target = findTerminal(workspaceId, peerId)
         const program = target && foregroundProgram(target)
-        return { nodeId: peerId, type: 'terminal', program, canReceive: !SHELLS.has(program) }
+        const role = ROLES[nodeOf(peerId)?.role]?.label.toLowerCase()
+        return { nodeId: peerId, type: 'terminal', program, role, canReceive: !SHELLS.has(program) }
       })
     }
   }

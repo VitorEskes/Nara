@@ -3,7 +3,7 @@ import { execFileSync } from 'child_process'
 import { existsSync, readlinkSync } from 'fs'
 import * as pty from 'node-pty'
 import { AGENTS } from '../shared/agents'
-import { agentCommand } from './agents'
+import { agentLaunch } from './agents'
 
 // Each canvas terminal is a real PTY, identified by an id.
 // The renderer never touches node-pty: everything goes through IPC.
@@ -21,11 +21,12 @@ const exiting = new Set()
 // `extraEnv` holds the variables every terminal gets (the ones the `anbu` command uses).
 export function registerPty(win, extraEnv) {
   ipcMain.handle('pty:create', (_ev, options = {}) => {
-    const { workspaceId, nodeId, agent, session, cols = 80, rows = 24, cwd } = options
+    const { workspaceId, nodeId, agent, session, role, cols = 80, rows = 24, cwd } = options
     const id = nextId++
     // An agent runs inside the user's interactive shell (-i loads .zshrc/.bashrc), so it's found
     // on the same PATH as when typed in a terminal. When the agent quits, the shell ends with it.
-    const args = AGENTS[agent] ? ['-ic', agentCommand(agent, session)] : []
+    const launch = AGENTS[agent] && agentLaunch({ agent, session, role, nodeId })
+    const args = launch ? ['-ic', launch.command] : []
     const term = pty.spawn(process.env.SHELL || 'bash', args, {
       name: 'xterm-256color',
       cols,
@@ -33,7 +34,7 @@ export function registerPty(win, extraEnv) {
       // A restored terminal asks for the folder it was in, which may have been deleted since.
       cwd: cwd && existsSync(cwd) ? cwd : process.env.HOME,
       // ANBU_PTY is how `anbu` tells the app which terminal the message came from.
-      env: { ...process.env, ...extraEnv, ANBU_PTY: String(id) }
+      env: { ...process.env, ...extraEnv, ...launch?.env, ANBU_PTY: String(id) }
     })
 
     // A killed program can still write on its way out (Claude Code restores the terminal), and
