@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
-// Tab bar across the top: one tab per open workspace, a button to create one and a menu with the
-// closed ones.
+// Bar across the top: the app's name, one tab per open workspace, a button to create one and a
+// menu with the closed ones.
 export default function WorkspaceTabs({
   tabs,
   closed,
@@ -15,6 +15,7 @@ export default function WorkspaceTabs({
 }) {
   return (
     <nav className="tabs" role="tablist">
+      <span className="brand">anbu</span>
       {tabs.map((tab) => (
         <Tab
           key={tab.id}

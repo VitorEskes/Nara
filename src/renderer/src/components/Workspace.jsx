@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import Canvas from './Canvas'
-import Links from './Links'
+import Links, { LinkPins } from './Links'
 import CanvasNode from './CanvasNode'
 import Terminal from './Terminal'
 import Note from './Note'
 import Drawings from './Drawings'
 import AgentButton from './AgentButton'
+import NotePanel from './NotePanel'
 import { touches } from '../drawing'
+import { PAPERS, resolveStyle } from '../noteStyle'
 import { AGENTS } from '../../../shared/agents'
 import { ROLES } from '../../../shared/roles'
 
@@ -38,6 +40,8 @@ export default function Workspace({ workspaceId, saved, active }) {
   const [strokes, setStrokes] = useState(saved.strokes)
   // 'draw', 'erase' or null (the pointer works on the nodes as usual).
   const [tool, setTool] = useState(null)
+  // The note the side panel edits, if any. Only notes can be selected for now.
+  const [selected, setSelected] = useState(null)
   // Stroke being drawn. The ref is what the handlers build on: pointerup can arrive before React
   // renders the last move, and the state would still have the old points.
   const [sketch, setSketch] = useState(null)
@@ -85,6 +89,18 @@ export default function Workspace({ workspaceId, saved, active }) {
     updateNode(id, { layer: ++topLayer.current })
   }
 
+  // Clicking a node brings it to the front and, if it's a note, selects it for the side panel.
+  function pointerDownOnNode(node) {
+    raise(node.id)
+    setSelected(node.type === 'note' ? node.id : null)
+  }
+
+  // A click anywhere but a node or the panels clears the selection. Capture, because the canvas
+  // and the nodes stop some pointer events on their way up.
+  function pointerDownAnywhere(e) {
+    if (!e.target.closest('.node, .note-panel, .dock')) setSelected(null)
+  }
+
   // Creates a node centered on the point (in world coordinates), in front of the others, with any
   // extra `fields` its type needs. Terminals and notes share the id sequence: the id is what
   // `anbu send` takes, and it has to be unique across the whole workspace.
@@ -103,6 +119,8 @@ export default function Workspace({ workspaceId, saved, active }) {
       ...fields
     }
     setNodes((current) => [...current, node])
+    // A new note is being written, so the panel opens for it right away.
+    setSelected(type === 'note' ? id : null)
   }
 
   // Center of the viewport converted to world coordinates: world = (screen - (x, y)) / z.
@@ -235,8 +253,15 @@ export default function Workspace({ workspaceId, saved, active }) {
     })
   }
 
+  const selectedNote = nodes.find((node) => node.id === selected)
+
   return (
-    <div className="workspace" ref={container} hidden={!active}>
+    <div
+      className="workspace"
+      ref={container}
+      hidden={!active}
+      onPointerDownCapture={pointerDownAnywhere}
+    >
       <Canvas
         cam={cam}
         setCam={setCam}
@@ -244,22 +269,34 @@ export default function Workspace({ workspaceId, saved, active }) {
         onToolStart={toolStart}
         onToolMove={toolMove}
         onToolEnd={toolEnd}
-        overlay={<Drawings strokes={strokes} sketch={sketch} />}
+        overlay={
+          <>
+            <LinkPins nodes={nodes} links={links} />
+            <Drawings strokes={strokes} sketch={sketch} />
+          </>
+        }
       >
         <Links nodes={nodes} links={links} draft={draft} onRemove={removeLink} />
         {nodes.map((node) => (
           <CanvasNode
             key={node.id}
             {...node}
-            badge={badge(node)}
+            agent={AGENTS[node.agent] && { key: node.agent, label: AGENTS[node.agent].label }}
+            role={ROLES[node.role] && { key: node.role, label: ROLES[node.role].label }}
+            paper={node.type === 'note' ? PAPERS[resolveStyle(node.style).paper].color : undefined}
+            selected={node.id === selected}
             isLinkTarget={draft?.target === node.id}
             onChange={(changes) => updateNode(node.id, changes)}
-            onRaise={() => raise(node.id)}
+            onRaise={() => pointerDownOnNode(node)}
             onClose={() => closeNode(node.id)}
             onLinkStart={(e) => startLink(node.id, e)}
           >
             {node.type === 'note' ? (
-              <Note text={node.text} onChange={(text) => updateNode(node.id, { text })} />
+              <Note
+                text={node.text}
+                style={node.style}
+                onChange={(text) => updateNode(node.id, { text })}
+              />
             ) : (
               <Terminal
                 workspaceId={workspaceId}
@@ -275,17 +312,37 @@ export default function Workspace({ workspaceId, saved, active }) {
         ))}
       </Canvas>
 
-      <div className="toolbar">
-        <button onClick={() => createNodeAtCenter('terminal')}>+ Terminal</button>
+      {selectedNote && (
+        <NotePanel
+          style={selectedNote.style}
+          onChange={(change) =>
+            updateNode(selectedNote.id, { style: { ...selectedNote.style, ...change } })
+          }
+        />
+      )}
+
+      <div className="dock" role="toolbar" aria-label="Tools">
+        <button
+          className={tool ? undefined : 'active'}
+          title="Select"
+          aria-label="Select"
+          onClick={() => setTool(null)}
+        >
+          <PointerIcon />
+        </button>
+        <span className="dock-divider" />
+        <button onClick={() => createNodeAtCenter('terminal')}>
+          <span className="dock-mono">&gt;_</span> Terminal
+        </button>
         {Object.keys(AGENTS).map((agent) => (
           <AgentButton key={agent} agent={agent} onCreate={(role) => createAgent(agent, role)} />
         ))}
-        <button onClick={() => createNodeAtCenter('note', { text: '' })}>+ Note</button>
-        <span className="toolbar-divider" />
+        <button onClick={() => createNodeAtCenter('note', { text: '' })}>Note</button>
+        <span className="dock-divider" />
         {['draw', 'erase'].map((name) => (
           <button
             key={name}
-            className={tool === name ? 'active' : undefined}
+            className={tool === name ? 'tool active' : 'tool'}
             // Clicking the active tool turns it off.
             onClick={() => setTool((current) => (current === name ? null : name))}
           >
@@ -295,16 +352,18 @@ export default function Workspace({ workspaceId, saved, active }) {
       </div>
 
       {nodes.length === 0 && strokes.length === 0 && (
-        <div className="empty">Open a terminal, an agent or a note from the toolbar</div>
+        <div className="empty">Open a terminal, an agent or a note from the dock below</div>
       )}
     </div>
   )
 }
 
-// Which agent a terminal opened with, and in which role.
-function badge({ agent, role }) {
-  if (!AGENTS[agent]) return undefined
-  return ROLES[role] ? `${AGENTS[agent].label} · ${ROLES[role].label}` : AGENTS[agent].label
+function PointerIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M3 2 L 13 8 L 8.5 9 L 11 14 L 9 15 L 6.5 10 L 3 13 Z" fill="currentColor" />
+    </svg>
+  )
 }
 
 function highest(items, key) {

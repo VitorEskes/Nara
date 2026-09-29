@@ -1,10 +1,42 @@
+/* The palette: ink-black surfaces, washi-paper text and a single vermilion (shu) accent. */
+:root {
+  --sumi: #111214;
+  --bar: #151619;
+  --terminal: #16171a;
+  --stone: #1b1c1f;
+  --raised: #232427;
+  --hover: #2a2b2f;
+  --edge: #2b2c30;
+  --edge-strong: #34353a;
+  --grid: #18191c;
+  --washi: #ebe6dc;
+  --text-dim: #b9b4aa;
+  --muted: #8a8780;
+  --faint: #5f5d58;
+  --shu: #e0452b;
+  --shu-deep: #3a1f1a;
+
+  --font-ui: 'Geist Sans', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+  --font-display: 'Shippori Mincho B1', serif;
+
+  color-scheme: dark;
+}
+
 html,
 body,
 #root {
   margin: 0;
   height: 100%;
-  background: #0d0d10;
+  background: var(--sumi);
   overflow: hidden;
+  font-family: var(--font-ui);
+  color: var(--washi);
+}
+
+button {
+  font: inherit;
+  color: inherit;
 }
 
 .app {
@@ -25,12 +57,15 @@ body,
   inset: 0;
 }
 
+/* Canvas.jsx scales and moves the grid with the camera. */
 .viewport {
   position: relative;
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-image: radial-gradient(circle, #2a2a33 1px, transparent 1px);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
 }
 
 .world {
@@ -61,7 +96,8 @@ body,
 }
 
 /* 1x1 like .links, drawing everything in its overflow. */
-.drawings {
+.drawings,
+.link-pins {
   position: absolute;
   top: 0;
   left: 0;
@@ -70,40 +106,108 @@ body,
 
 .drawings path {
   fill: none;
-  stroke: #e8e8ee;
+  stroke: var(--washi);
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* Nodes */
 
 .node {
   position: absolute;
   display: flex;
   flex-direction: column;
-  border: 1px solid #2a2a33;
+  border: 1px solid var(--edge-strong);
   border-radius: 8px;
-  background: #0d0d10;
+  background: var(--terminal);
   overflow: hidden;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 40%);
+  box-shadow: 0 14px 34px rgb(0 0 0 / 45%);
 }
 
 .node-bar {
-  height: 24px;
+  height: 34px;
   flex-shrink: 0;
-  padding: 0 10px;
   display: flex;
   align-items: center;
-  font:
-    12px system-ui,
-    sans-serif;
-  color: #9a9aa6;
-  background: #16161b;
-  border-bottom: 1px solid #2a2a33;
+  gap: 10px;
+  padding: 0 8px 0 12px;
+  font-size: 12.5px;
+  color: var(--washi);
+  background: var(--stone);
+  border-bottom: 1px solid var(--edge);
   user-select: none;
   cursor: grab;
 }
 
 .node-bar:active {
   cursor: grabbing;
+}
+
+/* Dot on the bar: dragging from it to another node creates a link. */
+.node-port {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border: 2px solid var(--faint);
+  border-radius: 50%;
+  cursor: crosshair;
+}
+
+.node-port:hover {
+  border-color: var(--shu);
+  background: var(--shu);
+}
+
+/* "terminal 3" is stored lowercase; it reads as a name on the bar. */
+.node-title {
+  font-weight: 600;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+/* Which agent the terminal opened with. It shrinks first when the node is narrow. */
+.node-agent {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.node-role {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.node-role[data-role='orchestrator'] {
+  color: var(--shu);
+}
+
+.node-close,
+.tab-close {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--faint);
+  background: none;
+  cursor: pointer;
+}
+
+.node-close {
+  margin-left: auto;
+}
+
+.node-close:hover,
+.tab-close:hover {
+  color: var(--washi);
+  background: var(--shu);
 }
 
 /* min-height: 0 lets the flex item shrink; without it FitAddon measures a box that grows too. */
@@ -116,52 +220,7 @@ body,
 /* No padding here: FitAddon measures this element. The margin comes from inset. */
 .terminal {
   position: absolute;
-  inset: 6px;
-}
-
-/* Which agent the terminal opened with. */
-.node-badge {
-  flex-shrink: 0;
-  margin: 0 8px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 11px;
-  color: #b3c3f2;
-  background: #1e2540;
-}
-
-/* Warm tones set notes apart from terminals at a glance. */
-.node[data-type='note'] {
-  border-color: #3d3722;
-}
-
-.node[data-type='note'] .node-bar {
-  color: #c9b977;
-  background: #211e13;
-  border-bottom-color: #3d3722;
-}
-
-/* resize: none hides the textarea's own grip; the node has its resize corner. */
-.note-text {
-  position: absolute;
-  inset: 0;
-  box-sizing: border-box;
-  width: 100%;
-  height: 100%;
-  padding: 10px 12px 16px;
-  border: 0;
-  outline: none;
-  resize: none;
-  font:
-    13px/1.5 system-ui,
-    sans-serif;
-  color: #e6e0c8;
-  background: #17150e;
-  color-scheme: dark;
-}
-
-.note-text::placeholder {
-  color: #6b634a;
+  inset: 8px 6px 6px 12px;
 }
 
 /* Bottom-right corner: dragging it resizes the node. */
@@ -172,128 +231,89 @@ body,
   width: 14px;
   height: 14px;
   cursor: nwse-resize;
-  background: linear-gradient(135deg, transparent 50%, #3a3a45 50%);
+  background: linear-gradient(135deg, transparent 50%, var(--edge-strong) 50%);
 }
 
-.node-title {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.node-close,
-.tab-close {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  padding: 0;
+/* A note is a card of paper; --paper is set per note from its style. */
+.node[data-type='note'] {
+  --paper: var(--washi);
   border: 0;
-  border-radius: 4px;
-  font-size: 14px;
-  line-height: 1;
-  color: inherit;
-  background: none;
-  cursor: pointer;
-}
-
-.node-close:hover,
-.tab-close:hover {
-  color: #fff;
-  background: #c4314b;
-}
-
-.node-close {
-  margin-right: -6px;
-}
-
-/* Lives outside .world: not affected by pan or zoom. */
-.toolbar {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 1;
-  display: flex;
-  gap: 6px;
-}
-
-.toolbar button {
-  padding: 6px 12px;
-  border: 1px solid #2a2a33;
   border-radius: 6px;
-  font:
-    13px system-ui,
-    sans-serif;
-  color: #e6e6ec;
-  background: #16161b;
-  cursor: pointer;
+  color: #1b1c1f;
+  background: var(--paper);
 }
 
-.toolbar button:hover {
-  background: #22222a;
-}
-
-.toolbar button.active {
-  color: #b3c3f2;
-  border-color: #5b8def;
-  background: #1e2540;
-}
-
-/* Anchors the role menu under its button. */
-.agent-button {
-  position: relative;
-}
-
-.role-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  display: flex;
-  flex-direction: column;
-  width: 260px;
-  padding: 4px;
-  border: 1px solid #2a2a33;
-  border-radius: 6px;
-  background: #16161b;
-  box-shadow: 0 6px 20px rgb(0 0 0 / 40%);
-}
-
-.toolbar .role-menu button {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 6px 8px;
-  border: none;
-  text-align: left;
-  background: none;
-}
-
-.toolbar .role-menu button:hover {
-  background: #22222a;
-}
-
-.role-description {
+.node[data-type='note'] .node-bar {
+  height: 30px;
+  font-family: var(--font-mono);
   font-size: 11px;
-  color: #8a8a96;
+  color: #6b675f;
+  background: transparent;
+  border-bottom-color: rgb(0 0 0 / 10%);
 }
 
-.toolbar-divider {
-  width: 1px;
-  margin: 4px 2px;
-  background: #2a2a33;
+.node[data-type='note'] .node-title {
+  font-weight: 400;
 }
 
-.empty {
+.node[data-type='note'] .node-port {
+  border-color: #a39e94;
+}
+
+.node[data-type='note'] .node-close {
+  color: #a39e94;
+}
+
+.node[data-type='note'] .node-resize {
+  background: linear-gradient(135deg, transparent 50%, rgb(0 0 0 / 15%) 50%);
+}
+
+/* resize: none hides the textarea's own grip; the node has its resize corner. */
+.note-text {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
-  font:
-    14px system-ui,
-    sans-serif;
-  color: #5c5c68;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 12px 14px 18px;
+  border: 0;
+  outline: none;
+  resize: none;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.55;
+  color: #1b1c1f;
+  background: transparent;
+  color-scheme: light;
+}
+
+.note-text::placeholder {
+  color: rgb(0 0 0 / 35%);
+}
+
+/* The note the side panel is editing. overflow: hidden on .node would clip an outline drawn
+   outside it, so this one sits on top of the node instead. */
+.node.selected {
+  overflow: visible;
+}
+
+.node.selected::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border: 1.5px solid var(--shu);
+  border-radius: 9px;
   pointer-events: none;
 }
+
+/* Node under the cursor while a link is being dragged. */
+.node.link-target {
+  box-shadow:
+    0 0 0 2px var(--shu),
+    0 14px 34px rgb(0 0 0 / 45%);
+}
+
+/* Links: a string pinned between two nodes. */
 
 /* Inside .world, behind the nodes. The svg is 1x1 and draws everything in its overflow. */
 .links {
@@ -311,6 +331,7 @@ body,
 
 /* The whole svg ignores the pointer; only this invisible stroke receives clicks. */
 .link-hitbox {
+  fill: none;
   stroke: transparent;
   stroke-width: 14;
   pointer-events: stroke;
@@ -319,60 +340,55 @@ body,
 /* non-scaling-stroke: the width stays the same on screen at any zoom. */
 .link-line,
 .link-draft {
-  stroke-width: 2;
+  fill: none;
+  stroke: var(--shu);
+  stroke-width: 2.2;
+  stroke-linecap: round;
   vector-effect: non-scaling-stroke;
 }
 
-.link-line {
-  stroke: #4a4a58;
-}
-
+/* Hovering a string shows it would come apart on click. */
 .link:hover .link-line {
-  stroke: #c4314b;
+  stroke: var(--washi);
+  stroke-dasharray: 6 5;
 }
 
 .link-draft {
-  stroke: #5b8def;
-  stroke-dasharray: 6 4;
+  stroke-dasharray: 6 5;
 }
 
-/* Dot on the bar: dragging from it to another node creates a link. */
-.node-port {
-  width: 8px;
-  height: 8px;
-  margin-right: 8px;
-  flex-shrink: 0;
-  border: 2px solid #5c5c68;
-  border-radius: 50%;
-  cursor: crosshair;
+.link-pins circle {
+  fill: var(--shu);
 }
 
-.node-port:hover {
-  border-color: #5b8def;
-  background: #5b8def;
+.link-pins .pin-hole {
+  fill: var(--sumi);
 }
 
-/* Node under the cursor while a link is being dragged. */
-.node.link-target {
-  border-color: #5b8def;
-  box-shadow:
-    0 0 0 2px #5b8def,
-    0 8px 24px rgb(0 0 0 / 40%);
-}
+/* Tab bar */
 
 .tabs {
   position: relative;
   z-index: 1;
   display: flex;
-  height: 34px;
+  align-items: center;
+  gap: 4px;
+  height: 48px;
   flex-shrink: 0;
-  font:
-    12px system-ui,
-    sans-serif;
-  color: #9a9aa6;
-  background: #16161b;
-  border-bottom: 1px solid #2a2a33;
+  padding: 0 10px 0 16px;
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--bar);
+  border-bottom: 1px solid var(--edge);
   user-select: none;
+}
+
+.brand {
+  margin-right: 18px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--washi);
 }
 
 .tab {
@@ -380,20 +396,32 @@ body,
   align-items: center;
   gap: 6px;
   max-width: 200px;
-  padding: 0 8px 0 12px;
-  border-right: 1px solid #2a2a33;
+  height: 32px;
+  box-sizing: border-box;
+  padding: 0 6px 0 14px;
+  border: 1px solid transparent;
+  border-radius: 7px;
   cursor: pointer;
 }
 
-.tab:hover,
-.tab.active {
-  color: #e6e6ec;
+.tab:hover {
+  color: var(--washi);
 }
 
-/* Same color as the canvas, and 1px taller to cover the bar's border: the tab joins its canvas. */
 .tab.active {
-  margin-bottom: -1px;
-  background: #0d0d10;
+  color: var(--washi);
+  background: #1f2023;
+  border-color: var(--edge-strong);
+}
+
+/* The close button takes its place only when needed, so a tab's name doesn't shift around. */
+.tab .tab-close {
+  visibility: hidden;
+}
+
+.tab:hover .tab-close,
+.tab.active .tab-close {
+  visibility: visible;
 }
 
 .tab-name {
@@ -405,17 +433,19 @@ body,
 input.tab-name {
   width: 120px;
   padding: 2px 4px;
-  border: 1px solid #5b8def;
+  border: 1px solid var(--shu);
   border-radius: 4px;
   outline: none;
   font: inherit;
   color: inherit;
-  background: #0d0d10;
+  background: var(--sumi);
 }
 
 .tabs-button {
-  width: 34px;
+  width: 32px;
+  height: 32px;
   border: 0;
+  border-radius: 7px;
   font-size: 16px;
   color: inherit;
   background: none;
@@ -423,8 +453,8 @@ input.tab-name {
 }
 
 .tabs-button:hover {
-  color: #e6e6ec;
-  background: #22222a;
+  color: var(--washi);
+  background: var(--raised);
 }
 
 .closed-menu {
@@ -436,33 +466,32 @@ input.tab-name {
 .menu {
   position: absolute;
   top: 100%;
-  right: 4px;
-  min-width: 200px;
-  margin-top: 4px;
+  right: 0;
+  min-width: 220px;
+  margin-top: 6px;
   padding: 4px;
-  border: 1px solid #2a2a33;
-  border-radius: 6px;
-  background: #16161b;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 40%);
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  background: var(--stone);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 45%);
 }
 
 .menu-item {
   display: flex;
   align-items: center;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 .menu-item:hover {
-  background: #22222a;
+  background: var(--raised);
 }
 
 .menu-open {
   flex: 1;
-  padding: 6px 8px;
+  padding: 7px 10px;
   border: 0;
-  font: inherit;
   text-align: left;
-  color: #e6e6ec;
+  color: var(--washi);
   background: none;
   cursor: pointer;
 }
@@ -470,22 +499,205 @@ input.tab-name {
 .menu-remove {
   width: 22px;
   height: 22px;
-  margin-right: 2px;
+  margin-right: 4px;
   padding: 0;
   border: 0;
   border-radius: 4px;
   font-size: 14px;
-  color: #9a9aa6;
+  color: var(--muted);
   background: none;
   cursor: pointer;
 }
 
 .menu-remove:hover {
-  color: #fff;
-  background: #c4314b;
+  color: var(--washi);
+  background: var(--shu);
 }
 
 .menu-empty {
-  padding: 6px 8px;
-  color: #5c5c68;
+  padding: 7px 10px;
+  color: var(--faint);
+}
+
+/* Dock: the tools, floating at the bottom. Lives outside .world, so pan and zoom don't move it. */
+
+.dock {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  z-index: 1;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px;
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  background: var(--stone);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 45%);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.dock button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--washi);
+  background: transparent;
+  cursor: pointer;
+}
+
+.dock button:hover {
+  background: var(--raised);
+}
+
+.dock button.active {
+  color: var(--shu);
+  background: var(--shu-deep);
+}
+
+.dock .tool {
+  color: var(--muted);
+}
+
+.dock-mono {
+  font-family: var(--font-mono);
+}
+
+.dock-divider {
+  width: 1px;
+  height: 22px;
+  margin: 0 4px;
+  background: var(--edge);
+}
+
+/* Anchors the role menu above its button. */
+.agent-button {
+  position: relative;
+}
+
+.role-menu {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  width: 270px;
+  padding: 4px;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  background: var(--stone);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 45%);
+  white-space: normal;
+}
+
+.dock .role-menu button {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  height: auto;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.role-description {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* Side panel with the selected note's text style, like Excalidraw's. */
+
+.note-panel {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 224px;
+  box-sizing: border-box;
+  padding: 16px;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  font-size: 12px;
+  background: var(--stone);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 45%);
+}
+
+.panel-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.panel-group legend {
+  padding: 0;
+  margin-bottom: 8px;
+  color: var(--muted);
+}
+
+.panel-options {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 4px;
+}
+
+.panel-options button {
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--washi);
+  background: var(--raised);
+  cursor: pointer;
+}
+
+.panel-options button:hover {
+  background: var(--hover);
+}
+
+.panel-options button[aria-pressed='true'] {
+  border-color: var(--edge-strong);
+  background: var(--hover);
+}
+
+.panel-swatches {
+  display: flex;
+  gap: 6px;
+}
+
+.panel-swatches button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  /* The dark ink would vanish into the panel without an edge. */
+  border: 1px solid var(--edge-strong);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.panel-swatches button[aria-pressed='true'] {
+  outline: 2px solid var(--washi);
+  outline-offset: 1px;
+}
+
+.empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  color: var(--faint);
+  pointer-events: none;
 }

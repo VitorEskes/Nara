@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 
 const ZOOM_MIN = 0.1
 const ZOOM_MAX = 4
-const GRID = 20
+const GRID = 40
 
 // `children` live in the world, `overlay` too but drawn above them (and never taking the pointer).
 // With a `tool` on, the nodes ignore the pointer and a left-button drag anywhere goes to

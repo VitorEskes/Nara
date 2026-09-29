@@ -25,5 +25,8 @@ npm run dev
 - `src/preload/index.js` — exposes `window.api.pty` and `window.api.workspace` to the renderer
 - `src/renderer/src/components/Terminal.jsx` — an xterm.js terminal connected to a PTY
 - `src/renderer/src/components/AgentButton.jsx` — the toolbar button that opens an agent, with the role menu
-- `src/renderer/src/components/Note.jsx` — a sticky note, whose text is saved with the workspace
+- `src/renderer/src/components/Note.jsx` — a note, whose text and text style are saved with the workspace
+- `src/renderer/src/components/NotePanel.jsx` + `src/renderer/src/noteStyle.js` — the side panel that styles the selected note (font, size, colors, alignment), and the options it offers
+- `src/renderer/src/components/Links.jsx` — links drawn as a string pinned between two nodes
+- `src/renderer/src/assets/main.css` — all the styles; the palette and fonts are variables at the top
 - `src/renderer/src/components/Drawings.jsx` + `src/renderer/src/drawing.js` — freehand strokes drawn over the canvas, and the geometry behind them

@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { AGENTS } from '../../../shared/agents'
 import { ROLES } from '../../../shared/roles'
 
-// Toolbar button that opens an agent. An agent that takes anbu's prompt first asks for a role,
-// in a menu under the button; the others open right away. onCreate gets the role key, or
+// Dock button that opens an agent. An agent that takes anbu's prompt first asks for a role, in a
+// menu above the button; the others open right away. onCreate gets the role key, or
 // undefined for no role.
 export default function AgentButton({ agent, onCreate }) {
   const { label, prompt } = AGENTS[agent]
@@ -33,7 +33,7 @@ export default function AgentButton({ agent, onCreate }) {
     onCreate(role)
   }
 
-  if (!prompt) return <button onClick={() => onCreate()}>+ {label}</button>
+  if (!prompt) return <button onClick={() => onCreate()}>{label}</button>
 
   const options = [
     [undefined, { label: 'No role', description: 'Knows how anbu works, nothing more' }],
@@ -42,7 +42,7 @@ export default function AgentButton({ agent, onCreate }) {
   return (
     <div className="agent-button" ref={root}>
       <button className={open ? 'active' : undefined} onClick={() => setOpen((o) => !o)}>
-        + {label}
+        {label} ▴
       </button>
       {open && (
         <div className="role-menu">

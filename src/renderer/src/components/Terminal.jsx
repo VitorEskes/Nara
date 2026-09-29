@@ -3,6 +3,15 @@ import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 
+// Terminal colors from the app's palette (main.css): paper-white text on the node's black.
+const THEME = {
+  background: '#16171a',
+  foreground: '#ebe6dc',
+  cursor: '#ebe6dc',
+  cursorAccent: '#16171a',
+  selectionBackground: '#3d3e44'
+}
+
 // How long to wait between pasting a message from another agent and pressing Enter.
 const ENTER_DELAY = 500
 
@@ -22,7 +31,13 @@ export default function Terminal({ workspaceId, nodeId, agent, session, role, cw
   })
 
   useEffect(() => {
-    const term = new XTerm({ fontSize: 13, cursorBlink: true, theme: { background: '#0d0d10' } })
+    const term = new XTerm({
+      fontFamily: '"Geist Mono", ui-monospace, monospace',
+      fontSize: 13,
+      lineHeight: 1.15,
+      cursorBlink: true,
+      theme: THEME
+    })
     const fit = new FitAddon()
     term.loadAddon(fit)
     term.open(container.current)

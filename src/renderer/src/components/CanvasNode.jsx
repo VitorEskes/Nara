@@ -2,6 +2,7 @@ const MIN_WIDTH = 240
 const MIN_HEIGHT = 120
 
 // A box in the world: position and size are in world coordinates, not screen coordinates.
+// `agent` and `role` are labels for the bar, as { key, label }; `paper` is a note's color.
 export default function CanvasNode({
   id,
   type,
@@ -11,7 +12,10 @@ export default function CanvasNode({
   h,
   layer,
   title,
-  badge,
+  agent,
+  role,
+  paper,
+  selected,
   isLinkTarget,
   onChange,
   onRaise,
@@ -31,11 +35,13 @@ export default function CanvasNode({
 
   return (
     <div
-      className={isLinkTarget ? 'node link-target' : 'node'}
+      className={['node', selected && 'selected', isLinkTarget && 'link-target']
+        .filter(Boolean)
+        .join(' ')}
       // App finds the node under the cursor via the DOM (elementFromPoint) and reads its id here.
       data-id={id}
       data-type={type}
-      style={{ left: x, top: y, width: w, height: h, zIndex: layer }}
+      style={{ left: x, top: y, width: w, height: h, zIndex: layer, '--paper': paper }}
       // Capture: runs before any child (including xterm) gets a chance to swallow the event.
       onPointerDownCapture={onRaise}
     >
@@ -46,7 +52,12 @@ export default function CanvasNode({
           onPointerDown={onLinkStart}
         />
         <span className="node-title">{title}</span>
-        {badge && <span className="node-badge">{badge}</span>}
+        {agent && <span className="node-agent">{agent.label}</span>}
+        {role && (
+          <span className="node-role" data-role={role.key}>
+            {role.label}
+          </span>
+        )}
         <button
           className="node-close"
           title="Close"
