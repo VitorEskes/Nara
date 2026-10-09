@@ -364,7 +364,7 @@ button {
   fill: var(--sumi);
 }
 
-/* Sidebar: the projects and their workspaces, then the loose workspaces. */
+/* Sidebar: the app's actions, then the projects and their workspaces, then the loose ones. */
 
 .sidebar {
   display: flex;
@@ -372,54 +372,46 @@ button {
   width: 236px;
   flex-shrink: 0;
   font-size: 13px;
-  color: var(--muted);
+  color: var(--text-dim);
   background: var(--bar);
   border-right: 1px solid var(--edge);
   user-select: none;
 }
 
+/* Same height as .overview-bar, so their bottom borders line up. */
+.sidebar-top {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  flex-shrink: 0;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--edge);
+}
+
 .brand {
-  padding: 14px 16px 10px;
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 800;
   color: var(--washi);
 }
 
-.sidebar-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  padding: 4px 10px 12px;
-  border-bottom: 1px solid var(--edge);
-}
-
-.sidebar-actions button {
-  height: 30px;
-  padding: 0 6px;
-  border: 1px solid var(--edge-strong);
-  border-radius: 7px;
-  font-size: 12px;
-  color: var(--washi);
-  background: var(--raised);
-  cursor: pointer;
-}
-
-.sidebar-actions button:hover {
-  background: var(--hover);
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 6px 4px;
 }
 
 .sidebar-list {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 6px;
+  padding: 0 6px 10px;
 }
 
 .sidebar-heading {
-  padding: 12px 10px 6px;
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  padding: 14px 8px 6px;
+  font-size: 11.5px;
+  font-weight: 600;
   color: var(--faint);
 }
 
@@ -430,71 +422,109 @@ button {
 }
 
 .sidebar-items.nested {
-  margin-bottom: 6px;
-  padding-left: 14px;
+  margin-bottom: 4px;
+  padding-left: 8px;
 }
 
 .sidebar-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 4px 0 8px;
-  border: 1px solid transparent;
-  border-radius: 7px;
-}
-
-.project-row {
-  padding-left: 2px;
-  font-weight: 600;
-  color: var(--text-dim);
-}
-
-.workspace-row,
-.project-row {
+  gap: 8px;
+  height: 28px;
+  padding: 0 6px 0 8px;
+  border: 0;
+  border-radius: 6px;
   cursor: pointer;
 }
 
-.overview-row {
+.sidebar-row:hover {
+  color: var(--washi);
+  background: var(--stone);
+}
+
+.sidebar-row > svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.nav-row {
   width: 100%;
-  margin-bottom: 6px;
   font-size: 13px;
+  font-weight: 500;
+  text-align: left;
   color: var(--text-dim);
   background: none;
-  cursor: pointer;
 }
 
-.overview-row:hover {
-  color: var(--washi);
-}
-
-.overview-row.active {
-  color: var(--washi);
-  background: #1f2023;
-  border-color: var(--edge-strong);
-}
-
-.workspace-row:hover,
-.workspace-row.open {
-  color: var(--washi);
-}
-
+.nav-row.active,
 .workspace-row.active {
-  background: #1f2023;
-  border-color: var(--edge-strong);
+  color: var(--washi);
+  background: var(--raised);
 }
 
-/* Dot on an open workspace: its terminals are running, whether it's on screen or not. */
-.status {
-  width: 6px;
-  height: 6px;
+.nav-row.active > svg {
+  color: var(--washi);
+}
+
+kbd {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+}
+
+.project-row {
+  font-weight: 600;
+  color: var(--washi);
+}
+
+.workspace-row {
+  color: var(--muted);
+}
+
+.workspace-row.open {
+  color: var(--text-dim);
+}
+
+/* Open workspace: its terminals are running, whether it's on screen or not. */
+.workspace-row.open > svg,
+.card.open .card-top > svg {
+  color: var(--shu);
+}
+
+/* The project's initial: a tinted square, the letter in the full tone. */
+.badge {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
-  border-radius: 50%;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 22%, transparent);
 }
 
-.workspace-row.open .status,
-.card.open .status {
-  background: var(--shu);
+.badge[data-tone='0'] {
+  --tone: var(--shu);
+}
+
+.badge[data-tone='1'] {
+  --tone: #7d8fc4;
+}
+
+.badge[data-tone='2'] {
+  --tone: #c9a45c;
+}
+
+.badge[data-tone='3'] {
+  --tone: #85a878;
+}
+
+.badge[data-tone='4'] {
+  --tone: #b48ab8;
 }
 
 .row-name {
@@ -515,6 +545,15 @@ input.row-name {
   background: var(--sumi);
 }
 
+/* The count of a project or the age of a workspace, on the right of its row. */
+.row-meta {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--faint);
+}
+
 .row-button {
   display: grid;
   place-items: center;
@@ -531,24 +570,35 @@ input.row-name {
   cursor: pointer;
 }
 
+.row-button svg {
+  width: 13px;
+  height: 13px;
+}
+
 .row-button:hover {
   color: var(--washi);
-  background: var(--raised);
+  background: var(--hover);
 }
 
 .row-button.danger:hover {
   background: var(--shu);
 }
 
-/* A row's buttons show up only when needed, so its name doesn't shift around. The chevron
-   always shows. */
-.sidebar-row .row-button:not(.chevron) {
-  visibility: hidden;
+/* A row's buttons take the place of its count or age on hover, so the name doesn't shift. The
+   chevron also shows on a collapsed project, which would look empty otherwise. */
+.sidebar-row .row-button {
+  display: none;
 }
 
 .sidebar-row:hover .row-button,
-.workspace-row.active .row-button {
-  visibility: visible;
+.workspace-row.active .row-button,
+.project-row.collapsed .chevron {
+  display: grid;
+}
+
+.sidebar-row:hover .row-meta,
+.workspace-row.active .row-meta {
+  display: none;
 }
 
 .chevron {
@@ -565,112 +615,140 @@ input.row-name {
 .overview {
   position: absolute;
   inset: 0;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   background: var(--sumi);
   user-select: none;
 }
 
-.overview-inner {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 40px 40px 64px;
-}
-
-.overview-head {
+.overview-bar {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 36px;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  flex-shrink: 0;
+  padding: 0 10px 0 16px;
+  border-bottom: 1px solid var(--edge);
 }
 
-.overview-head h1 {
+.overview-bar h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 30px;
+  font-size: 17px;
   font-weight: 800;
 }
 
-.overview-head p {
-  margin: 6px 0 0;
-  font-size: 13px;
+.count {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
 
-.overview-actions,
-.group-actions {
+.ghost-button {
   display: flex;
+  align-items: center;
   gap: 6px;
-}
-
-.overview-actions button,
-.group-actions button {
-  display: grid;
-  place-items: center;
-  height: 30px;
-  padding: 0 12px;
-  border: 1px solid var(--edge-strong);
-  border-radius: 7px;
-  font-size: 12px;
-  color: var(--washi);
-  background: var(--raised);
+  height: 28px;
+  margin-left: auto;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-dim);
+  background: var(--stone);
   cursor: pointer;
 }
 
-.overview-actions button:hover,
-.group-actions button:hover {
-  background: var(--hover);
-}
-
-.group-actions button.danger {
-  padding: 0 9px;
-  color: var(--muted);
-}
-
-.group-actions button.danger:hover {
+.ghost-button:hover {
   color: var(--washi);
-  border-color: var(--shu);
-  background: var(--shu);
+  background: var(--raised);
+}
+
+.ghost-button svg {
+  width: 13px;
+  height: 13px;
+}
+
+.overview-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 16px 48px;
 }
 
 .overview-group {
-  margin-bottom: 36px;
+  margin-bottom: 28px;
 }
 
 .group-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding-bottom: 12px;
-  margin-bottom: 14px;
-  border-bottom: 1px solid var(--edge);
-}
-
-.group-title {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
+  margin-bottom: 10px;
+  font-size: 13px;
 }
 
 .group-name {
   margin: 0;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
   color: var(--washi);
 }
 
 input.group-name {
-  width: 220px;
+  width: 200px;
   padding: 2px 6px;
   border: 1px solid var(--shu);
   border-radius: 4px;
   outline: none;
   font: inherit;
-  font-size: 16px;
+  font-weight: 600;
   background: var(--sumi);
+}
+
+.separator {
+  color: var(--faint);
+}
+
+.group-folder {
+  max-width: 320px;
+}
+
+/* The small buttons beside a project's name. */
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  flex-shrink: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--muted);
+  background: var(--stone);
+  cursor: pointer;
+}
+
+.chip:first-of-type {
+  margin-left: 4px;
+}
+
+.chip svg {
+  width: 12px;
+  height: 12px;
+}
+
+.chip:hover {
+  color: var(--washi);
+  background: var(--raised);
+}
+
+.chip.danger:hover {
+  background: var(--shu);
 }
 
 /* See Path in Overview.jsx: rtl puts the ellipsis at the start of the path. */
@@ -688,30 +766,36 @@ input.group-name {
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 216px));
+  gap: 10px;
 }
 
 .cards-empty {
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--faint);
 }
 
 .card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
   min-width: 0;
-  padding: 14px 12px 12px 14px;
-  border: 1px solid var(--edge);
-  border-radius: 10px;
-  background: var(--stone);
+  min-height: 56px;
+  padding: 10px 8px 9px 10px;
+  border: 1px solid var(--edge-strong);
+  border-radius: 7px;
+  background: var(--bar);
   cursor: pointer;
 }
 
 .card:hover {
-  border-color: var(--edge-strong);
-  background: var(--raised);
+  background: var(--stone);
+}
+
+/* The workspace that was on screen before the page opened. */
+.card.current {
+  border-color: var(--shu);
+  background: var(--stone);
 }
 
 .card-top {
@@ -720,13 +804,18 @@ input.group-name {
   gap: 8px;
 }
 
+.card-top > svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
 .card-name {
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--washi);
 }
@@ -734,10 +823,15 @@ input.group-name {
 /* Like the sidebar rows, the button shows up only on hover. */
 .card .row-button {
   visibility: hidden;
+  margin: -2px 0;
 }
 
 .card:hover .row-button {
   visibility: visible;
+}
+
+.card-folder {
+  font-size: 11px;
 }
 
 .card-meta {
@@ -746,16 +840,12 @@ input.group-name {
   justify-content: space-between;
   gap: 8px;
   margin-top: auto;
-  font-size: 12px;
-  color: var(--muted);
+  font-size: 11.5px;
+  color: var(--faint);
 }
 
-.tag {
-  padding: 2px 7px;
-  border-radius: 999px;
-  font-size: 11px;
+.running {
   color: var(--shu);
-  background: var(--shu-deep);
 }
 
 .overview-empty {

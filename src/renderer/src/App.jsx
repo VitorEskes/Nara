@@ -3,6 +3,7 @@ import Workspace from './components/Workspace'
 import Sidebar from './components/Sidebar'
 import Overview from './components/Overview'
 import { byName } from './workspaceList'
+import { shortcutFor } from './shortcuts'
 
 export default function App() {
   // Every project as { id, name, folder }, and every saved workspace as { id, name, project,
@@ -44,6 +45,25 @@ export default function App() {
   useEffect(() => {
     if (started) window.api.workspace.saveSession({ open, active })
   }, [started, open, active])
+
+  // Capture, so a focused terminal doesn't also get the keys. Registered again on every render,
+  // which keeps the handlers reading the current state.
+  useEffect(() => {
+    const actions = {
+      newWorkspace: () => createWorkspace(),
+      overview: showOverview,
+      newProject: createProject
+    }
+    function onKeyDown(e) {
+      const name = shortcutFor(e)
+      if (!name) return
+      e.preventDefault()
+      e.stopPropagation()
+      actions[name]()
+    }
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
+  })
 
   function openWorkspace(id) {
     setOpen((current) => (current.includes(id) ? current : [...current, id]))
@@ -167,9 +187,9 @@ export default function App() {
           <Overview
             projects={projects}
             workspaces={workspaces}
+            current={active}
             onOpen={openWorkspace}
             onOpenProject={openProject}
-            onCreateProject={createProject}
             onCreateWorkspace={createWorkspace}
             onCloseWorkspace={closeWorkspace}
             onRemoveWorkspace={removeWorkspace}

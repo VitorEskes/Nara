@@ -1,6 +1,14 @@
 import { app, dialog, ipcMain } from 'electron'
 import { randomUUID } from 'crypto'
-import { mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'fs'
+import {
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync
+} from 'fs'
 import { basename, dirname, join } from 'path'
 import { currentCwd } from './pty'
 
@@ -202,7 +210,15 @@ function list() {
     .map((id) => {
       const { name, project, folder, nodes = [] } = workspaces.get(id) ?? read(id)?.workspace ?? {}
       const count = (type) => nodes.filter((node) => node.type === type).length
-      return { id, name, project, folder, terminals: count('terminal'), notes: count('note') }
+      return {
+        id,
+        name,
+        project,
+        folder,
+        terminals: count('terminal'),
+        notes: count('note'),
+        updated: modified(id)
+      }
     })
     .filter(({ name }) => name)
   return sortByName(all)
@@ -382,6 +398,15 @@ function projectsPath() {
 }
 
 // Ids come from the renderer; checking them keeps a bad one from reaching outside the folder.
+// When the workspace's file was last written, in ms, or null if it can't be read.
+function modified(id) {
+  try {
+    return statSync(workspacePath(id)).mtimeMs
+  } catch {
+    return null
+  }
+}
+
 function workspacePath(id) {
   if (!/^[\w-]+$/.test(id)) throw new Error(`invalid workspace id: ${id}`)
   return join(app.getPath('userData'), 'workspaces', `${id}.json`)

@@ -25,3 +25,20 @@ export function stop(fn) {
     fn()
   }
 }
+
+const UNITS = [
+  ['y', 365 * 24 * 3600],
+  ['mo', 30 * 24 * 3600],
+  ['w', 7 * 24 * 3600],
+  ['d', 24 * 3600],
+  ['h', 3600],
+  ['m', 60]
+]
+
+// How long ago a time in ms was, in the largest unit that fits: "3d", "1w", "now".
+export function ago(time, now = Date.now()) {
+  if (!time) return ''
+  const seconds = (now - time) / 1000
+  const [unit, size] = UNITS.find(([, size]) => seconds >= size) ?? []
+  return unit ? `${Math.floor(seconds / size)}${unit}` : 'now'
+}

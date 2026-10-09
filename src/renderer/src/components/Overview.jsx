@@ -1,15 +1,17 @@
 import Name from './Name'
-import { TrashIcon } from './icons'
-import { groupByProject, stop } from '../workspaceList'
+import ProjectBadge from './ProjectBadge'
+import { FolderIcon, PlusIcon, TrashIcon } from './icons'
+import { ago, groupByProject, stop } from '../workspaceList'
 
 // Full page with every workspace as a card: one section per project, then one with the loose
 // workspaces. Opening a workspace or a project from here takes the canvas back to the screen.
+// `current` is the workspace that was on screen before the page opened, if any.
 export default function Overview({
   projects,
   workspaces,
+  current,
   onOpen,
   onOpenProject,
-  onCreateProject,
   onCreateWorkspace,
   onCloseWorkspace,
   onRemoveWorkspace,
@@ -17,13 +19,13 @@ export default function Overview({
   onRemoveProject
 }) {
   const { groups, loose } = groupByProject(projects, workspaces)
-  const running = workspaces.filter((w) => w.open).length
 
   function card(w, project) {
     return (
       <WorkspaceCard
         key={w.id}
         {...w}
+        current={w.id === current}
         // Inside a project only a folder of its own is worth showing.
         folder={project && w.folder === project.folder ? null : w.folder}
         onOpen={() => onOpen(w.id)}
@@ -35,46 +37,44 @@ export default function Overview({
 
   return (
     <div className="overview">
-      <div className="overview-inner">
-        <header className="overview-head">
-          <div>
-            <h1>Workspaces</h1>
-            <p>
-              {plural(projects.length, 'project')} · {plural(workspaces.length, 'workspace')} ·{' '}
-              {running} open
-            </p>
-          </div>
-          <div className="overview-actions">
-            <button onClick={onCreateProject}>New project</button>
-            <button onClick={() => onCreateWorkspace()}>New workspace</button>
-          </div>
-        </header>
+      <header className="overview-bar">
+        <h1>Workspaces</h1>
+        <span className="count">{workspaces.length}</span>
+        <button className="ghost-button" onClick={() => onCreateWorkspace()}>
+          <PlusIcon />
+          New workspace
+        </button>
+      </header>
 
+      <div className="overview-body">
         {groups.map(({ project, members }) => (
           <section key={project.id} className="overview-group">
             <div className="group-head">
-              <div className="group-title">
-                <Name
-                  className="group-name"
-                  name={project.name}
-                  onRename={(name) => onRenameProject(project.id, name)}
-                />
-                <Path className="group-folder" path={project.folder} />
-              </div>
-              <div className="group-actions">
-                <button onClick={() => onOpenProject(project.id)}>Open</button>
-                <button onClick={() => onCreateWorkspace(project.id)}>+ Workspace</button>
-                {members.every((w) => !w.open) && (
-                  <button
-                    className="danger"
-                    title="Delete project"
-                    aria-label="Delete project"
-                    onClick={() => onRemoveProject(project.id)}
-                  >
-                    <TrashIcon />
-                  </button>
-                )}
-              </div>
+              <ProjectBadge project={project} />
+              <Name
+                className="group-name"
+                name={project.name}
+                onRename={(name) => onRenameProject(project.id, name)}
+              />
+              <span className="separator">·</span>
+              <Path className="group-folder" path={project.folder} />
+              <button className="chip" onClick={() => onOpenProject(project.id)}>
+                Open
+              </button>
+              <button className="chip" onClick={() => onCreateWorkspace(project.id)}>
+                <PlusIcon />
+                Workspace
+              </button>
+              {members.every((w) => !w.open) && (
+                <button
+                  className="chip danger"
+                  title="Delete project"
+                  aria-label="Delete project"
+                  onClick={() => onRemoveProject(project.id)}
+                >
+                  <TrashIcon />
+                </button>
+              )}
             </div>
             <div className="cards">
               {members.map((w) => card(w, project))}
@@ -86,9 +86,7 @@ export default function Overview({
         {loose.length > 0 && (
           <section className="overview-group">
             <div className="group-head">
-              <div className="group-title">
-                <h2 className="group-name">Without a project</h2>
-              </div>
+              <h2 className="group-name">Without a project</h2>
             </div>
             <div className="cards">{loose.map((w) => card(w))}</div>
           </section>
@@ -109,6 +107,8 @@ function WorkspaceCard({
   name,
   folder,
   open,
+  current,
+  updated,
   terminals = 0,
   notes = 0,
   onOpen,
@@ -116,10 +116,11 @@ function WorkspaceCard({
   onRemove
 }) {
   const contents = [terminals && plural(terminals, 'terminal'), notes && plural(notes, 'note')]
+  const className = ['card', open && 'open', current && 'current']
   return (
-    <article className={open ? 'card open' : 'card'} onClick={onOpen}>
+    <article className={className.filter(Boolean).join(' ')} onClick={onOpen}>
       <div className="card-top">
-        <span className="status" />
+        <FolderIcon />
         <span className="card-name">{name}</span>
         {open ? (
           <button
@@ -138,7 +139,7 @@ function WorkspaceCard({
       {folder !== null && <Path className="card-folder" path={folder ?? 'No folder yet'} />}
       <div className="card-meta">
         <span>{contents.filter(Boolean).join(' · ') || 'Empty canvas'}</span>
-        {open && <span className="tag">Running</span>}
+        {open ? <span className="running">running</span> : <span>{ago(updated)}</span>}
       </div>
     </article>
   )
