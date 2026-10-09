@@ -5,7 +5,6 @@ import { contextBridge, ipcRenderer } from 'electron'
 const api = {
   pty: {
     create: (options) => ipcRenderer.invoke('pty:create', options),
-    pickFolder: (agent) => ipcRenderer.invoke('pty:pick-folder', agent),
     write: (id, data) => ipcRenderer.send('pty:write', id, data),
     resize: (id, cols, rows) => ipcRenderer.send('pty:resize', id, cols, rows),
     kill: (id) => ipcRenderer.send('pty:kill', id),
@@ -18,12 +17,20 @@ const api = {
     saveSession: (session) => ipcRenderer.send('workspace:save-session', session),
     list: () => ipcRenderer.invoke('workspace:list'),
     load: (id) => ipcRenderer.invoke('workspace:load', id),
-    create: () => ipcRenderer.invoke('workspace:create'),
+    // projectId is optional: without it the workspace is a loose one.
+    create: (projectId) => ipcRenderer.invoke('workspace:create', projectId),
+    pickFolder: (id) => ipcRenderer.invoke('workspace:pick-folder', id),
     update: (id, layout) => ipcRenderer.send('workspace:update', id, layout),
     rename: (id, name) => ipcRenderer.send('workspace:rename', id, name),
     close: (id) => ipcRenderer.invoke('workspace:close', id),
     remove: (id) => ipcRenderer.invoke('workspace:remove', id),
     onNoteWritten: (fn) => listen('workspace:note-written', fn)
+  },
+  project: {
+    list: () => ipcRenderer.invoke('project:list'),
+    create: () => ipcRenderer.invoke('project:create'),
+    rename: (id, name) => ipcRenderer.send('project:rename', id, name),
+    remove: (id) => ipcRenderer.invoke('project:remove', id)
   }
 }
 

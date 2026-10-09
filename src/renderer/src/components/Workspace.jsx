@@ -27,8 +27,10 @@ const ERASER_RADIUS = 8
 
 // One canvas with its camera, nodes, links and drawings. `saved` is what was loaded from disk: from then on
 // this component owns the state, and main keeps a copy that it saves.
-// An inactive workspace is hidden, not unmounted, so its terminals keep running.
-export default function Workspace({ workspaceId, saved, active }) {
+// An inactive workspace is hidden, not unmounted, so its terminals keep running. New terminals
+// and agents open in `folder`; a workspace from before folders existed has none, and onPickFolder
+// asks for one.
+export default function Workspace({ workspaceId, saved, active, folder, onPickFolder }) {
   const container = useRef(null)
   const [cam, setCam] = useState(saved.camera)
   const [nodes, setNodes] = useState(saved.nodes)
@@ -134,7 +136,7 @@ export default function Workspace({ workspaceId, saved, active }) {
   // node resume its conversation after a restart; agents that can't resume ignore it. The role,
   // if any, is fixed for the node's lifetime: it's part of the prompt the conversation began with.
   async function createAgent(agent, role) {
-    const cwd = await window.api.pty.pickFolder(agent)
+    const cwd = folder ?? (await onPickFolder())
     if (!cwd) return
     createNodeAtCenter('terminal', {
       agent,
@@ -171,7 +173,7 @@ export default function Workspace({ workspaceId, saved, active }) {
       return target.type === 'terminal' || source.type === 'terminal' ? id : null
     }
 
-    // clientX/Y count from the window, and the viewport starts below the tab bar.
+    // clientX/Y count from the window, and the viewport starts right of the sidebar.
     const viewport = container.current.getBoundingClientRect()
     function toWorld(ev) {
       const c = camRef.current
@@ -331,7 +333,7 @@ export default function Workspace({ workspaceId, saved, active }) {
           <PointerIcon />
         </button>
         <span className="dock-divider" />
-        <button onClick={() => createNodeAtCenter('terminal')}>
+        <button onClick={() => createNodeAtCenter('terminal', folder && { cwd: folder })}>
           <span className="dock-mono">&gt;_</span> Terminal
         </button>
         {Object.keys(AGENTS).map((agent) => (

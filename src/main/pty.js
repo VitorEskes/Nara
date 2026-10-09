@@ -1,4 +1,4 @@
-import { dialog, ipcMain } from 'electron'
+import { ipcMain } from 'electron'
 import { execFileSync } from 'child_process'
 import { existsSync, readlinkSync } from 'fs'
 import * as pty from 'node-pty'
@@ -11,8 +11,6 @@ import { agentLaunch } from './agents'
 // and node ids are only unique within a workspace.
 export const terminals = new Map()
 let nextId = 1
-// Where the folder picker opens: the folder of the last agent opened.
-let lastFolder = process.env.HOME
 // How long a killed terminal gets to exit on its own before it's killed outright.
 const KILL_GRACE = 2000
 // Exits still pending from kill().
@@ -51,19 +49,6 @@ export function registerPty(win, extraEnv) {
     return id
   })
 
-  // An agent starts in the folder it will work on: unlike a shell, it has no prompt to cd from.
-  ipcMain.handle('pty:pick-folder', async (_ev, agent) => {
-    const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-      title: `Open ${AGENTS[agent]?.label ?? 'agent'} in…`,
-      defaultPath: lastFolder,
-      buttonLabel: 'Open here',
-      properties: ['openDirectory']
-    })
-    if (canceled || !filePaths[0]) return null
-    lastFolder = filePaths[0]
-    return lastFolder
-  })
-
   ipcMain.on('pty:write', (_ev, id, data) => terminals.get(id)?.term.write(data))
   ipcMain.on('pty:resize', (_ev, id, cols, rows) => terminals.get(id)?.term.resize(cols, rows))
   ipcMain.on('pty:kill', (_ev, id) => kill(id))
@@ -71,7 +56,6 @@ export function registerPty(win, extraEnv) {
   win.on('closed', () => {
     for (const id of terminals.keys()) kill(id)
     ipcMain.removeHandler('pty:create')
-    ipcMain.removeHandler('pty:pick-folder')
     ipcMain.removeAllListeners('pty:write')
     ipcMain.removeAllListeners('pty:resize')
     ipcMain.removeAllListeners('pty:kill')

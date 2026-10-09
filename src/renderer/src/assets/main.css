@@ -41,14 +41,15 @@ button {
 
 .app {
   display: flex;
-  flex-direction: column;
   height: 100%;
 }
 
-/* isolation keeps the nodes' ever-growing z-index from stacking above the tab bar's menu. */
+/* isolation keeps the nodes' ever-growing z-index inside this box. min-width: 0 lets it shrink
+   next to the sidebar instead of being pushed by a wide canvas. */
 .workspaces {
   position: relative;
   flex: 1;
+  min-width: 0;
   isolation: isolate;
 }
 
@@ -185,8 +186,7 @@ button {
   color: var(--shu);
 }
 
-.node-close,
-.tab-close {
+.node-close {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
@@ -204,8 +204,7 @@ button {
   margin-left: auto;
 }
 
-.node-close:hover,
-.tab-close:hover {
+.node-close:hover {
   color: var(--washi);
   background: var(--shu);
 }
@@ -365,73 +364,127 @@ button {
   fill: var(--sumi);
 }
 
-/* Tab bar */
+/* Sidebar: the projects and their workspaces, then the loose workspaces. */
 
-.tabs {
-  position: relative;
-  z-index: 1;
+.sidebar {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 48px;
+  flex-direction: column;
+  width: 236px;
   flex-shrink: 0;
-  padding: 0 10px 0 16px;
   font-size: 13px;
   color: var(--muted);
   background: var(--bar);
-  border-bottom: 1px solid var(--edge);
+  border-right: 1px solid var(--edge);
   user-select: none;
 }
 
 .brand {
-  margin-right: 18px;
+  padding: 14px 16px 10px;
   font-family: var(--font-display);
   font-size: 20px;
   font-weight: 800;
   color: var(--washi);
 }
 
-.tab {
-  display: flex;
-  align-items: center;
+.sidebar-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
-  max-width: 200px;
-  height: 32px;
-  box-sizing: border-box;
-  padding: 0 6px 0 14px;
-  border: 1px solid transparent;
+  padding: 4px 10px 12px;
+  border-bottom: 1px solid var(--edge);
+}
+
+.sidebar-actions button {
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--edge-strong);
   border-radius: 7px;
+  font-size: 12px;
+  color: var(--washi);
+  background: var(--raised);
   cursor: pointer;
 }
 
-.tab:hover {
+.sidebar-actions button:hover {
+  background: var(--hover);
+}
+
+.sidebar-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 6px;
+}
+
+.sidebar-heading {
+  padding: 12px 10px 6px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.sidebar-items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sidebar-items.nested {
+  margin-bottom: 6px;
+  padding-left: 14px;
+}
+
+.sidebar-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 4px 0 8px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+}
+
+.project-row {
+  padding-left: 2px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.workspace-row {
+  cursor: pointer;
+}
+
+.workspace-row:hover,
+.workspace-row.open {
   color: var(--washi);
 }
 
-.tab.active {
-  color: var(--washi);
+.workspace-row.active {
   background: #1f2023;
   border-color: var(--edge-strong);
 }
 
-/* The close button takes its place only when needed, so a tab's name doesn't shift around. */
-.tab .tab-close {
-  visibility: hidden;
+/* Dot on an open workspace: its terminals are running, whether it's on screen or not. */
+.status {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
 }
 
-.tab:hover .tab-close,
-.tab.active .tab-close {
-  visibility: visible;
+.workspace-row.open .status {
+  background: var(--shu);
 }
 
-.tab-name {
+.row-name {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-input.tab-name {
-  width: 120px;
+input.row-name {
   padding: 2px 4px;
   border: 1px solid var(--shu);
   border-radius: 4px;
@@ -441,82 +494,49 @@ input.tab-name {
   background: var(--sumi);
 }
 
-.tabs-button {
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: 7px;
-  font-size: 16px;
-  color: inherit;
-  background: none;
-  cursor: pointer;
-}
-
-.tabs-button:hover {
-  color: var(--washi);
-  background: var(--raised);
-}
-
-.closed-menu {
-  position: relative;
-  display: flex;
-  margin-left: auto;
-}
-
-.menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  min-width: 220px;
-  margin-top: 6px;
-  padding: 4px;
-  border: 1px solid var(--edge);
-  border-radius: 8px;
-  background: var(--stone);
-  box-shadow: 0 10px 28px rgb(0 0 0 / 45%);
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  border-radius: 6px;
-}
-
-.menu-item:hover {
-  background: var(--raised);
-}
-
-.menu-open {
-  flex: 1;
-  padding: 7px 10px;
-  border: 0;
-  text-align: left;
-  color: var(--washi);
-  background: none;
-  cursor: pointer;
-}
-
-.menu-remove {
-  width: 22px;
-  height: 22px;
-  margin-right: 4px;
+.row-button {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
   padding: 0;
   border: 0;
   border-radius: 4px;
-  font-size: 14px;
-  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  color: var(--faint);
   background: none;
   cursor: pointer;
 }
 
-.menu-remove:hover {
+.row-button:hover {
   color: var(--washi);
+  background: var(--raised);
+}
+
+.row-button.danger:hover {
   background: var(--shu);
 }
 
-.menu-empty {
-  padding: 7px 10px;
-  color: var(--faint);
+/* A row's buttons show up only when needed, so its name doesn't shift around. The chevron
+   always shows. */
+.sidebar-row .row-button:not(.chevron) {
+  visibility: hidden;
+}
+
+.sidebar-row:hover .row-button,
+.workspace-row.active .row-button {
+  visibility: visible;
+}
+
+.chevron {
+  font-size: 12px;
+  transition: transform 0.12s;
+}
+
+.chevron[aria-expanded='false'] {
+  transform: rotate(-90deg);
 }
 
 /* Dock: the tools, floating at the bottom. Lives outside .world, so pan and zoom don't move it. */

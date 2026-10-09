@@ -1,23 +1,28 @@
 import { useEffect, useState } from 'react'
 import Workspace from './components/Workspace'
-import WorkspaceTabs from './components/WorkspaceTabs'
+import Sidebar from './components/Sidebar'
 
 export default function App() {
-  // Every saved workspace as { id, name }; `open` holds the ids shown as tabs, in order.
+  // Every project as { id, name, folder }, and every saved workspace as { id, name, project,
+  // folder }; `open` holds the ids of the open workspaces, in the order they were opened.
+  const [projects, setProjects] = useState([])
   const [all, setAll] = useState([])
   const [open, setOpen] = useState([])
   const [active, setActive] = useState(null)
-  // Saved state of each tab mounted so far. A tab mounts the first time it's shown and stays
-  // mounted while open, hidden when inactive, so its terminals keep running in the background.
+  const [started, setStarted] = useState(false)
+  // Saved state of each open workspace mounted so far. A workspace mounts the first time it's
+  // shown and stays mounted while open, hidden when inactive, so its terminals keep running in
+  // the background.
   const [loaded, setLoaded] = useState({})
 
   useEffect(() => {
-    // One after the other: the session may create the first workspace, which the list must see.
     async function start() {
       const session = await window.api.workspace.session()
+      setProjects(await window.api.project.list())
       setAll(await window.api.workspace.list())
       setOpen(session.open)
       setActive(session.active)
+      setStarted(true)
     }
     start()
   }, [])
@@ -30,22 +35,32 @@ export default function App() {
   }, [active, loaded])
 
   useEffect(() => {
-    if (active) window.api.workspace.saveSession({ open, active })
-  }, [open, active])
+    if (started) window.api.workspace.saveSession({ open, active })
+  }, [started, open, active])
 
   function openWorkspace(id) {
     setOpen((current) => (current.includes(id) ? current : [...current, id]))
     setActive(id)
   }
 
-  async function createWorkspace() {
-    const workspace = await window.api.workspace.create()
+  // Both ask for a folder first, and return nothing if that's canceled.
+  async function createWorkspace(projectId) {
+    const workspace = await window.api.workspace.create(projectId)
+    if (!workspace) return
     setAll((current) => [...current, workspace])
     openWorkspace(workspace.id)
   }
 
+  async function createProject() {
+    const created = await window.api.project.create()
+    if (!created) return
+    setProjects((current) => [...current, created.project])
+    setAll((current) => [...current, created.workspace])
+    openWorkspace(created.workspace.id)
+  }
+
   async function closeWorkspace(id) {
-    // Main saves it before the tab unmounts and takes its terminals down.
+    // Main saves it before the workspace unmounts and takes its terminals down.
     await window.api.workspace.close(id)
     const index = open.indexOf(id)
     const rest = open.filter((other) => other !== id)
@@ -55,7 +70,7 @@ export default function App() {
       delete next[id]
       return next
     })
-    if (id === active) setActive(rest[Math.max(0, index - 1)])
+    if (id === active) setActive(rest[Math.max(0, index - 1)] ?? null)
   }
 
   function renameWorkspace(id, name) {
@@ -69,28 +84,63 @@ export default function App() {
     }
   }
 
-  if (!active) return null
+  // A workspace from before folders existed picks one the first time an agent opens in it.
+  async function pickFolder(id) {
+    const folder = await window.api.workspace.pickFolder(id)
+    if (folder) setAll((current) => current.map((w) => (w.id === id ? { ...w, folder } : w)))
+    return folder
+  }
 
-  const names = new Map(all.map((w) => [w.id, w.name]))
+  function renameProject(id, name) {
+    setProjects((current) => current.map((p) => (p.id === id ? { ...p, name } : p)))
+    window.api.project.rename(id, name)
+  }
+
+  async function removeProject(id) {
+    if (await window.api.project.remove(id)) {
+      setProjects((current) => current.filter((p) => p.id !== id))
+      setAll((current) => current.filter((w) => w.project !== id))
+    }
+  }
+
+  if (!started) return null
+
+  const folders = new Map(all.map((w) => [w.id, w.folder]))
   return (
     <div className="app">
-      <WorkspaceTabs
-        tabs={open.map((id) => ({ id, name: names.get(id) }))}
-        closed={all.filter((w) => !open.includes(w.id))}
+      <Sidebar
+        projects={projects}
+        workspaces={all.map((w) => ({ ...w, open: open.includes(w.id) }))}
         active={active}
-        onSelect={setActive}
-        onCreate={createWorkspace}
-        onClose={closeWorkspace}
-        onRename={renameWorkspace}
-        onOpen={openWorkspace}
-        onRemove={removeWorkspace}
+        onSelect={openWorkspace}
+        onCreateProject={createProject}
+        onCreateWorkspace={createWorkspace}
+        onCloseWorkspace={closeWorkspace}
+        onRenameWorkspace={renameWorkspace}
+        onRemoveWorkspace={removeWorkspace}
+        onRenameProject={renameProject}
+        onRemoveProject={removeProject}
       />
       <main className="workspaces">
         {open
           .filter((id) => loaded[id])
           .map((id) => (
-            <Workspace key={id} workspaceId={id} saved={loaded[id]} active={id === active} />
+            <Workspace
+              key={id}
+              workspaceId={id}
+              saved={loaded[id]}
+              active={id === active}
+              folder={folders.get(id)}
+              onPickFolder={() => pickFolder(id)}
+            />
           ))}
+        {!active && (
+          <div className="empty">
+            {all.length > 0
+              ? 'Open a workspace from the sidebar, or create a new one'
+              : 'Create a project or a workspace to start'}
+          </div>
+        )}
       </main>
     </div>
   )
