@@ -24,6 +24,7 @@ npm run dev
 - `src/shared/roles.js` — the roles an agent can open with (orchestrator, worker, reviewer) and the instructions each one adds to the prompt
 - `src/preload/index.js` — exposes `window.api.pty`, `window.api.workspace` and `window.api.project` to the renderer
 - `src/renderer/src/components/Sidebar.jsx` — the sidebar with the projects, their workspaces and the loose workspaces
+- `src/renderer/src/components/Overview.jsx` — the page with every workspace as a card, grouped by project, shown in place of the canvas
 - `src/renderer/src/components/Terminal.jsx` — an xterm.js terminal connected to a PTY
 - `src/renderer/src/components/AgentButton.jsx` — the toolbar button that opens an agent, with the role menu
 - `src/renderer/src/components/Note.jsx` — a note, whose text and text style are saved with the workspace

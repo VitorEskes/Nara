@@ -187,7 +187,8 @@ async function confirm(win, { message, detail }) {
   return response === 0
 }
 
-// Every saved workspace, open or not, as { id, name, project, folder }, sorted by name.
+// Every saved workspace, open or not, as { id, name, project, folder, terminals, notes } (the last
+// two are how many of each it has), sorted by name.
 function list() {
   let files
   try {
@@ -199,8 +200,9 @@ function list() {
     .filter((file) => file.endsWith('.json'))
     .map((file) => file.slice(0, -'.json'.length))
     .map((id) => {
-      const { name, project, folder } = workspaces.get(id) ?? read(id)?.workspace ?? {}
-      return { id, name, project, folder }
+      const { name, project, folder, nodes = [] } = workspaces.get(id) ?? read(id)?.workspace ?? {}
+      const count = (type) => nodes.filter((node) => node.type === type).length
+      return { id, name, project, folder, terminals: count('terminal'), notes: count('note') }
     })
     .filter(({ name }) => name)
   return sortByName(all)

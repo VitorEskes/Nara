@@ -1,13 +1,21 @@
 import { useState } from 'react'
+import Name from './Name'
+import { GridIcon, TrashIcon } from './icons'
+import { groupByProject, stop } from '../workspaceList'
 
 // Column on the left with every project and its workspaces, then the loose workspaces. Clicking a
-// workspace opens it; an open one stays mounted, with its terminals running, until it's closed
-// here. Only a closed workspace can be deleted, and only a project with none open.
+// workspace opens it, and clicking a project opens one of its workspaces; an open one stays
+// mounted, with its terminals running, until it's closed here. Only a closed workspace can be
+// deleted, and only a project with none open. `active` is the workspace on screen, if any: with
+// the overview showing there is none.
 export default function Sidebar({
   projects,
   workspaces,
   active,
+  overview,
+  onOverview,
   onSelect,
+  onOpenProject,
   onCreateProject,
   onCreateWorkspace,
   onCloseWorkspace,
@@ -17,9 +25,7 @@ export default function Sidebar({
   onRemoveProject
 }) {
   const [collapsed, setCollapsed] = useState(() => new Set())
-  // A workspace whose project is gone shows up as a loose one.
-  const projectIds = new Set(projects.map((p) => p.id))
-  const loose = workspaces.filter((w) => !projectIds.has(w.project))
+  const { groups, loose } = groupByProject(projects, workspaces)
 
   function toggle(id) {
     setCollapsed((current) => {
@@ -51,17 +57,28 @@ export default function Sidebar({
         <button onClick={() => onCreateWorkspace()}>New workspace</button>
       </div>
       <nav className="sidebar-list">
-        {byName(projects).map((project) => {
-          const members = workspaces.filter((w) => w.project === project.id)
+        <button
+          className={overview ? 'sidebar-row overview-row active' : 'sidebar-row overview-row'}
+          aria-current={overview || undefined}
+          onClick={onOverview}
+        >
+          <GridIcon />
+          All workspaces
+        </button>
+        {groups.map(({ project, members }) => {
           const open = !collapsed.has(project.id)
           return (
             <section key={project.id} className="sidebar-project">
-              <div className="sidebar-row project-row" title={project.folder}>
+              <div
+                className="sidebar-row project-row"
+                title={project.folder}
+                onClick={() => onOpenProject(project.id)}
+              >
                 <button
                   className="row-button chevron"
                   aria-expanded={open}
                   title={open ? 'Collapse' : 'Expand'}
-                  onClick={() => toggle(project.id)}
+                  onClick={stop(() => toggle(project.id))}
                 >
                   ▾
                 </button>
@@ -69,7 +86,7 @@ export default function Sidebar({
                 <button
                   className="row-button"
                   title="New workspace in this project"
-                  onClick={() => onCreateWorkspace(project.id)}
+                  onClick={stop(() => onCreateWorkspace(project.id))}
                 >
                   +
                 </button>
@@ -77,20 +94,20 @@ export default function Sidebar({
                   <button
                     className="row-button danger"
                     title="Delete project"
-                    onClick={() => onRemoveProject(project.id)}
+                    onClick={stop(() => onRemoveProject(project.id))}
                   >
                     <TrashIcon />
                   </button>
                 )}
               </div>
-              {open && <ul className="sidebar-items nested">{byName(members).map(item)}</ul>}
+              {open && <ul className="sidebar-items nested">{members.map(item)}</ul>}
             </section>
           )
         })}
         {loose.length > 0 && (
           <section>
             <div className="sidebar-heading">Workspaces</div>
-            <ul className="sidebar-items">{byName(loose).map(item)}</ul>
+            <ul className="sidebar-items">{loose.map(item)}</ul>
           </section>
         )}
       </nav>
@@ -113,81 +130,15 @@ function WorkspaceItem({ name, folder, open, active, onSelect, onClose, onRename
         <button
           className="row-button"
           title="Close (stops its terminals; the workspace stays saved)"
-          onClick={(e) => {
-            // Otherwise the click also reaches the row and opens the workspace again.
-            e.stopPropagation()
-            onClose()
-          }}
+          onClick={stop(onClose)}
         >
           ×
         </button>
       ) : (
-        <button
-          className="row-button danger"
-          title="Delete"
-          onClick={(e) => {
-            e.stopPropagation()
-            onRemove()
-          }}
-        >
+        <button className="row-button danger" title="Delete" onClick={stop(onRemove)}>
           <TrashIcon />
         </button>
       )}
     </li>
   )
-}
-
-// A name that turns into a text field on double-click.
-function Name({ name, onRename }) {
-  const [editing, setEditing] = useState(false)
-
-  function finish(value) {
-    setEditing(false)
-    const next = value.trim()
-    if (next && next !== name) onRename(next)
-  }
-
-  if (!editing) {
-    return (
-      <span
-        className="row-name"
-        title="Double-click to rename"
-        onDoubleClick={() => setEditing(true)}
-      >
-        {name}
-      </span>
-    )
-  }
-  return (
-    <input
-      className="row-name"
-      defaultValue={name}
-      autoFocus
-      onFocus={(e) => e.target.select()}
-      onClick={(e) => e.stopPropagation()}
-      onBlur={(e) => finish(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') e.target.value = name
-        if (e.key === 'Enter' || e.key === 'Escape') e.target.blur()
-      }}
-    />
-  )
-}
-
-function TrashIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
-      <path
-        d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function byName(items) {
-  return [...items].sort((a, b) => a.name.localeCompare(b.name))
 }

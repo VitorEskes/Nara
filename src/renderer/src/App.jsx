@@ -1,15 +1,21 @@
 import { useEffect, useState } from 'react'
 import Workspace from './components/Workspace'
 import Sidebar from './components/Sidebar'
+import Overview from './components/Overview'
+import { byName } from './workspaceList'
 
 export default function App() {
   // Every project as { id, name, folder }, and every saved workspace as { id, name, project,
-  // folder }; `open` holds the ids of the open workspaces, in the order they were opened.
+  // folder, terminals, notes }; `open` holds the ids of the open workspaces, in the order they
+  // were opened.
   const [projects, setProjects] = useState([])
   const [all, setAll] = useState([])
   const [open, setOpen] = useState([])
   const [active, setActive] = useState(null)
   const [started, setStarted] = useState(false)
+  // The page with every workspace, in place of the canvas. The active workspace stays mounted
+  // under it, hidden like any other, and comes back when it closes.
+  const [overview, setOverview] = useState(false)
   // Saved state of each open workspace mounted so far. A workspace mounts the first time it's
   // shown and stays mounted while open, hidden when inactive, so its terminals keep running in
   // the background.
@@ -22,6 +28,7 @@ export default function App() {
       setAll(await window.api.workspace.list())
       setOpen(session.open)
       setActive(session.active)
+      setOverview(!session.active)
       setStarted(true)
     }
     start()
@@ -41,6 +48,23 @@ export default function App() {
   function openWorkspace(id) {
     setOpen((current) => (current.includes(id) ? current : [...current, id]))
     setActive(id)
+    setOverview(false)
+  }
+
+  // Opens the project's workspace opened last, or its first one if none is open. A project with
+  // no workspaces gets a new one.
+  function openProject(id) {
+    const members = all.filter((w) => w.project === id)
+    const latest = open.findLast((other) => members.some((w) => w.id === other))
+    const chosen = latest ?? byName(members)[0]?.id
+    if (chosen) openWorkspace(chosen)
+    else createWorkspace(id)
+  }
+
+  // The list is read again for the counts on the cards: the canvases have changed since.
+  async function showOverview() {
+    setOverview(true)
+    setAll(await window.api.workspace.list())
   }
 
   // Both ask for a folder first, and return nothing if that's canceled.
@@ -71,6 +95,7 @@ export default function App() {
       return next
     })
     if (id === active) setActive(rest[Math.max(0, index - 1)] ?? null)
+    if (rest.length === 0) setOverview(true)
   }
 
   function renameWorkspace(id, name) {
@@ -106,13 +131,17 @@ export default function App() {
   if (!started) return null
 
   const folders = new Map(all.map((w) => [w.id, w.folder]))
+  const workspaces = all.map((w) => ({ ...w, open: open.includes(w.id) }))
   return (
     <div className="app">
       <Sidebar
         projects={projects}
-        workspaces={all.map((w) => ({ ...w, open: open.includes(w.id) }))}
-        active={active}
+        workspaces={workspaces}
+        active={overview ? null : active}
+        overview={overview}
+        onOverview={showOverview}
         onSelect={openWorkspace}
+        onOpenProject={openProject}
         onCreateProject={createProject}
         onCreateWorkspace={createWorkspace}
         onCloseWorkspace={closeWorkspace}
@@ -129,17 +158,24 @@ export default function App() {
               key={id}
               workspaceId={id}
               saved={loaded[id]}
-              active={id === active}
+              active={id === active && !overview}
               folder={folders.get(id)}
               onPickFolder={() => pickFolder(id)}
             />
           ))}
-        {!active && (
-          <div className="empty">
-            {all.length > 0
-              ? 'Open a workspace from the sidebar, or create a new one'
-              : 'Create a project or a workspace to start'}
-          </div>
+        {(overview || !active) && (
+          <Overview
+            projects={projects}
+            workspaces={workspaces}
+            onOpen={openWorkspace}
+            onOpenProject={openProject}
+            onCreateProject={createProject}
+            onCreateWorkspace={createWorkspace}
+            onCloseWorkspace={closeWorkspace}
+            onRemoveWorkspace={removeWorkspace}
+            onRenameProject={renameProject}
+            onRemoveProject={removeProject}
+          />
         )}
       </main>
     </div>
