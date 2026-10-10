@@ -54,7 +54,7 @@ export default function Sidebar({
   return (
     <aside className="sidebar">
       <div className="sidebar-top">
-        <span className="brand">anbu</span>
+        <span className="brand">Nara</span>
       </div>
       <nav className="sidebar-nav">
         <NavItem

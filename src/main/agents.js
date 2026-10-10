@@ -7,7 +7,7 @@ import { ROLES } from '../shared/roles'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // How to open an agent in a node: the shell command, plus the variables it needs in its
-// environment. Claude Code runs under a session id that anbu picked and saved with the node, so
+// environment. Claude Code runs under a session id that Nara picked and saved with the node, so
 // after a restart the node picks its conversation back up instead of starting over.
 export function agentLaunch({ agent, session, role, nodeId }) {
   const { command, prompt } = AGENTS[agent]
@@ -23,31 +23,31 @@ export function agentLaunch({ agent, session, role, nodeId }) {
   // text never has to be quoted into the command line. It's passed again on every resume: Claude
   // Code may reuse the one saved at the first launch, but where it doesn't, the role would be lost.
   if (prompt) {
-    env.ANBU_PROMPT = agentPrompt(nodeId, ROLES[role])
-    args.push('--append-system-prompt', '"$ANBU_PROMPT"')
+    env.NARA_PROMPT = agentPrompt(nodeId, ROLES[role])
+    args.push('--append-system-prompt', '"$NARA_PROMPT"')
   }
 
   return { command: [command, ...args].join(' '), env }
 }
 
-// What every agent is told about anbu, followed by its role's instructions, if it has one.
+// What every agent is told about Nara, followed by its role's instructions, if it has one.
 function agentPrompt(nodeId, role) {
-  const base = `You are running inside anbu, a desktop app where terminals and AI agents live as nodes on an infinite canvas. You are terminal ${nodeId}. The user sees your terminal on the canvas and can link it to other nodes: other terminals, usually running agents, and notes, which are shared text.
+  const base = `You are running inside Nara, a desktop app where terminals and AI agents live as nodes on an infinite canvas. You are terminal ${nodeId}. The user sees your terminal on the canvas and can link it to other nodes: other terminals, usually running agents, and notes, which are shared text.
 
-You reach the nodes linked to you with the \`anbu\` command, run from your shell:
-  anbu peers                        list the terminals and notes linked to you, with their roles
-  anbu send <terminal> <text>       send a message to a linked terminal
-  anbu note read <note>             print a linked note
-  anbu note write <note> <text>     replace the note's text
-  anbu note append <note> <text>    add a line to the end of the note
+You reach the nodes linked to you with the \`nara\` command, run from your shell:
+  nara peers                        list the terminals and notes linked to you, with their roles
+  nara send <terminal> <text>       send a message to a linked terminal
+  nara note read <note>             print a linked note
+  nara note write <note> <text>     replace the note's text
+  nara note append <note> <text>    add a line to the end of the note
 
 How it works:
-- The user can add and remove links at any time. Run \`anbu peers\` whenever you need to know who you can reach, instead of relying on an earlier answer.
-- A message arrives in the other terminal as if someone had typed it there. Messages to you arrive the same way, as a new turn that starts with "[anbu · message from terminal N · reply with: anbu send N ...]". That turn comes from the agent in terminal N, not from the user. Turns without that header come from the user, who has the final word.
+- The user can add and remove links at any time. Run \`nara peers\` whenever you need to know who you can reach, instead of relying on an earlier answer.
+- A message arrives in the other terminal as if someone had typed it there. Messages to you arrive the same way, as a new turn that starts with "[nara · message from terminal N · reply with: nara send N ...]". That turn comes from the agent in terminal N, not from the user. Turns without that header come from the user, who has the final word.
 - Don't sleep, poll or wait for a reply: end your turn, and the reply will arrive as a new message.
-- Only terminals running an agent can receive messages; \`anbu peers\` marks the ones that only have a shell.
+- Only terminals running an agent can receive messages; \`nara peers\` marks the ones that only have a shell.
 - The user reads the notes too. Use them for what's worth keeping in view, like a plan, a status or a result. Keep messages short and point to a note or a file for anything long.
-- Text with several lines or with quotes is safer through stdin: anbu send 2 <<'EOF' ... EOF`
+- Text with several lines or with quotes is safer through stdin: nara send 2 <<'EOF' ... EOF`
   return role ? `${base}\n\n${role.instructions}` : base
 }
 

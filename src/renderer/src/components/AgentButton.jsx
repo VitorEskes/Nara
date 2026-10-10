@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AGENTS } from '../../../shared/agents'
 import { ROLES } from '../../../shared/roles'
 
-// Dock button that opens an agent. An agent that takes anbu's prompt first asks for a role, in a
+// Dock button that opens an agent. An agent that takes Nara's prompt first asks for a role, in a
 // menu above the button; the others open right away. onCreate gets the role key, or
 // undefined for no role.
 export default function AgentButton({ agent, onCreate }) {
@@ -36,7 +36,7 @@ export default function AgentButton({ agent, onCreate }) {
   if (!prompt) return <button onClick={() => onCreate()}>{label}</button>
 
   const options = [
-    [undefined, { label: 'No role', description: 'Knows how anbu works, nothing more' }],
+    [undefined, { label: 'No role', description: 'Knows how Nara works, nothing more' }],
     ...Object.entries(ROLES)
   ]
   return (

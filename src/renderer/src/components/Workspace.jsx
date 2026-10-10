@@ -66,7 +66,7 @@ export default function Workspace({ workspaceId, saved, active, folder, onPickFo
     window.api.workspace.update(workspaceId, { camera: cam, nodes, links, strokes })
   }, [workspaceId, cam, nodes, links, strokes])
 
-  // An agent wrote to a note with `anbu note`. Main has already changed its own copy; this
+  // An agent wrote to a note with `nara note`. Main has already changed its own copy; this
   // brings the screen in line with it.
   useEffect(
     () =>
@@ -105,7 +105,7 @@ export default function Workspace({ workspaceId, saved, active, folder, onPickFo
 
   // Creates a node centered on the point (in world coordinates), in front of the others, with any
   // extra `fields` its type needs. Terminals and notes share the id sequence: the id is what
-  // `anbu send` takes, and it has to be unique across the whole workspace.
+  // `nara send` takes, and it has to be unique across the whole workspace.
   function createNode(type, center, fields) {
     const id = nextId.current++
     const { w, h } = SIZES[type]
@@ -132,7 +132,7 @@ export default function Workspace({ workspaceId, saved, active, folder, onPickFo
   }
 
   // An agent node is a terminal that opens straight into the agent. It keeps the "terminal N"
-  // title, since that's how other agents and `anbu send` refer to it. The session id lets the
+  // title, since that's how other agents and `nara send` refer to it. The session id lets the
   // node resume its conversation after a restart; agents that can't resume ignore it. The role,
   // if any, is fixed for the node's lifetime: it's part of the prompt the conversation began with.
   async function createAgent(agent, role) {

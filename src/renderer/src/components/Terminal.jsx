@@ -58,7 +58,7 @@ export default function Terminal({ workspaceId, nodeId, agent, session, role, cw
       else term.write(`\r\n[process exited with code ${code}]\r\n`)
     })
 
-    // Message from another agent (`anbu send`): it comes in as a paste, like Ctrl+V, and the
+    // Message from another agent (`nara send`): it comes in as a paste, like Ctrl+V, and the
     // Enter follows separately. If it arrived with the text, the agent could take the Enter as
     // part of the paste, and the message would sit in the input without being sent.
     const offPaste = window.api.pty.onPaste((from, text) => {

@@ -1,0 +1,5 @@
+#!/bin/sh
+# The `nara` command for canvas terminals: the app puts this folder on every terminal's PATH.
+# Runs cli.js with Electron itself in Node mode, so it doesn't need Node to be installed.
+export ELECTRON_RUN_AS_NODE=1
+exec "$NARA_ELECTRON" "$NARA_CLI" "$@"

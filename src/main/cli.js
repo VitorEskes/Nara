@@ -1,15 +1,15 @@
 import { connect } from 'net'
 
-// The `anbu` command that runs inside canvas terminals. It does nothing on its own: it sends
-// the request to the app over the socket in ANBU_SOCK and prints the response. This file is run
-// by resources/bin/anbu, with Electron itself acting as Node.
+// The `nara` command that runs inside canvas terminals. It does nothing on its own: it sends
+// the request to the app over the socket in NARA_SOCK and prints the response. This file is run
+// by resources/bin/nara, with Electron itself acting as Node.
 
 const HELP = `usage:
-  anbu peers                        list the terminals and notes linked to this one, with roles
-  anbu send <terminal> <text>       send the text to a linked terminal
-  anbu note read <note>             print the text of a linked note
-  anbu note write <note> <text>     replace the note's text
-  anbu note append <note> <text>    add the text to the end of the note, on a new line
+  nara peers                        list the terminals and notes linked to this one, with roles
+  nara send <terminal> <text>       send the text to a linked terminal
+  nara note read <note>             print the text of a linked note
+  nara note write <note> <text>     replace the note's text
+  nara note append <note> <text>    add the text to the end of the note, on a new line
 
 Without <text>, send, write and append read it from stdin.
 
@@ -18,7 +18,7 @@ The reply, if any, arrives in this terminal the same way: no need to wait or che
 A note is shared text on the canvas: anyone linked to it can read it, and so can the user.`
 
 main().catch((error) => {
-  console.error(`anbu: ${error.message}`)
+  console.error(`nara: ${error.message}`)
   process.exit(1)
 })
 
@@ -29,7 +29,7 @@ async function main() {
     console.log(HELP)
     return
   }
-  if (!process.env.ANBU_SOCK) throw new Error('run this command inside an anbu terminal')
+  if (!process.env.NARA_SOCK) throw new Error('run this command inside a Nara terminal')
 
   if (command === 'peers') {
     const { peers } = await request({ command })
@@ -48,8 +48,8 @@ async function main() {
 
   if (command === 'send') {
     const [target, ...words] = args
-    const to = nodeNumber(target, 'which terminal? e.g. anbu send 2 "hi"')
-    const text = await readText(words, 'missing message, e.g. anbu send 2 "hi"')
+    const to = nodeNumber(target, 'which terminal? e.g. nara send 2 "hi"')
+    const text = await readText(words, 'missing message, e.g. nara send 2 "hi"')
     await request({ command, to, text })
     console.log(`delivered to terminal ${to}`)
     return
@@ -58,9 +58,9 @@ async function main() {
   if (command === 'note') {
     const [action, target, ...words] = args
     if (!['read', 'write', 'append'].includes(action)) {
-      throw new Error('usage: anbu note <read|write|append> <note> [text]')
+      throw new Error('usage: nara note <read|write|append> <note> [text]')
     }
-    const to = nodeNumber(target, `which note? e.g. anbu note ${action} 2`)
+    const to = nodeNumber(target, `which note? e.g. nara note ${action} 2`)
 
     if (action === 'read') {
       const { text } = await request({ command, action, to })
@@ -70,7 +70,7 @@ async function main() {
       return
     }
 
-    const text = await readText(words, `missing text, e.g. anbu note ${action} 2 "hi"`)
+    const text = await readText(words, `missing text, e.g. nara note ${action} 2 "hi"`)
     await request({ command, action, to, text })
     console.log(action === 'write' ? `wrote note ${to}` : `appended to note ${to}`)
     return
@@ -87,7 +87,7 @@ function nodeNumber(target, hint) {
 }
 
 // The text given as arguments or, with none, whatever comes in on stdin. An empty argument
-// counts: `anbu note write 2 ""` clears the note.
+// counts: `nara note write 2 ""` clears the note.
 async function readText(words, hint) {
   if (words.length > 0) return words.join(' ')
   if (process.stdin.isTTY) throw new Error(hint)
@@ -98,7 +98,7 @@ async function readText(words, hint) {
 
 function request(body) {
   return new Promise((resolve, reject) => {
-    const socket = connect(process.env.ANBU_SOCK)
+    const socket = connect(process.env.NARA_SOCK)
     let response = ''
     socket.setEncoding('utf8')
     socket.on('data', (chunk) => (response += chunk))
@@ -107,8 +107,8 @@ function request(body) {
       if (error) reject(new Error(error))
       else resolve(rest)
     })
-    socket.on('error', () => reject(new Error('anbu did not respond (was the app closed?)')))
+    socket.on('error', () => reject(new Error('Nara did not respond (was the app closed?)')))
     // Ending the write side tells the server the request is complete.
-    socket.end(JSON.stringify({ from: process.env.ANBU_PTY, ...body }))
+    socket.end(JSON.stringify({ from: process.env.NARA_PTY, ...body }))
   })
 }

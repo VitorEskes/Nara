@@ -16,7 +16,7 @@ const KILL_GRACE = 2000
 // Exits still pending from kill().
 const exiting = new Set()
 
-// `extraEnv` holds the variables every terminal gets (the ones the `anbu` command uses).
+// `extraEnv` holds the variables every terminal gets (the ones the `nara` command uses).
 export function registerPty(win, extraEnv) {
   ipcMain.handle('pty:create', (_ev, options = {}) => {
     const { workspaceId, nodeId, agent, session, role, cols = 80, rows = 24, cwd } = options
@@ -31,8 +31,8 @@ export function registerPty(win, extraEnv) {
       rows,
       // A restored terminal asks for the folder it was in, which may have been deleted since.
       cwd: cwd && existsSync(cwd) ? cwd : process.env.HOME,
-      // ANBU_PTY is how `anbu` tells the app which terminal the message came from.
-      env: { ...process.env, ...extraEnv, ...launch?.env, ANBU_PTY: String(id) }
+      // NARA_PTY is how `nara` tells the app which terminal the message came from.
+      env: { ...process.env, ...extraEnv, ...launch?.env, NARA_PTY: String(id) }
     })
 
     // A killed program can still write on its way out (Claude Code restores the terminal), and
@@ -103,7 +103,7 @@ function kill(id) {
   const { term } = terminal
 
   // SIGHUP, as when a terminal window closes: a shell saves its history and exits. A program
-  // that ignores it would keep running with no terminal (and keep anbu from quitting), so
+  // that ignores it would keep running with no terminal (and keep Nara from quitting), so
   // whatever is still there after the grace period gets SIGKILL.
   term.kill()
   const force = setTimeout(() => {

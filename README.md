@@ -1,4 +1,4 @@
-# anbu
+# Nara
 
 Runs AI coding agents (Claude Code, Codex) with an infinite canvas as the
 interface.
@@ -17,9 +17,9 @@ npm run dev
 
 - `src/main/pty.js` — creates and manages the PTYs (`pty:create`, `pty:write`, `pty:resize`, `pty:kill`)
 - `src/main/workspaces.js` — keeps each open workspace in memory and saves it to `workspaces/<id>.json` in the app's data folder; `projects.json` holds the projects (a name and a default folder for their workspaces) and `state.json` remembers the open workspaces
-- `src/main/messages.js` — socket that takes requests from the `anbu` command, delivers messages between linked terminals and reads or writes linked notes
-- `src/main/cli.js` + `resources/bin/anbu` — the `anbu` command (`peers`, `send`, `note`) available inside every terminal
-- `src/main/agents.js` — the command that opens each agent; Claude Code gets a session id so a restored node resumes its conversation, and a prompt that explains anbu and the node's role
+- `src/main/messages.js` — socket that takes requests from the `nara` command, delivers messages between linked terminals and reads or writes linked notes
+- `src/main/cli.js` + `resources/bin/nara` — the `nara` command (`peers`, `send`, `note`) available inside every terminal
+- `src/main/agents.js` — the command that opens each agent; Claude Code gets a session id so a restored node resumes its conversation, and a prompt that explains Nara and the node's role
 - `src/shared/agents.js` — the agents a node can open with (Claude Code, Codex), used by main and the renderer
 - `src/shared/roles.js` — the roles an agent can open with (orchestrator, worker, reviewer) and the instructions each one adds to the prompt
 - `src/preload/index.js` — exposes `window.api.pty`, `window.api.workspace` and `window.api.project` to the renderer

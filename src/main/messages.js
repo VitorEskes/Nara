@@ -2,24 +2,24 @@ import { rmSync } from 'fs'
 import { createServer } from 'net'
 import { tmpdir } from 'os'
 import { basename, delimiter, dirname, join } from 'path'
-import anbu from '../../resources/bin/anbu?asset'
+import nara from '../../resources/bin/nara?asset'
 import { ROLES } from '../shared/roles'
 import { findTerminal, terminals } from './pty'
 import { updateNode, workspaces } from './workspaces'
 
-// Agents talk by running the `anbu` command in their own terminal. The command talks to this
+// Agents talk by running the `nara` command in their own terminal. The command talks to this
 // server over a socket, and the server pastes the message into the terminal on the other end of
 // the link as if someone had typed it. The agent there replies the same way.
 // A note on the other end of a link works as a shared scratchpad: the agent reads and writes it.
-// The pid in the name lets two anbu instances run at once without one stealing the other's socket.
-const SOCKET = join(tmpdir(), `anbu-${process.pid}.sock`)
+// The pid in the name lets two Nara instances run at once without one stealing the other's socket.
+const SOCKET = join(tmpdir(), `nara-${process.pid}.sock`)
 
 // A terminal with only the shell in the foreground doesn't get messages: the Enter at the end
 // would run the text as a command.
 const SHELLS = new Set(['sh', 'bash', 'zsh', 'fish', 'dash', 'ksh', 'tcsh', 'csh', 'nu', 'pwsh'])
 
 export function registerMessages(win) {
-  // One request per connection: `anbu` writes the JSON and ends its write side; the response
+  // One request per connection: `nara` writes the JSON and ends its write side; the response
   // goes back after 'end'. allowHalfOpen lets the server write after the client closed its side.
   const server = createServer({ allowHalfOpen: true }, (conn) => {
     let request = ''
@@ -42,18 +42,18 @@ export function registerMessages(win) {
 
   win.on('closed', () => server.close())
 
-  // What every terminal needs in its environment for `anbu` to work inside it.
+  // What every terminal needs in its environment for `nara` to work inside it.
   return {
-    PATH: `${dirname(anbu)}${delimiter}${process.env.PATH}`,
-    ANBU_SOCK: SOCKET,
-    ANBU_ELECTRON: process.execPath,
-    ANBU_CLI: join(__dirname, 'cli.js')
+    PATH: `${dirname(nara)}${delimiter}${process.env.PATH}`,
+    NARA_SOCK: SOCKET,
+    NARA_ELECTRON: process.execPath,
+    NARA_CLI: join(__dirname, 'cli.js')
   }
 }
 
 function handle({ from, command, action, to, text }, win) {
   const sender = terminals.get(Number(from))
-  if (!sender) throw new Error('this terminal no longer exists in anbu')
+  if (!sender) throw new Error('this terminal no longer exists in Nara')
   const { workspaceId, nodeId } = sender
 
   // Links have no direction: from→to works the same as to→from.
@@ -76,7 +76,7 @@ function handle({ from, command, action, to, text }, win) {
   if (command === 'send') {
     if (!peers.includes(to)) throw new Error(`terminal ${to} is not linked to this one`)
     if (nodeOf(to)?.type === 'note') {
-      throw new Error(`${to} is a note, not a terminal: use anbu note write ${to} "..."`)
+      throw new Error(`${to} is a note, not a terminal: use nara note write ${to} "..."`)
     }
     const target = findTerminal(workspaceId, to)
     if (!target) throw new Error(`terminal ${to} no longer exists`)
@@ -87,7 +87,7 @@ function handle({ from, command, action, to, text }, win) {
     if (!clean.trim()) throw new Error('empty message')
 
     // The header tells the agent on the other side who sent it and how to reply.
-    const header = `[anbu · message from terminal ${nodeId} · reply with: anbu send ${nodeId} "..."]`
+    const header = `[nara · message from terminal ${nodeId} · reply with: nara send ${nodeId} "..."]`
     win.webContents.send('pty:paste', target.id, `${header} ${clean}`)
     return { ok: true }
   }
@@ -96,7 +96,7 @@ function handle({ from, command, action, to, text }, win) {
     if (!peers.includes(to)) throw new Error(`note ${to} is not linked to this terminal`)
     const note = nodeOf(to)
     if (note?.type !== 'note') {
-      throw new Error(`${to} is a terminal, not a note: use anbu send ${to} "..."`)
+      throw new Error(`${to} is a terminal, not a note: use nara send ${to} "..."`)
     }
     if (action === 'read') return { text: note.text ?? '' }
 

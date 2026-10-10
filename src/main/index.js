@@ -2,9 +2,12 @@ import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { setUpDataFolder } from './dataFolder'
 import { registerMessages } from './messages'
 import { registerPty, terminalsExited } from './pty'
 import { registerWorkspaces } from './workspaces'
+
+setUpDataFolder()
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -41,7 +44,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  electronApp.setAppUserModelId('dev.vitor.anbu')
+  electronApp.setAppUserModelId('dev.vitor.nara')
 
   // F12 opens DevTools in dev; Ctrl+R is ignored in production.
   app.on('browser-window-created', (_, window) => {

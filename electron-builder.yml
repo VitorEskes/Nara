@@ -1,5 +1,5 @@
-appId: dev.vitor.anbu
-productName: anbu
+appId: dev.vitor.nara
+productName: Nara
 directories:
   buildResources: build
 files:
@@ -12,7 +12,7 @@ asarUnpack:
   - resources/**
   - node_modules/node-pty/**
 win:
-  executableName: anbu
+  executableName: nara
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

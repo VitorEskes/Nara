@@ -251,7 +251,7 @@ function read(id) {
       workspace: { name, project, folder, camera, nodes: typed, links, strokes: drawn }
     }
   } catch (error) {
-    console.error(`anbu: could not read workspace ${id}: ${error.message}`)
+    console.error(`nara: could not read workspace ${id}: ${error.message}`)
     return null
   }
 }
@@ -335,7 +335,7 @@ function save(id) {
     writeAtomic(workspacePath(id), json)
     written.set(id, json)
   } catch (error) {
-    console.error(`anbu: could not save workspace ${id}: ${error.message}`)
+    console.error(`nara: could not save workspace ${id}: ${error.message}`)
   }
 }
 
@@ -356,7 +356,7 @@ function saveSession({ open, active }) {
   try {
     writeAtomic(statePath(), JSON.stringify({ open, active }, null, 2))
   } catch (error) {
-    console.error(`anbu: could not save state: ${error.message}`)
+    console.error(`nara: could not save state: ${error.message}`)
   }
 }
 
@@ -365,7 +365,7 @@ function saveProjects(projects) {
   try {
     writeAtomic(projectsPath(), json)
   } catch (error) {
-    console.error(`anbu: could not save projects: ${error.message}`)
+    console.error(`nara: could not save projects: ${error.message}`)
   }
 }
 
