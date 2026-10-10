@@ -22,7 +22,7 @@ import {
   TerminalIcon
 } from './icons'
 import { touches } from '../drawing'
-import { PAPERS, TERMINAL_SIZES, resolveStyle, terminalSize } from '../nodeStyle'
+import { PAPERS, resolveStyle, terminalLook } from '../nodeStyle'
 import { defaultTitle, nodeLabel } from '../nodeLabel'
 import { AGENTS } from '../../../shared/agents'
 import { ROLES } from '../../../shared/roles'
@@ -558,7 +558,8 @@ export default function Workspace({ workspaceId, saved, active, folder, onPickFo
             {...node}
             label={nodeLabel(node)}
             agent={AGENTS[node.agent] && { key: node.agent, label: AGENTS[node.agent].label }}
-            role={ROLES[node.role] && { key: node.role, label: ROLES[node.role].label }}
+            role={ROLES[node.role]}
+            look={node.type === 'terminal' ? terminalLook(node.style) : undefined}
             paper={node.type === 'note' ? PAPERS[resolveStyle(node.style).paper].color : undefined}
             linked={linked.has(node.id)}
             selected={selection.includes(node.id)}
@@ -586,7 +587,7 @@ export default function Workspace({ workspaceId, saved, active, folder, onPickFo
                 session={node.session}
                 role={node.role}
                 cwd={node.cwd}
-                fontSize={TERMINAL_SIZES[terminalSize(node.style)].px}
+                look={terminalLook(node.style)}
                 onExit={() => closeNode(node.id)}
               />
             )}

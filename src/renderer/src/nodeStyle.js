@@ -1,4 +1,6 @@
-// The ways a node can be styled from the side panel: a note's text, and a terminal's text size.
+import { TERMINAL_THEMES } from './terminalThemes'
+
+// The ways a node can be styled from the side panel: a note's text, and a terminal's look.
 // A note saves only the keys (`style: { font: 'serif', size: 'l' }`); anything missing falls back
 // to DEFAULTS, so notes saved before styles existed look the same as a fresh one.
 
@@ -53,7 +55,9 @@ export function resolveStyle(style = {}) {
   )
 }
 
-// A terminal only picks its text size, saved the same way (`style: { size: 'l' }`).
+// A terminal's look is saved the same way (`style: { size: 'l', theme: 'forest' }`): its text
+// size, its color scheme (terminalThemes.js), a tone that marks it out on the canvas, the shape of
+// its cursor and the icon on its bar.
 export const TERMINAL_SIZES = {
   s: { label: 'S', px: 11 },
   m: { label: 'M', px: 13 },
@@ -61,6 +65,36 @@ export const TERMINAL_SIZES = {
   xl: { label: 'XL', px: 17 }
 }
 
-export function terminalSize(style = {}) {
-  return style.size in TERMINAL_SIZES ? style.size : 'm'
+// Tones come from main.css (--tone-*), which has each in a light and a dark version. Roles use
+// them too.
+export const TONES = {
+  green: { label: 'Forest' },
+  leaf: { label: 'Leaf' },
+  olive: { label: 'Olive' },
+  umber: { label: 'Umber' },
+  clay: { label: 'Clay' },
+  slate: { label: 'Slate' },
+  plum: { label: 'Plum' }
+}
+
+export const CURSORS = {
+  bar: { label: 'Bar' },
+  block: { label: 'Block' },
+  underline: { label: 'Underline' }
+}
+
+const TERMINAL_DEFAULTS = { size: 'm', theme: 'nara', tone: null, cursor: 'bar', icon: null }
+
+// The look with every key filled in. No tone means none; no icon means the program's own.
+export function terminalLook(style = {}) {
+  const options = { size: TERMINAL_SIZES, theme: TERMINAL_THEMES, tone: TONES, cursor: CURSORS }
+  return {
+    ...TERMINAL_DEFAULTS,
+    ...Object.fromEntries(
+      Object.entries(options)
+        .filter(([key, values]) => Object.hasOwn(values, style[key] ?? ''))
+        .map(([key]) => [key, style[key]])
+    ),
+    icon: typeof style.icon === 'string' ? style.icon : null
+  }
 }

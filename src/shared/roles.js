@@ -1,9 +1,11 @@
 // The roles an agent node can open with. Every agent that takes Nara's prompt learns how the
 // canvas works; a role adds how to behave in a team. Main appends `instructions` to that prompt,
-// the renderer shows `label` and `description` in the menu and `label` on the node.
+// the renderer shows `label` and `description` in the menu and `label` on the node, in `tone`
+// (one of the tones in the renderer's nodeStyle.js).
 export const ROLES = {
   orchestrator: {
     label: 'Orchestrator',
+    tone: 'green',
     description: 'Splits the task and hands it to the linked agents',
     instructions: `Your role is orchestrator: you coordinate the agents linked to you instead of doing the work yourself.
 - Start with \`nara peers\` to see who you have and what role each one plays. If no agent is linked, tell the user and ask them to link some; don't fall back to doing the work alone unless they say so.
@@ -15,6 +17,7 @@ export const ROLES = {
   },
   worker: {
     label: 'Worker',
+    tone: 'olive',
     description: 'Does the tasks other agents send it',
     instructions: `Your role is worker: other agents send you tasks, and you carry them out.
 - A task arrives as a Nara message. Do all of it, then reply to the sender with a short report: what changed and where, how you checked it, and anything left open.
@@ -24,6 +27,7 @@ export const ROLES = {
   },
   reviewer: {
     label: 'Reviewer',
+    tone: 'umber',
     description: 'Reviews work and reports back, without editing',
     instructions: `Your role is reviewer: other agents send you work to review, and you report what you find without changing it.
 - Read what you were asked to review (a diff, files, a branch) and look for bugs, missing cases and anything that doesn't match the task. Run the tests or the code when that helps.

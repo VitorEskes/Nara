@@ -48,12 +48,16 @@
   --preview-terminal: var(--terminal);
   --preview-bar: #3d3d40;
 
-  /* Role and project tones, all from the green, olive and charcoal families. */
+  /* Tones for roles, projects and terminals: the green, olive and charcoal families, plus a clay,
+     a slate and a plum, muted to sit with them. Each has a dark version for dark surfaces. */
   --tone-green: #24503d;
   --tone-leaf: #2f6a50;
   --tone-olive: #5c6b2e;
   --tone-umber: #6b5a2a;
   --tone-ink: #3e433f;
+  --tone-clay: #9a4a34;
+  --tone-slate: #3f5a78;
+  --tone-plum: #6b4868;
 
   --font-ui: 'Geist Sans', system-ui, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
@@ -121,6 +125,9 @@
     --tone-olive: #c3cf9e;
     --tone-umber: #dcc28c;
     --tone-ink: #c8c6c0;
+    --tone-clay: #e59a88;
+    --tone-slate: #8aa7d6;
+    --tone-plum: #c49ac6;
 
     --shade: 8 8 9;
     --dot: 236 231 219;
@@ -594,9 +601,11 @@ kbd {
   }
 }
 
-/* A terminal is a dark island on the cream canvas: inside it, the tokens switch to their dark
-   values, so the bar, its buttons and its text read on charcoal. */
-.node:not([data-type='note']) {
+/* A terminal is an island in its own colors (terminalThemes.js), which CanvasNode sets as
+   --terminal and --terminal-bar. Inside it the tokens switch to their dark values, so the bar, its
+   buttons and its text read on charcoal; a light theme (data-scheme) switches them back. The
+   preview in the new terminal dialog is an island too. */
+.island {
   --stone: var(--terminal-bar);
   --hover: #343437;
   --edge: #323235;
@@ -612,7 +621,57 @@ kbd {
   --accent-soft: rgb(111 174 142 / 22%);
   --danger: #e59a88;
   --danger-soft: rgb(229 154 136 / 16%);
+  --tone-green: #8cc4a4;
+  --tone-leaf: #9fcfc3;
+  --tone-olive: #c3cf9e;
+  --tone-umber: #dcc28c;
+  --tone-ink: #c8c6c0;
+  --tone-clay: #e59a88;
+  --tone-slate: #8aa7d6;
+  --tone-plum: #c49ac6;
   color: var(--text);
+}
+
+.island[data-scheme='light'] {
+  --hover: #e4ddcd;
+  --edge: #e0d9ca;
+  --edge-strong: #d2cab8;
+  --edge-focus: #a9a08b;
+  --text: #232624;
+  --text-2: #3e433f;
+  --text-3: #5a605b;
+  --text-4: #7d817a;
+  --hover-soft: rgb(35 38 36 / 5%);
+  --active-soft: rgb(35 38 36 / 8%);
+  --accent: #24503d;
+  --accent-soft: rgb(36 80 61 / 12%);
+  --danger: #9c3d2c;
+  --danger-soft: rgb(156 61 44 / 12%);
+  --tone-green: #24503d;
+  --tone-leaf: #2f6a50;
+  --tone-olive: #5c6b2e;
+  --tone-umber: #6b5a2a;
+  --tone-ink: #3e433f;
+  --tone-clay: #9a4a34;
+  --tone-slate: #3f5a78;
+  --tone-plum: #6b4868;
+  --shade: 35 38 36;
+}
+
+/* A terminal with a tone: a line of it along the top of the bar, a wash of it on the bar, and the
+   icon in it, so related terminals read as a group from across the canvas. */
+.island[data-tone] > .node-bar {
+  background: color-mix(in srgb, var(--tone) 10%, var(--stone));
+  box-shadow: inset 0 2px 0 var(--tone);
+}
+
+.island[data-tone] .node-icon,
+.island[data-tone]:focus-within .node-icon {
+  color: var(--tone);
+}
+
+.node.island[data-tone] {
+  border-color: color-mix(in srgb, var(--tone) 35%, var(--edge-strong));
 }
 
 /* The node that has the keyboard: what you type goes here. */
@@ -640,8 +699,12 @@ kbd {
   transition: background-color var(--base);
 }
 
-.node:not([data-type='note']):focus-within > .node-bar {
-  background: #2e2e31;
+.island:focus-within > .node-bar {
+  background: var(--terminal-bar-focus, #2e2e31);
+}
+
+.island[data-tone]:focus-within > .node-bar {
+  background: color-mix(in srgb, var(--tone) 14%, var(--terminal-bar-focus, #2e2e31));
 }
 
 .node.dragging .node-bar {
@@ -731,29 +794,38 @@ kbd {
   background: color-mix(in srgb, var(--tone) 14%, transparent);
 }
 
-[data-role='orchestrator'] {
+/* A tone by name, for roles and terminals (nodeStyle.js). On an island the names point to the
+   island's own versions, lighter on a dark terminal. */
+[data-tone='green'] {
   --tone: var(--tone-green);
 }
 
-[data-role='worker'] {
+[data-tone='leaf'] {
+  --tone: var(--tone-leaf);
+}
+
+[data-tone='olive'] {
   --tone: var(--tone-olive);
 }
 
-[data-role='reviewer'] {
+[data-tone='umber'] {
   --tone: var(--tone-umber);
 }
 
-/* The same roles, lighter, on a terminal's dark bar. */
-.node [data-role='orchestrator'] {
-  --tone: #8cc4a4;
+[data-tone='ink'] {
+  --tone: var(--tone-ink);
 }
 
-.node [data-role='worker'] {
-  --tone: #c3cf9e;
+[data-tone='clay'] {
+  --tone: var(--tone-clay);
 }
 
-.node [data-role='reviewer'] {
-  --tone: #dcc28c;
+[data-tone='slate'] {
+  --tone: var(--tone-slate);
+}
+
+[data-tone='plum'] {
+  --tone: var(--tone-plum);
 }
 
 .node-close {
@@ -2663,4 +2735,212 @@ kbd {
 
 .segmented button:focus-visible {
   outline-offset: -2px;
+}
+
+/* A terminal's look (TerminalLook.jsx), in the dialog and in the side panel. */
+
+.themes {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.theme-option {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+/* A terminal in miniature: a prompt in green, a line of text, a line in blue. */
+.theme-swatch {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 7px;
+  border-radius: var(--radius-s);
+  box-shadow: inset 0 0 0 1px var(--edge-strong);
+  transition:
+    box-shadow var(--fast),
+    transform var(--fast) var(--ease-spring);
+}
+
+.theme-swatch i {
+  height: 3px;
+  border-radius: 2px;
+}
+
+.theme-swatch i:nth-child(1) {
+  width: 55%;
+  background: var(--a);
+}
+
+.theme-swatch i:nth-child(2) {
+  width: 85%;
+  background: var(--fg);
+  opacity: 0.55;
+}
+
+.theme-swatch i:nth-child(3) {
+  width: 35%;
+  background: var(--b);
+}
+
+.theme-option:hover .theme-swatch {
+  transform: translateY(-1px);
+}
+
+.theme-option[aria-pressed='true'] .theme-swatch {
+  box-shadow:
+    0 0 0 2px var(--stone),
+    0 0 0 4px var(--accent);
+}
+
+.theme-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  text-align: center;
+  color: var(--text-3);
+}
+
+.theme-option[aria-pressed='true'] .theme-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* The side panel is too narrow for the names; the tooltips have them. */
+.node-panel .theme-name {
+  display: none;
+}
+
+.tones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tone-dot {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--text-4);
+  background: var(--tone);
+  box-shadow: inset 0 0 0 1px rgb(var(--shade) / 15%);
+  cursor: pointer;
+  transition:
+    box-shadow var(--fast),
+    transform var(--fast) var(--ease-spring);
+}
+
+/* Eight tones fit on one line in the side panel. */
+.node-panel .tones {
+  gap: 6px;
+}
+
+.node-panel .tone-dot {
+  width: 22px;
+  height: 22px;
+}
+
+.tones.small .tone-dot {
+  width: 18px;
+  height: 18px;
+}
+
+.tone-dot:hover {
+  transform: scale(1.12);
+}
+
+.tone-dot[aria-pressed='true'] {
+  box-shadow:
+    0 0 0 2px var(--stone),
+    0 0 0 4px var(--tone);
+}
+
+.tone-dot.none {
+  --tone: var(--text-3);
+  background: none;
+  box-shadow: inset 0 0 0 1.5px var(--edge-focus);
+}
+
+.tone-dot.none[aria-pressed='true'] {
+  color: var(--text-2);
+}
+
+.glyphs {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-m);
+  background: var(--active-soft);
+}
+
+.glyphs button {
+  display: grid;
+  place-items: center;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  color: var(--text-3);
+  background: none;
+  cursor: pointer;
+  transition:
+    color var(--fast),
+    background-color var(--fast);
+}
+
+.glyphs button:hover {
+  color: var(--text);
+}
+
+.glyphs button[aria-pressed='true'] {
+  color: var(--accent-text);
+  background: var(--chip);
+  box-shadow:
+    var(--highlight),
+    0 1px 3px rgb(var(--shade) / 14%);
+}
+
+.look-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* Each cursor drawn as it looks, after a letter. */
+.cursor-sample {
+  position: relative;
+  width: 8px;
+  height: 14px;
+}
+
+.cursor-sample[data-cursor='bar'] {
+  width: 2px;
+  background: currentColor;
+}
+
+.cursor-sample[data-cursor='block'] {
+  background: currentColor;
+  opacity: 0.85;
+}
+
+.cursor-sample[data-cursor='underline'] {
+  box-shadow: inset 0 -2px 0 currentColor;
 }

@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { CloseIcon, NodeIcon } from './icons'
+import { CloseIcon } from './icons'
+import NodeIcon from './NodeIcon'
+import { TERMINAL_THEMES } from '../terminalThemes'
 
 const MIN_WIDTH = 240
 const MIN_HEIGHT = 120
@@ -8,8 +10,9 @@ const MIN_HEIGHT = 120
 const EDGES = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw']
 
 // A box in the world: position and size are in world coordinates, not screen coordinates.
-// `label` is the name on the bar; `agent` and `role` are labels for it too, as { key, label };
-// `paper` is a note's color and `linked` says whether any string is pinned to it. While a string is
+// `label` is the name on the bar; `agent` ({ key, label }) and `role` ({ label, tone }) go on it
+// too. `look` is a terminal's (terminalLook): its colors, tone and icon. `paper` is a note's color
+// and `linked` says whether any string is pinned to it. While a string is
 // being pulled, `dimmed` marks a node it can't be tied to; `highlighted` lights the node up while
 // its row in the side panel's connections is hovered.
 export default function CanvasNode({
@@ -23,6 +26,7 @@ export default function CanvasNode({
   label,
   agent,
   role,
+  look,
   paper,
   linked,
   selected,
@@ -52,8 +56,11 @@ export default function CanvasNode({
     drag(e, setDragging, (dx, dy) => onChange(resized({ x, y, w, h }, edge, dx, dy)))
   }
 
+  // A terminal is an island in its theme's colors, on the cream canvas or the dark one.
+  const theme = look && TERMINAL_THEMES[look.theme]
   const className = [
     'node',
+    theme && 'island',
     selected && 'selected',
     isLinkTarget && 'link-target',
     dimmed && 'dimmed',
@@ -67,9 +74,21 @@ export default function CanvasNode({
       // App finds the node under the cursor via the DOM (elementFromPoint) and reads its id here.
       data-id={id}
       data-type={type}
+      data-scheme={theme?.light ? 'light' : undefined}
+      data-tone={look?.tone ?? undefined}
       role="group"
       aria-label={label}
-      style={{ left: x, top: y, width: w, height: h, zIndex: layer, '--paper': paper }}
+      style={{
+        left: x,
+        top: y,
+        width: w,
+        height: h,
+        zIndex: layer,
+        '--paper': paper,
+        '--terminal': theme?.colors.background,
+        '--terminal-bar': theme?.bar,
+        '--terminal-bar-focus': theme?.barFocus
+      }}
       // Capture: runs before any child (including xterm) gets a chance to swallow the event.
       onPointerDownCapture={onRaise}
       onAnimationEnd={(e) => e.animationName === 'node-out' && onClose()}
@@ -80,11 +99,11 @@ export default function CanvasNode({
           title="Drag onto another node to connect them, or click and then pick one"
           onPointerDown={onLinkStart}
         />
-        <NodeIcon type={type} agent={agent?.key} />
+        <NodeIcon type={type} agent={agent?.key} icon={look?.icon} className="node-icon" />
         <span className="node-title">{label}</span>
         {agent && <span className="node-agent">{agent.label}</span>}
         {role && (
-          <span className="role-pill" data-role={role.key}>
+          <span className="role-pill" data-tone={role.tone}>
             {role.label}
           </span>
         )}

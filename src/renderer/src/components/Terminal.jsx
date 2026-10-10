@@ -2,38 +2,8 @@ import { useEffect, useRef } from 'react'
 import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
-
-// Terminal colors from the app's palette (main.css): a terminal is a neutral charcoal island on the
-// cream canvas, with cream text, a green cursor and the 16 ANSI colors toned to sit with them instead of
-// xterm's defaults. Every color clears 4.5:1 against the background except black and bright
-// black, which are meant to be dim.
-const THEME = {
-  background: '#1f1f21',
-  foreground: '#ece7db',
-  cursor: '#8cc4a4',
-  cursorAccent: '#1f1f21',
-  selectionBackground: '#2f4a3d',
-  selectionInactiveBackground: '#2e2e31',
-  scrollbarSliderBackground: 'rgba(236, 231, 219, 0.12)',
-  scrollbarSliderHoverBackground: 'rgba(236, 231, 219, 0.2)',
-  scrollbarSliderActiveBackground: 'rgba(236, 231, 219, 0.28)',
-  black: '#2e2e31',
-  red: '#e2756a',
-  green: '#8cc4a4',
-  yellow: '#dcc28c',
-  blue: '#8aa7d6',
-  magenta: '#c49ac6',
-  cyan: '#7fbdb4',
-  white: '#d8d4ca',
-  brightBlack: '#86847f',
-  brightRed: '#ef8f82',
-  brightGreen: '#a9d8bc',
-  brightYellow: '#ecd6a4',
-  brightBlue: '#a6bfe6',
-  brightMagenta: '#d8b4da',
-  brightCyan: '#9dd3cb',
-  brightWhite: '#fbf9f3'
-}
+import { TERMINAL_SIZES } from '../nodeStyle'
+import { TERMINAL_THEMES } from '../terminalThemes'
 
 // How long to wait between pasting a message from another agent and pressing Enter.
 const ENTER_DELAY = 500
@@ -43,22 +13,15 @@ const ENTER_DELAY = 500
 // With `agent` (a key of AGENTS), the PTY opens straight into that agent instead of a shell, and
 // `session` is the id its conversation is saved under. `role` (a key of ROLES) goes into the
 // prompt the agent opens with: changing it restarts the agent, which resumes its conversation
-// under the new role. `fontSize` changes in place, without touching the PTY.
-export default function Terminal({
-  workspaceId,
-  nodeId,
-  agent,
-  session,
-  role,
-  cwd,
-  fontSize = 13,
-  onExit
-}) {
+// under the new role. `look` (terminalLook) changes in place, without touching the PTY.
+export default function Terminal({ workspaceId, nodeId, agent, session, role, cwd, look, onExit }) {
   const container = useRef(null)
-  // The open terminal and the function that fits it to its box, for the font size effect.
+  // The open terminal and the function that fits it to its box, for the look effect.
   const live = useRef(null)
+  const fontSize = TERMINAL_SIZES[look.size].px
+  const { theme, cursor } = look
   // Read once when the terminal opens; later changes go through the effect at the bottom.
-  const fontSizeRef = useRef(fontSize)
+  const lookRef = useRef({ fontSize, theme, cursor })
 
   // onExit changes on every parent render. If it were a dependency of the effect below, every
   // render would kill the PTY and spawn another; kept in a ref, the effect always reads the latest.
@@ -68,14 +31,15 @@ export default function Terminal({
   })
 
   useEffect(() => {
+    const initial = lookRef.current
     const term = new XTerm({
       fontFamily: '"Geist Mono", ui-monospace, monospace',
-      fontSize: fontSizeRef.current,
+      fontSize: initial.fontSize,
       lineHeight: 1.2,
       cursorBlink: true,
-      cursorStyle: 'bar',
+      cursorStyle: initial.cursor,
       cursorInactiveStyle: 'outline',
-      theme: THEME
+      theme: TERMINAL_THEMES[initial.theme].colors
     })
     const fit = new FitAddon()
     term.loadAddon(fit)
@@ -152,13 +116,18 @@ export default function Terminal({
     }
   }, [workspaceId, nodeId, agent, session, role, cwd])
 
-  // A new size changes how many rows and columns fit in the same box, so the PTY hears about it.
+  // The colors and the cursor change in place. A new size changes how many rows and columns fit
+  // in the same box, so the PTY hears about it.
   useEffect(() => {
-    fontSizeRef.current = fontSize
-    if (!live.current || live.current.term.options.fontSize === fontSize) return
-    live.current.term.options.fontSize = fontSize
-    live.current.refit()
-  }, [fontSize])
+    lookRef.current = { fontSize, theme, cursor }
+    if (!live.current) return
+    const { term, refit } = live.current
+    term.options.theme = TERMINAL_THEMES[theme].colors
+    term.options.cursorStyle = cursor
+    if (term.options.fontSize === fontSize) return
+    term.options.fontSize = fontSize
+    refit()
+  }, [fontSize, theme, cursor])
 
   return <div ref={container} className="terminal" />
 }

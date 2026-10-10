@@ -1,14 +1,8 @@
-import { CheckIcon, CloseIcon, LinkIcon, LocateIcon, NodeIcon, UnlinkIcon } from './icons'
-import {
-  ALIGNS,
-  FONTS,
-  INKS,
-  PAPERS,
-  SIZES,
-  TERMINAL_SIZES,
-  resolveStyle,
-  terminalSize
-} from '../nodeStyle'
+import TerminalLook from './TerminalLook'
+import { Group, Options } from './fields'
+import NodeIcon from './NodeIcon'
+import { CheckIcon, CloseIcon, LinkIcon, LocateIcon, UnlinkIcon } from './icons'
+import { ALIGNS, FONTS, INKS, PAPERS, SIZES, resolveStyle, terminalLook } from '../nodeStyle'
 import { defaultTitle, nodeLabel } from '../nodeLabel'
 import { AGENTS } from '../../../shared/agents'
 import { ROLES } from '../../../shared/roles'
@@ -19,7 +13,7 @@ const TABS = [
 ]
 
 // Side panel for the selected node, like Excalidraw's, in two tabs. Config holds the name, the
-// role and the connections; Style holds a note's text style or a terminal's text size. `nodes`
+// role and the connections; Style holds a note's text style or a terminal's look. `nodes`
 // and `links` are the whole canvas, for the connections. onChange gets the node's fields that
 // changed, e.g. { title: 'Backend' }. onConnectStart starts pulling a string from the node, the
 // same as its port on the bar does.
@@ -51,7 +45,7 @@ export default function NodePanel({
   return (
     <aside className="floating node-panel" aria-label={`${label} settings`}>
       <header className="panel-head">
-        <NodeIcon type={node.type} agent={node.agent} />
+        <NodeIcon type={node.type} agent={node.agent} icon={node.style?.icon} />
         <h2 className="panel-title">{label}</h2>
         <button
           className="icon-button small"
@@ -111,8 +105,9 @@ export default function NodePanel({
             onChange={(change) => onChange({ style: { ...node.style, ...change } })}
           />
         ) : (
-          <TerminalStyle
-            style={node.style}
+          <TerminalLook
+            look={terminalLook(node.style)}
+            agent={node.agent}
             onChange={(change) => onChange({ style: { ...node.style, ...change } })}
           />
         )}
@@ -202,18 +197,6 @@ function NoteStyle({ style, onChange }) {
   )
 }
 
-function TerminalStyle({ style, onChange }) {
-  return (
-    <Group label="Text size">
-      <Options
-        options={TERMINAL_SIZES}
-        value={terminalSize(style)}
-        onPick={(size) => onChange({ size })}
-      />
-    </Group>
-  )
-}
-
 // The name, the role (for an agent that takes Nara's prompt) and the connections, with the
 // connector that links the node to another one.
 function Config({
@@ -245,11 +228,11 @@ function Config({
         <Group label="Role">
           <div className="choices">
             {[[undefined, { label: 'No role' }], ...Object.entries(ROLES)].map(
-              ([key, { label }]) => (
+              ([key, { label, tone }]) => (
                 <button
                   key={key ?? 'none'}
                   className="choice"
-                  data-role={key}
+                  data-tone={tone}
                   // Kept out of sight: the role goes into the prompt, so changing it restarts the
                   // agent, which picks its conversation back up.
                   title={`Restarts ${agent.label}; its conversation picks up where it left off`}
@@ -276,7 +259,7 @@ function Config({
                 onPointerEnter={() => onPeerHover(peer.id)}
                 onPointerLeave={() => onPeerHover(null)}
               >
-                <NodeIcon type={peer.type} agent={peer.agent} />
+                <NodeIcon type={peer.type} agent={peer.agent} icon={peer.style?.icon} />
                 <span className="peer-name">{nodeLabel(peer)}</span>
                 <span className="peer-id">#{peer.id}</span>
                 <button
@@ -351,27 +334,6 @@ function NameInput({ node, onRename }) {
         }
       }}
     />
-  )
-}
-
-function Group({ label, children }) {
-  return (
-    <fieldset className="panel-group">
-      <legend>{label}</legend>
-      {children}
-    </fieldset>
-  )
-}
-
-function Options({ options, value, onPick }) {
-  return (
-    <div className="panel-options">
-      {Object.entries(options).map(([key, { label }]) => (
-        <button key={key} aria-pressed={value === key} onClick={() => onPick(key)}>
-          {label}
-        </button>
-      ))}
-    </div>
   )
 }
 

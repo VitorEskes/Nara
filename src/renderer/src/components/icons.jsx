@@ -259,12 +259,104 @@ export function UnlinkIcon(props) {
   )
 }
 
-// What a node is: a note, a plain terminal, or the agent it opened with.
-const AGENT_ICONS = { claude: SparkIcon, codex: HexIcon }
+export function CodeIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M5.5 4.5L2 8l3.5 3.5M10.5 4.5L14 8l-3.5 3.5" />
+    </Icon>
+  )
+}
 
-export function NodeIcon({ type, agent, size = 14 }) {
-  const Glyph = type === 'note' ? NoteIcon : (AGENT_ICONS[agent] ?? TerminalIcon)
-  return <Glyph size={size} />
+export function BoltIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M9 1.75L3.5 9h4l-1 5.25L12.5 7h-4z" />
+    </Icon>
+  )
+}
+
+export function BugIcon(props) {
+  return (
+    <Icon {...props}>
+      <rect x="5" y="4.5" width="6" height="9" rx="3" />
+      <path d="M8 8v5.5M5 8.5H2.5M13.5 8.5H11M5 11.5H3M13 11.5h-2M6.2 5L5 2.75M9.8 5L11 2.75" />
+    </Icon>
+  )
+}
+
+export function FlaskIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M6 2.25h4M6.75 2.25v4.25L3 12.6a.8.8 0 0 0 .7 1.15h8.6a.8.8 0 0 0 .7-1.15L9.25 6.5V2.25" />
+      <path d="M4.6 10h6.8" />
+    </Icon>
+  )
+}
+
+export function DatabaseIcon(props) {
+  return (
+    <Icon {...props}>
+      <ellipse cx="8" cy="4" rx="5" ry="1.75" />
+      <path d="M3 4v8c0 1 2.2 1.75 5 1.75S13 13 13 12V4M3 8c0 1 2.2 1.75 5 1.75S13 9 13 8" />
+    </Icon>
+  )
+}
+
+export function GlobeIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="8" cy="8" r="5.75" />
+      <path d="M2.25 8h11.5M8 2.25c1.6 1.6 2.4 3.5 2.4 5.75S9.6 12.15 8 13.75C6.4 12.15 5.6 10.25 5.6 8S6.4 3.85 8 2.25z" />
+    </Icon>
+  )
+}
+
+export function BookIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M8 4.25C6.5 3.2 4.5 2.9 2.5 3.2v9.3c2-.3 4 0 5.5 1 1.5-1 3.5-1.3 5.5-1V3.2c-2-.3-4 0-5.5 1.05zM8 4.25v9.25" />
+    </Icon>
+  )
+}
+
+export function EyeIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M1.75 8S4 3.75 8 3.75 14.25 8 14.25 8 12 12.25 8 12.25 1.75 8 1.75 8z" />
+      <circle cx="8" cy="8" r="2" />
+    </Icon>
+  )
+}
+
+// A leaf from the Nara forest.
+export function LeafIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M3.25 12.75C3 7 6.5 3.3 13 3c.1 6.6-3.6 10-9.75 9.75z" />
+      <path d="M3.25 12.75L9 7" />
+    </Icon>
+  )
+}
+
+// Three nodes and the strings between them.
+export function NodesIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="8" cy="3.5" r="1.75" />
+      <circle cx="3.5" cy="12" r="1.75" />
+      <circle cx="12.5" cy="12" r="1.75" />
+      <path d="M7.1 5L4.4 10.5M8.9 5l2.7 5.5M5.25 12h5.5" />
+    </Icon>
+  )
+}
+
+export function CupIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M3 6h8.5v3.5A3.5 3.5 0 0 1 8 13H6.5A3.5 3.5 0 0 1 3 9.5z" />
+      <path d="M11.5 7h.75a1.75 1.75 0 0 1 0 3.5H11M6 2.5v1.5M8.5 2.5v1.5" />
+    </Icon>
+  )
 }
 
 // The mark: the Nara deer, a nod to the clan that tends the deer of the Nara forest. Decorative
