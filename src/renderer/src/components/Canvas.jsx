@@ -9,12 +9,15 @@ const MAJOR = 5
 // `children` live in the world, `overlay` too but drawn above them (and never taking the pointer).
 //
 // The pointer, as on a desktop:
-// - A left-button drag on empty canvas draws a selection box; onSelectBox gets the box in world
-//   coordinates as it changes, and whether it adds to the selection (Shift or Ctrl held).
-// - The camera pans from anywhere, over nodes too: dragging with the right button, with the
+// - A left-button drag on empty canvas pans the camera, as with the hand. With Shift or Ctrl held
+//   it draws a selection box instead; onSelectBox gets the box in world coordinates as it
+//   changes, and whether it adds to the selection (always, since a plain click on the canvas has
+//   already cleared it).
+// - The camera also pans from anywhere, over nodes too: dragging with the right button, with the
 //   middle one (except over a terminal's text, where it pastes), with Space held (`grab`), or
-//   with the hand tool. The wheel pans too, except where something inside scrolls: a terminal,
-//   or a note with more text than fits. Ctrl+wheel zooms anywhere.
+//   with the hand tool. The wheel (two fingers on a touchpad) pans too, over nodes as well, except
+//   over the node that has the keyboard when it scrolls itself: a terminal clicked into, or a note
+//   being written with more text than fits. Ctrl+wheel (a pinch) zooms anywhere.
 // - With the draw or erase `tool` on, the nodes ignore the pointer and a left-button drag
 //   anywhere goes to onToolStart/Move/End, in world coordinates.
 export default function Canvas({
@@ -67,7 +70,12 @@ export default function Canvas({
       onToolStart(toWorld(local(e)))
       return
     }
-    drag.current = { start: local(e), additive: e.shiftKey || e.ctrlKey || e.metaKey }
+    if (e.shiftKey || e.ctrlKey || e.metaKey) {
+      drag.current = { start: local(e), additive: true }
+      return
+    }
+    drag.current = 'pan'
+    e.currentTarget.classList.add('panning')
   }
 
   function onPointerMove(e) {
@@ -119,11 +127,14 @@ export default function Canvas({
         })
       } else if (!scrollsItself(e.target)) {
         e.preventDefault()
+        e.stopPropagation()
         setCam((c) => ({ ...c, x: c.x - e.deltaX, y: c.y - e.deltaY }))
       }
     }
-    el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
+    // Capture, so the camera gets the wheel before a terminal under the pointer can scroll its
+    // history with it.
+    el.addEventListener('wheel', onWheel, { passive: false, capture: true })
+    return () => el.removeEventListener('wheel', onWheel, { capture: true })
   }, [setCam])
 
   const transform = `translate(${cam.x}px, ${cam.y}px) scale(${cam.z})`
@@ -164,9 +175,13 @@ export default function Canvas({
   )
 }
 
-// Whether the wheel belongs to what's under the pointer instead of the camera: a terminal (its
-// scrollback, or the program inside), or a note whose text overflows.
+// Whether the wheel belongs to what's under the pointer instead of the camera: only inside the
+// node that has the keyboard, so passing over the others never stops the camera. There, a
+// terminal scrolls its history (or the program inside does), and a note scrolls if its text
+// overflows.
 function scrollsItself(target) {
+  const node = target.closest('.node')
+  if (!node?.contains(document.activeElement)) return false
   if (target.closest('.xterm')) return true
   const note = target.closest('.note-text')
   return Boolean(note && note.scrollHeight > note.clientHeight)

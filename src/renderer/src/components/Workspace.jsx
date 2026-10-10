@@ -747,7 +747,10 @@ export default function Workspace({ workspaceId, saved, active, folder, onPickFo
             </div>
             <div className="empty-hints">
               <span>
-                <kbd>Space</kbd> + <kbd>Drag</kbd> or <kbd>Scroll</kbd> to pan
+                <kbd>Drag</kbd> or <kbd>Scroll</kbd> to pan
+              </span>
+              <span>
+                <kbd>Shift</kbd> + <kbd>Drag</kbd> to select
               </span>
               <span>
                 <kbd>Ctrl</kbd> + <kbd>Scroll</kbd> to zoom

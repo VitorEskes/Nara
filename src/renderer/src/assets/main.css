@@ -518,7 +518,7 @@ kbd {
   cursor: grab;
 }
 
-/* The selection box, drawn while dragging on empty canvas. */
+/* The selection box, drawn while dragging on empty canvas with Shift or Ctrl. */
 .marquee {
   position: absolute;
   z-index: 1;
