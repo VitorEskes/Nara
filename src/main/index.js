@@ -14,6 +14,8 @@ function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
+    minWidth: 640,
+    minHeight: 480,
     show: false,
     // The renderer's --bg, so the window doesn't flash another color before it paints.
     backgroundColor: windowBackground(),

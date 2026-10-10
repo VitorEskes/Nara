@@ -2,8 +2,13 @@ import { useEffect, useState } from 'react'
 import Workspace from './components/Workspace'
 import Sidebar from './components/Sidebar'
 import Overview from './components/Overview'
+import ProjectBadge from './components/ProjectBadge'
 import { byName } from './workspaceList'
-import { shortcutFor } from './shortcuts'
+import { SidebarIcon } from './components/icons'
+import { SHORTCUTS, shortcutFor } from './shortcuts'
+
+// Below this window width the sidebar hides itself, leaving the room to the canvas.
+const NARROW = 760
 
 export default function App() {
   // Every project as { id, name, folder }, and every saved workspace as { id, name, project,
@@ -21,6 +26,56 @@ export default function App() {
   // shown and stays mounted while open, hidden when inactive, so its terminals keep running in
   // the background.
   const [loaded, setLoaded] = useState({})
+  // Remembered across runs; the first run starts with it shown unless the window is narrow.
+  const [sidebar, setSidebar] = useState(
+    () => localStorage.getItem('sidebar') ?? (innerWidth < NARROW ? 'closed' : 'open')
+  )
+
+  useEffect(() => {
+    localStorage.setItem('sidebar', sidebar)
+  }, [sidebar])
+
+  useEffect(() => {
+    const narrow = matchMedia(`(max-width: ${NARROW}px)`)
+    const onChange = (e) => e.matches && setSidebar('closed')
+    narrow.addEventListener('change', onChange)
+    return () => narrow.removeEventListener('change', onChange)
+  }, [])
+
+  // 'light', 'dark' or 'system'; main applies it (see main/theme.js) and the CSS follows.
+  const [theme, setTheme] = useState('light')
+
+  useEffect(() => {
+    window.api.theme.get().then(setTheme)
+  }, [])
+
+  // The switch crossfades the window: the browser snapshots the old colors, waits for the new
+  // ones and fades between them. The new colors arrive once main has changed the theme, which
+  // the media query reports; when they don't change (say, from dark to a system that's dark too)
+  // there's no report, and the timeout ends the wait.
+  function changeTheme(next) {
+    setTheme(next)
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (reduced || !document.startViewTransition) return window.api.theme.set(next)
+    document.startViewTransition(
+      () =>
+        new Promise((resolve) => {
+          matchMedia('(prefers-color-scheme: dark)').addEventListener('change', resolve, {
+            once: true
+          })
+          setTimeout(resolve, 250)
+          window.api.theme.set(next)
+        })
+    )
+  }
+
+  function toggleTheme() {
+    changeTheme(matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark')
+  }
+
+  function toggleSidebar() {
+    setSidebar((current) => (current === 'open' ? 'closed' : 'open'))
+  }
 
   useEffect(() => {
     async function start() {
@@ -52,7 +107,9 @@ export default function App() {
     const actions = {
       newWorkspace: () => createWorkspace(),
       overview: showOverview,
-      newProject: createProject
+      newProject: createProject,
+      sidebar: toggleSidebar,
+      theme: toggleTheme
     }
     function onKeyDown(e) {
       const name = shortcutFor(e)
@@ -153,8 +210,12 @@ export default function App() {
   const folders = new Map(all.map((w) => [w.id, w.folder]))
   const workspaces = all.map((w) => ({ ...w, open: open.includes(w.id) }))
   return (
-    <div className="app">
+    <div className="app" data-sidebar={sidebar}>
       <Sidebar
+        hidden={sidebar === 'closed'}
+        theme={theme}
+        onTheme={changeTheme}
+        onHide={toggleSidebar}
         projects={projects}
         workspaces={workspaces}
         active={overview ? null : active}
@@ -171,6 +232,13 @@ export default function App() {
         onRemoveProject={removeProject}
       />
       <main className="workspaces">
+        {sidebar === 'closed' && (
+          <SidebarPeek
+            workspace={overview ? null : all.find((w) => w.id === active)}
+            projects={projects}
+            onShow={toggleSidebar}
+          />
+        )}
         {open
           .filter((id) => loaded[id])
           .map((id) => (
@@ -191,6 +259,7 @@ export default function App() {
             onOpen={openWorkspace}
             onOpenProject={openProject}
             onCreateWorkspace={createWorkspace}
+            onCreateProject={createProject}
             onCloseWorkspace={closeWorkspace}
             onRemoveWorkspace={removeWorkspace}
             onRenameProject={renameProject}
@@ -198,6 +267,40 @@ export default function App() {
           />
         )}
       </main>
+    </div>
+  )
+}
+
+// While the sidebar is hidden: the button that brings it back and, on a canvas, where you are:
+// the workspace's name, after its project's if it has one.
+function SidebarPeek({ workspace, projects, onShow }) {
+  const project = workspace && projects.find((p) => p.id === workspace.project)
+  return (
+    <div className="sidebar-peek">
+      <button
+        className="icon-button"
+        title={`Show sidebar (${SHORTCUTS.sidebar.keys})`}
+        aria-label="Show sidebar"
+        onClick={onShow}
+      >
+        <SidebarIcon />
+      </button>
+      {workspace && (
+        <nav className="crumbs" aria-label="Current workspace">
+          {project && (
+            <>
+              <ProjectBadge project={project} />
+              <span className="crumb">{project.name}</span>
+              <span className="crumb-separator" aria-hidden="true">
+                /
+              </span>
+            </>
+          )}
+          <span className="crumb current" aria-current="page">
+            {workspace.name}
+          </span>
+        </nav>
+      )}
     </div>
   )
 }

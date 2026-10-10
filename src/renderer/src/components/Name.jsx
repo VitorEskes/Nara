@@ -1,38 +1,18 @@
-import { useState } from 'react'
+import { isRenameKey, useRename } from '../rename'
 
-// A name that turns into a text field on double-click.
-export default function Name({ name, onRename, className = 'row-name' }) {
-  const [editing, setEditing] = useState(false)
-
-  function finish(value) {
-    setEditing(false)
-    const next = value.trim()
-    if (next && next !== name) onRename(next)
-  }
-
-  if (!editing) {
-    return (
-      <span
-        className={className}
-        title="Double-click to rename"
-        onDoubleClick={() => setEditing(true)}
-      >
-        {name}
-      </span>
-    )
-  }
+// A heading that renames on double-click, or on F2 when focused.
+export default function Name({ name, onRename, as: Tag = 'span', className }) {
+  const { editing, start, field } = useRename(name, onRename)
+  if (editing) return field
   return (
-    <input
+    <Tag
       className={className}
-      defaultValue={name}
-      autoFocus
-      onFocus={(e) => e.target.select()}
-      onClick={(e) => e.stopPropagation()}
-      onBlur={(e) => finish(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') e.target.value = name
-        if (e.key === 'Enter' || e.key === 'Escape') e.target.blur()
-      }}
-    />
+      tabIndex={0}
+      title="Double-click or F2 to rename"
+      onDoubleClick={start}
+      onKeyDown={(e) => isRenameKey(e) && start()}
+    >
+      {name}
+    </Tag>
   )
 }

@@ -195,8 +195,9 @@ async function confirm(win, { message, detail }) {
   return response === 0
 }
 
-// Every saved workspace, open or not, as { id, name, project, folder, terminals, notes } (the last
-// two are how many of each it has), sorted by name.
+// Every saved workspace, open or not, as { id, name, project, folder, terminals, notes, preview }
+// (terminals and notes are how many of each it has; preview is the boxes and links the overview
+// draws a miniature of the canvas from), sorted by name.
 function list() {
   let files
   try {
@@ -208,7 +209,13 @@ function list() {
     .filter((file) => file.endsWith('.json'))
     .map((file) => file.slice(0, -'.json'.length))
     .map((id) => {
-      const { name, project, folder, nodes = [] } = workspaces.get(id) ?? read(id)?.workspace ?? {}
+      const {
+        name,
+        project,
+        folder,
+        nodes = [],
+        links = []
+      } = workspaces.get(id) ?? read(id)?.workspace ?? {}
       const count = (type) => nodes.filter((node) => node.type === type).length
       return {
         id,
@@ -217,7 +224,19 @@ function list() {
         folder,
         terminals: count('terminal'),
         notes: count('note'),
-        updated: modified(id)
+        updated: modified(id),
+        preview: {
+          nodes: nodes.map(({ id, type, x, y, w, h, style }) => ({
+            id,
+            type,
+            x,
+            y,
+            w,
+            h,
+            paper: style?.paper
+          })),
+          links: links.map(({ from, to }) => ({ from, to }))
+        }
       }
     })
     .filter(({ name }) => name)

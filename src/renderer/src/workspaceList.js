@@ -17,15 +17,6 @@ export function byName(items) {
   return [...items].sort((a, b) => a.name.localeCompare(b.name))
 }
 
-// A click handler for a button inside a clickable row or card. Without stopPropagation the click
-// also reaches the row and opens what the row stands for.
-export function stop(fn) {
-  return (e) => {
-    e.stopPropagation()
-    fn()
-  }
-}
-
 const UNITS = [
   ['y', 365 * 24 * 3600],
   ['mo', 30 * 24 * 3600],

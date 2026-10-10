@@ -2,14 +2,15 @@
 // inside .world, so pan and zoom come for free from the camera transform.
 //
 // The string sits behind the nodes (z-index 0), and its pins go in the overlay, above them: a pin
-// sits on the node's edge, and half of it would be hidden under the node otherwise.
+// sits on the node's edge, and half of it would be hidden under the node otherwise. The string
+// being pulled goes in the overlay too, whole: it has to stay in sight over any node it crosses.
 
 // How far a string sags below the straight line, as a share of its length, and at most.
 const SAG = 0.2
 const MAX_SAG = 120
 const PIN_RADIUS = 5
 
-export default function Links({ nodes, links, draft, onRemove }) {
+export default function Links({ nodes, links, onRemove }) {
   const byId = new Map(nodes.map((node) => [node.id, node]))
 
   return (
@@ -27,18 +28,24 @@ export default function Links({ nodes, links, draft, onRemove }) {
           </g>
         )
       })}
-
-      {draft && byId.has(draft.from) && (
-        <path className="link-draft" d={stringPath(center(byId.get(draft.from)), draft)} />
-      )}
     </svg>
   )
 }
 
-export function LinkPins({ nodes, links }) {
+// `draft` is the string being pulled: from the edge of its node to the cursor, with a pin at the
+// cursor end.
+export function LinkPins({ nodes, links, draft }) {
   const byId = new Map(nodes.map((node) => [node.id, node]))
+  const source = draft && byId.get(draft.from)
+  const start = source && edgePoint(source, center(source), draft)
   return (
     <svg className="link-pins" width="1" height="1">
+      {source && (
+        <g className="draft">
+          <path className="link-draft" d={stringPath(start, draft)} />
+          <circle className="draft-pin" cx={draft.x} cy={draft.y} r={PIN_RADIUS} />
+        </g>
+      )}
       {links.flatMap((l) => {
         const ends = linkEnds(byId.get(l.from), byId.get(l.to))
         if (!ends) return []

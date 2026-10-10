@@ -1,43 +1,395 @@
-/* The palette: ink-black surfaces, washi-paper text and a single vermilion (shu) accent. */
+/* Tokens. A light theme in three families: cream for surfaces, a green-tinted charcoal for text
+   and terminals, and a dark forest green as the one accent. Nothing is pure black: shadows and
+   translucent marks use the charcoal too. The text tiers are checked against every cream surface:
+   --text-3 stays above 4.5:1 (body text), --text-4 above 3:1 (icons, placeholders, disabled). */
 :root {
-  --sumi: #111214;
-  --bar: #151619;
-  --terminal: #16171a;
-  --stone: #1b1c1f;
-  --raised: #232427;
-  --hover: #2a2b2f;
-  --edge: #2b2c30;
-  --edge-strong: #34353a;
-  --grid: #18191c;
-  --washi: #ebe6dc;
-  --text-dim: #b9b4aa;
-  --muted: #8a8780;
-  --faint: #5f5d58;
-  --shu: #e0452b;
-  --shu-deep: #3a1f1a;
+  --bg: #f4f0e6;
+  --canvas: #f4f0e6;
+  --bar: #ece7da;
+  --stone: #fbf9f3;
+  --raised: #e4ddcd;
+  --hover: #ebe5d8;
+  --pressed: #e0d9c8;
+  --hover-soft: rgb(35 38 36 / 5%);
+  --active-soft: rgb(35 38 36 / 8%);
+  /* The chosen option in a row of options: raised off its track. */
+  --chip: #fdfcf8;
+
+  --edge: #e0d9ca;
+  --edge-strong: #d2cab8;
+  --edge-focus: #a9a08b;
+
+  --cream: #fbf9f3;
+  --text: #232624;
+  --text-2: #3e433f;
+  --text-3: #5a605b;
+  --text-4: #7d817a;
+
+  --accent: #24503d;
+  --accent-text: #24503d;
+  --accent-fill: #24503d;
+  --accent-hover: #1c4232;
+  --accent-soft: rgb(36 80 61 / 12%);
+  --accent-softer: rgb(36 80 61 / 7%);
+  --danger: #9c3d2c;
+  --danger-soft: rgb(156 61 44 / 12%);
+
+  /* The terminals: dark islands on the cream canvas, in a neutral charcoal. The same in both
+     themes, since xterm's own colors (Terminal.jsx) don't follow the theme. */
+  --terminal: #1f1f21;
+  --terminal-bar: #28282a;
+
+  /* Channels for colors used at many strengths: shadows, and the dots of the canvas. */
+  --shade: 35 38 36;
+  --dot: 35 38 36;
+  --selection: rgb(36 80 61 / 22%);
+  --tip-bg: var(--terminal-bar);
+  --tip-text: var(--cream);
+  --preview-terminal: var(--terminal);
+  --preview-bar: #3d3d40;
+
+  /* Role and project tones, all from the green, olive and charcoal families. */
+  --tone-green: #24503d;
+  --tone-leaf: #2f6a50;
+  --tone-olive: #5c6b2e;
+  --tone-umber: #6b5a2a;
+  --tone-ink: #3e433f;
 
   --font-ui: 'Geist Sans', system-ui, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
   --font-display: 'Shippori Mincho B1', serif;
 
-  color-scheme: dark;
+  --radius-s: 6px;
+  --radius-m: 8px;
+  --radius-l: 12px;
+
+  --highlight: inset 0 1px 0 rgb(255 255 255 / 70%);
+  --shadow-node: 0 1px 2px rgb(var(--shade) / 10%), 0 10px 30px rgb(var(--shade) / 14%);
+  --shadow-lift: 0 2px 4px rgb(var(--shade) / 12%), 0 24px 50px rgb(var(--shade) / 24%);
+  --shadow-float:
+    var(--highlight), 0 1px 2px rgb(var(--shade) / 8%), 0 12px 32px rgb(var(--shade) / 12%);
+
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.5, 0, 0.75, 0);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --fast: 120ms;
+  --base: 180ms;
+  --slow: 280ms;
+
+  --sidebar-width: 248px;
+
+  color-scheme: light;
+  accent-color: var(--accent);
 }
+
+/* The dark theme: neutral, slightly warm grays for the surfaces (no green in them, or the whole
+   window reads tinted), cream for the text, and the green, lightened, only as the accent. Electron's nativeTheme decides which applies (see main/theme.js):
+   light, dark, or whatever the system uses. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #19191a;
+    --canvas: #19191a;
+    --bar: #1e1e20;
+    --stone: #242426;
+    --raised: #2c2c2f;
+    --hover: #2a2a2d;
+    --pressed: #323235;
+    --hover-soft: rgb(236 231 219 / 5%);
+    --active-soft: rgb(236 231 219 / 9%);
+    --chip: #38383b;
+
+    --edge: #2a2a2d;
+    --edge-strong: #353538;
+    --edge-focus: #58585d;
+
+    --text: #ece7db;
+    --text-2: #c8c6c0;
+    --text-3: #a3a19b;
+    --text-4: #82807b;
+
+    --accent: #7fb898;
+    --accent-text: #8cc4a4;
+    --accent-fill: #2f6a50;
+    --accent-hover: #367a5c;
+    --accent-soft: rgb(127 184 152 / 16%);
+    --accent-softer: rgb(127 184 152 / 9%);
+    --danger: #e59a88;
+    --danger-soft: rgb(229 154 136 / 14%);
+
+    --tone-green: #8cc4a4;
+    --tone-leaf: #9fcfc3;
+    --tone-olive: #c3cf9e;
+    --tone-umber: #dcc28c;
+    --tone-ink: #c8c6c0;
+
+    --shade: 8 8 9;
+    --dot: 236 231 219;
+    --selection: rgb(127 184 152 / 28%);
+    --tip-bg: var(--text);
+    --tip-text: var(--terminal);
+    --preview-terminal: #2c2c2f;
+    --preview-bar: #444447;
+
+    --highlight: inset 0 1px 0 rgb(255 255 255 / 4%);
+    --shadow-node: 0 1px 2px rgb(var(--shade) / 40%), 0 10px 30px rgb(var(--shade) / 40%);
+    --shadow-lift: 0 2px 4px rgb(var(--shade) / 40%), 0 24px 50px rgb(var(--shade) / 55%);
+    --shadow-float:
+      var(--highlight), 0 1px 2px rgb(var(--shade) / 30%), 0 12px 32px rgb(var(--shade) / 40%);
+
+    color-scheme: dark;
+  }
+}
+
+/* The theme switch crossfades the whole window (App.jsx). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--slow);
+}
+
+/* Base */
 
 html,
 body,
 #root {
   margin: 0;
   height: 100%;
-  background: var(--sumi);
+  background: var(--bg);
   overflow: hidden;
   font-family: var(--font-ui);
-  color: var(--washi);
+  font-size: 13px;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 button {
   font: inherit;
   color: inherit;
 }
+
+::selection {
+  color: var(--text);
+  background: var(--selection);
+}
+
+/* Keyboard focus only: a mouse click doesn't draw the ring. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 10px;
+  background: var(--edge-strong) padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--edge-focus);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.icon {
+  flex-shrink: 0;
+  display: block;
+}
+
+kbd {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: var(--text-4);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Buttons */
+
+/* A square button with only an icon. */
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  color: var(--text-3);
+  background: none;
+  cursor: pointer;
+  transition:
+    color var(--fast),
+    background-color var(--fast),
+    transform var(--fast) var(--ease-out);
+}
+
+.icon-button:hover {
+  color: var(--text);
+  background: var(--active-soft);
+}
+
+.icon-button:active {
+  transform: scale(0.92);
+}
+
+.icon-button.small {
+  width: 24px;
+  height: 24px;
+}
+
+.icon-button.danger:hover {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  flex-shrink: 0;
+  padding: 0 12px;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-m);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--text);
+  background: var(--stone);
+  box-shadow: var(--highlight);
+  cursor: pointer;
+  transition:
+    background-color var(--fast),
+    border-color var(--fast),
+    transform var(--fast) var(--ease-out);
+}
+
+.button:hover {
+  border-color: var(--edge-focus);
+  background: var(--raised);
+}
+
+.button:active {
+  transform: scale(0.97);
+}
+
+.button .icon {
+  color: var(--text-3);
+}
+
+.button.primary {
+  border-color: transparent;
+  color: var(--cream);
+  background: var(--accent-fill);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 14%),
+    0 1px 2px rgb(var(--shade) / 25%);
+}
+
+.button.primary:hover {
+  border-color: transparent;
+  background: var(--accent-hover);
+}
+
+.button.primary .icon {
+  color: inherit;
+}
+
+/* Smaller, quieter buttons beside a heading. */
+.button.subtle {
+  height: 26px;
+  gap: 5px;
+  padding: 0 9px;
+  border-color: transparent;
+  font-size: 12px;
+  color: var(--text-3);
+  background: none;
+  box-shadow: none;
+}
+
+.button.subtle:hover {
+  color: var(--text);
+  background: var(--raised);
+}
+
+.button.subtle.danger:hover {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+/* Tooltips: data-tip on a button inside a floating bar. Shown after a short pause, above the
+   button, or below it with data-tip-side="bottom". */
+[data-tip] {
+  position: relative;
+}
+
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  z-index: 10;
+  padding: 5px 8px;
+  border-radius: var(--radius-s);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--tip-text);
+  background: var(--tip-bg);
+  box-shadow: 0 6px 16px rgb(var(--shade) / 20%);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  transition:
+    opacity var(--fast),
+    transform var(--fast) var(--ease-out);
+}
+
+[data-tip-side='bottom']::after {
+  top: calc(100% + 10px);
+  bottom: auto;
+  transform: translate(-50%, -4px);
+}
+
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 450ms;
+}
+
+/* A menu open over everything, or a button with one open, hides the tooltip. */
+[data-tip][aria-expanded='true']::after {
+  display: none;
+}
+
+/* Layout */
 
 .app {
   display: flex;
@@ -53,20 +405,91 @@ button {
   isolation: isolate;
 }
 
+/* A container, so the dock can drop its labels when the canvas is narrow. */
 .workspace {
   position: absolute;
   inset: 0;
+  container: workspace / inline-size;
+  animation: fade-in var(--base) var(--ease-out);
 }
 
-/* Canvas.jsx scales and moves the grid with the camera. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* While the sidebar is hidden: the button that brings it back, and where you are. */
+.sidebar-peek {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: calc(100% - 24px);
+  box-sizing: border-box;
+  padding: 3px;
+  border: 1px solid var(--edge);
+  border-radius: 11px;
+  background: var(--stone);
+  box-shadow: var(--shadow-float);
+  animation: pop-in var(--base) var(--ease-out);
+}
+
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 0 12px 0 6px;
+  border-left: 1px solid var(--edge);
+  font-size: 13px;
+  white-space: nowrap;
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+.crumb {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-3);
+}
+
+.crumb.current {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.crumb-separator {
+  color: var(--text-4);
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+/* Canvas */
+
+/* Canvas.jsx scales and moves the dots with the camera, and fades the small ones out when zoomed
+   far out, where they would turn into noise. */
 .viewport {
   position: relative;
   width: 100%;
   height: 100%;
   overflow: hidden;
+  background-color: var(--canvas);
   background-image:
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    radial-gradient(circle at 1px 1px, rgb(var(--dot) / 20%) 1.1px, transparent 1.6px),
+    radial-gradient(
+      circle at 1px 1px,
+      rgb(var(--dot) / var(--dot-minor, 7%)) 0.9px,
+      transparent 1.4px
+    );
 }
 
 .world {
@@ -81,10 +504,27 @@ button {
   pointer-events: none;
 }
 
-/* With a drawing tool on, nothing in the world takes the pointer (not even link hitboxes or
-   xterm's own elements), so every drag lands on the viewport. */
+/* With a tool on, or Space held, nothing in the world takes the pointer (not even link hitboxes
+   or xterm's own elements), so every drag lands on the viewport. */
 .viewport[data-tool] .world,
-.viewport[data-tool] .world * {
+.viewport[data-tool] .world *,
+.viewport[data-grab] .world,
+.viewport[data-grab] .world * {
+  pointer-events: none;
+}
+
+.viewport[data-tool='hand'],
+.viewport[data-grab] {
+  cursor: grab;
+}
+
+/* The selection box, drawn while dragging on empty canvas. */
+.marquee {
+  position: absolute;
+  z-index: 1;
+  border: 1.5px solid var(--accent);
+  border-radius: 3px;
+  background: var(--accent-softer);
   pointer-events: none;
 }
 
@@ -94,6 +534,11 @@ button {
 
 .viewport[data-tool='erase'] {
   cursor: cell;
+}
+
+.viewport.panning,
+.viewport.panning * {
+  cursor: grabbing !important;
 }
 
 /* 1x1 like .links, drawing everything in its overflow. */
@@ -107,7 +552,7 @@ button {
 
 .drawings path {
   fill: none;
-  stroke: var(--washi);
+  stroke: var(--text);
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -119,51 +564,142 @@ button {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--edge-strong);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--terminal);
   overflow: hidden;
-  box-shadow: 0 14px 34px rgb(0 0 0 / 45%);
+  box-shadow: var(--shadow-node);
+  transition:
+    border-color var(--base),
+    box-shadow var(--base);
+  animation: node-in var(--slow) var(--ease-out);
+}
+
+@keyframes node-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+
+/* Closing: CanvasNode removes the node when this ends. */
+.node.leaving {
+  pointer-events: none;
+  animation: node-out var(--base) var(--ease-in) forwards;
+}
+
+@keyframes node-out {
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+/* A terminal is a dark island on the cream canvas: inside it, the tokens switch to their dark
+   values, so the bar, its buttons and its text read on charcoal. */
+.node:not([data-type='note']) {
+  --stone: var(--terminal-bar);
+  --hover: #343437;
+  --edge: #323235;
+  --edge-strong: #2d2d30;
+  --edge-focus: #55555a;
+  --text: #ece7db;
+  --text-2: #c8c6c0;
+  --text-3: #a9a7a1;
+  --text-4: #86847f;
+  --hover-soft: rgb(236 231 219 / 6%);
+  --active-soft: rgb(236 231 219 / 10%);
+  --accent: #6fae8e;
+  --accent-soft: rgb(111 174 142 / 22%);
+  --danger: #e59a88;
+  --danger-soft: rgb(229 154 136 / 16%);
+  color: var(--text);
+}
+
+/* The node that has the keyboard: what you type goes here. */
+.node:focus-within {
+  border-color: var(--edge-focus);
+}
+
+.node.dragging {
+  box-shadow: var(--shadow-lift);
 }
 
 .node-bar {
-  height: 34px;
+  height: 36px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 8px 0 12px;
+  gap: 8px;
+  padding: 0 6px 0 4px;
   font-size: 12.5px;
-  color: var(--washi);
+  color: var(--text);
   background: var(--stone);
   border-bottom: 1px solid var(--edge);
   user-select: none;
   cursor: grab;
+  transition: background-color var(--base);
 }
 
-.node-bar:active {
+.node:not([data-type='note']):focus-within > .node-bar {
+  background: #2e2e31;
+}
+
+.node.dragging .node-bar {
   cursor: grabbing;
 }
 
-/* Dot on the bar: dragging from it to another node creates a link. */
+/* The dot on the bar: dragging from it to another node creates a link. The dot is small, but the
+   element around it is a comfortable target. It fills in once the node has a link. */
 .node-port {
-  width: 8px;
-  height: 8px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
-  border: 2px solid var(--faint);
   border-radius: 50%;
   cursor: crosshair;
 }
 
-.node-port:hover {
-  border-color: var(--shu);
-  background: var(--shu);
+.node-port::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  box-sizing: border-box;
+  border: 2px solid var(--text-4);
+  border-radius: 50%;
+  transition:
+    transform var(--fast) var(--ease-spring),
+    border-color var(--fast),
+    background-color var(--fast);
 }
 
-/* "terminal 3" is stored lowercase; it reads as a name on the bar. */
+.node-port.linked::before {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.node-port:hover::before {
+  transform: scale(1.4);
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.node-icon {
+  color: var(--text-3);
+}
+
+.node:focus-within .node-icon {
+  color: var(--text-2);
+}
+
 .node-title {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-weight: 600;
   white-space: nowrap;
-  text-transform: capitalize;
 }
 
 /* Which agent the terminal opened with. It shrinks first when the node is narrow. */
@@ -173,40 +709,60 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--muted);
+  color: var(--text-3);
 }
 
-.node-role {
+.node-agent::before {
+  content: '·';
+  margin-right: 8px;
+  color: var(--text-4);
+}
+
+/* A pill with the role, in the role's color. */
+.role-pill {
   flex-shrink: 0;
-  font-size: 11.5px;
-  color: var(--text-dim);
-}
-
-.node-role[data-role='orchestrator'] {
-  color: var(--shu);
-}
-
-.node-close {
-  width: 20px;
   height: 20px;
-  flex-shrink: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 4px;
-  font-size: 15px;
-  line-height: 1;
-  color: var(--faint);
-  background: none;
-  cursor: pointer;
+  padding: 0 8px;
+  border-radius: 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 14%, transparent);
+}
+
+[data-role='orchestrator'] {
+  --tone: var(--tone-green);
+}
+
+[data-role='worker'] {
+  --tone: var(--tone-olive);
+}
+
+[data-role='reviewer'] {
+  --tone: var(--tone-umber);
+}
+
+/* The same roles, lighter, on a terminal's dark bar. */
+.node [data-role='orchestrator'] {
+  --tone: #8cc4a4;
+}
+
+.node [data-role='worker'] {
+  --tone: #c3cf9e;
+}
+
+.node [data-role='reviewer'] {
+  --tone: #dcc28c;
 }
 
 .node-close {
   margin-left: auto;
+  color: var(--text-4);
 }
 
-.node-close:hover {
-  color: var(--washi);
-  background: var(--shu);
+.node-bar:hover .node-close {
+  color: var(--text-3);
 }
 
 /* min-height: 0 lets the flex item shrink; without it FitAddon measures a box that grows too. */
@@ -219,52 +775,165 @@ button {
 /* No padding here: FitAddon measures this element. The margin comes from inset. */
 .terminal {
   position: absolute;
-  inset: 8px 6px 6px 12px;
+  inset: 10px 6px 6px 14px;
 }
 
-/* Bottom-right corner: dragging it resizes the node. */
-.node-resize {
+.terminal .xterm-viewport {
+  background-color: transparent !important;
+}
+
+/* Handles on every edge and corner resize the node: an edge moves only itself, a corner the two
+   edges that meet there. They sit just inside the node, over its border. The bottom-right one
+   shows a grip on hover, as a hint that the node can be resized at all. */
+.node-handle {
   position: absolute;
-  right: 0;
+  z-index: 2;
+}
+
+.node-handle[data-edge='n'],
+.node-handle[data-edge='s'] {
+  left: 14px;
+  right: 14px;
+  height: 6px;
+  cursor: ns-resize;
+}
+
+.node-handle[data-edge='e'],
+.node-handle[data-edge='w'] {
+  top: 14px;
+  bottom: 14px;
+  width: 6px;
+  cursor: ew-resize;
+}
+
+.node-handle[data-edge='n'] {
+  top: 0;
+}
+
+.node-handle[data-edge='s'] {
   bottom: 0;
+}
+
+.node-handle[data-edge='e'] {
+  right: 0;
+}
+
+.node-handle[data-edge='w'] {
+  left: 0;
+}
+
+.node-handle[data-edge='nw'],
+.node-handle[data-edge='ne'],
+.node-handle[data-edge='sw'],
+.node-handle[data-edge='se'] {
   width: 14px;
   height: 14px;
-  cursor: nwse-resize;
-  background: linear-gradient(135deg, transparent 50%, var(--edge-strong) 50%);
 }
 
-/* A note is a card of paper; --paper is set per note from its style. */
+.node-handle[data-edge='nw'] {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+}
+
+.node-handle[data-edge='ne'] {
+  top: 0;
+  right: 0;
+  cursor: nesw-resize;
+}
+
+.node-handle[data-edge='sw'] {
+  bottom: 0;
+  left: 0;
+  cursor: nesw-resize;
+}
+
+.node-handle[data-edge='se'] {
+  right: 0;
+  bottom: 0;
+  cursor: nwse-resize;
+}
+
+.node-handle[data-edge='se']::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 8px;
+  height: 8px;
+  box-sizing: border-box;
+  border-right: 2px solid var(--edge-focus);
+  border-bottom: 2px solid var(--edge-focus);
+  border-bottom-right-radius: 3px;
+  opacity: 0;
+  transition: opacity var(--fast);
+}
+
+.node:hover .node-handle[data-edge='se']::after,
+.node.dragging .node-handle[data-edge='se']::after {
+  opacity: 1;
+}
+
+/* A note is a card of paper; --paper is set per note from its style. It's paper in both themes,
+   so its marks keep the light theme's charcoal. */
 .node[data-type='note'] {
-  --paper: var(--washi);
+  --paper: var(--cream);
+  --shade: 35 38 36;
+  --text: #232624;
   border: 0;
-  border-radius: 6px;
-  color: #1b1c1f;
+  border-radius: 4px;
+  color: var(--text);
   background: var(--paper);
+  box-shadow:
+    0 0 0 1px rgb(var(--shade) / 6%),
+    0 1px 2px rgb(var(--shade) / 12%),
+    0 10px 24px rgb(var(--shade) / 12%);
+}
+
+.node[data-type='note'].dragging {
+  box-shadow:
+    0 0 0 1px rgb(var(--shade) / 6%),
+    0 2px 4px rgb(var(--shade) / 14%),
+    0 24px 50px rgb(var(--shade) / 24%);
 }
 
 .node[data-type='note'] .node-bar {
-  height: 30px;
+  height: 32px;
   font-family: var(--font-mono);
   font-size: 11px;
-  color: #6b675f;
+  color: rgb(var(--shade) / 55%);
   background: transparent;
-  border-bottom-color: rgb(0 0 0 / 10%);
+  border-bottom: 1px dashed rgb(var(--shade) / 12%);
 }
 
 .node[data-type='note'] .node-title {
-  font-weight: 400;
+  font-weight: 500;
 }
 
-.node[data-type='note'] .node-port {
-  border-color: #a39e94;
+.node[data-type='note'] .node-icon {
+  color: rgb(var(--shade) / 40%);
+}
+
+.node[data-type='note'] .node-port::before {
+  border-color: rgb(var(--shade) / 35%);
+}
+
+.node[data-type='note'] .node-port.linked::before,
+.node[data-type='note'] .node-port:hover::before {
+  border-color: var(--accent);
 }
 
 .node[data-type='note'] .node-close {
-  color: #a39e94;
+  color: rgb(var(--shade) / 40%);
 }
 
-.node[data-type='note'] .node-resize {
-  background: linear-gradient(135deg, transparent 50%, rgb(0 0 0 / 15%) 50%);
+.node[data-type='note'] .node-close:hover {
+  color: rgb(var(--shade) / 80%);
+  background: rgb(var(--shade) / 8%);
+}
+
+.node[data-type='note'] .node-handle[data-edge='se']::after {
+  border-color: rgb(var(--shade) / 22%);
 }
 
 /* resize: none hides the textarea's own grip; the node has its resize corner. */
@@ -274,42 +943,78 @@ button {
   box-sizing: border-box;
   width: 100%;
   height: 100%;
-  padding: 12px 14px 18px;
+  padding: 12px 16px 20px;
   border: 0;
   outline: none;
   resize: none;
   font-family: var(--font-ui);
   font-size: 15px;
   line-height: 1.55;
-  color: #1b1c1f;
+  color: #232624;
   background: transparent;
+  caret-color: var(--accent-fill);
   color-scheme: light;
 }
 
 .note-text::placeholder {
-  color: rgb(0 0 0 / 35%);
+  color: rgb(var(--shade) / 38%);
 }
 
-/* The note the side panel is editing. overflow: hidden on .node would clip an outline drawn
-   outside it, so this one sits on top of the node instead. */
+.note-text::selection {
+  background: rgb(36 80 61 / 22%);
+}
+
+/* The node the side panel is editing, of any type: a green ring a few pixels outside it. An outline
+   isn't clipped by the node's own overflow and follows its rounded corners; it slides in from a
+   little further out when the node is selected. */
+.node {
+  outline: 2.5px solid transparent;
+  outline-offset: 10px;
+}
+
 .node.selected {
-  overflow: visible;
+  outline-color: var(--accent);
+  outline-offset: 5px;
+  transition:
+    border-color var(--base),
+    box-shadow var(--base),
+    outline-color var(--fast),
+    outline-offset var(--base) var(--ease-out);
 }
 
-.node.selected::after {
-  content: '';
-  position: absolute;
-  inset: -5px;
-  border: 1.5px solid var(--shu);
-  border-radius: 9px;
-  pointer-events: none;
+/* While a string is out, the whole canvas aims, and the nodes it can't be tied to step back. */
+.workspace.linking,
+.workspace.linking * {
+  cursor: crosshair !important;
+}
+
+.node.dimmed {
+  opacity: 0.4;
+  filter: saturate(0.6);
+  transition:
+    opacity var(--base),
+    filter var(--base);
+}
+
+/* The node whose row is hovered in the side panel's connections: a dashed ring. */
+.node.highlighted:not(.selected) {
+  outline: 2px dashed var(--accent);
+  outline-offset: 5px;
 }
 
 /* Node under the cursor while a link is being dragged. */
 .node.link-target {
+  border-color: var(--accent);
   box-shadow:
-    0 0 0 2px var(--shu),
-    0 14px 34px rgb(0 0 0 / 45%);
+    0 0 0 3px var(--accent-soft),
+    var(--shadow-node);
+}
+
+.node[data-type='note'].link-target {
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 0 0 6px var(--accent-soft),
+    var(--shadow-node);
 }
 
 /* Links: a string pinned between two nodes. */
@@ -326,13 +1031,14 @@ button {
 
 .link {
   cursor: pointer;
+  animation: fade-in var(--slow) var(--ease-out);
 }
 
 /* The whole svg ignores the pointer; only this invisible stroke receives clicks. */
 .link-hitbox {
   fill: none;
   stroke: transparent;
-  stroke-width: 14;
+  stroke-width: 16;
   pointer-events: stroke;
 }
 
@@ -340,191 +1046,252 @@ button {
 .link-line,
 .link-draft {
   fill: none;
-  stroke: var(--shu);
+  stroke: var(--accent);
   stroke-width: 2.2;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
+  transition:
+    stroke var(--fast),
+    stroke-width var(--fast);
 }
 
 /* Hovering a string shows it would come apart on click. */
 .link:hover .link-line {
-  stroke: var(--washi);
+  stroke: var(--text);
+  stroke-width: 2.6;
   stroke-dasharray: 6 5;
+  animation: dash-march 0.6s linear infinite;
 }
 
 .link-draft {
   stroke-dasharray: 6 5;
+  animation: dash-march 0.6s linear infinite;
+}
+
+@keyframes dash-march {
+  to {
+    stroke-dashoffset: -11;
+  }
+}
+
+.link-pins g:not(.draft) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pin-in var(--slow) var(--ease-spring);
+}
+
+@keyframes pin-in {
+  from {
+    transform: scale(0);
+  }
 }
 
 .link-pins circle {
-  fill: var(--shu);
+  fill: var(--accent);
+}
+
+/* The pin at the cursor end of a string being pulled. vector-effect keeps the ring's width on
+   screen at any zoom, like the string's. */
+.link-pins .draft-pin {
+  fill: var(--bg);
+  stroke: var(--accent);
+  stroke-width: 2.2;
+  vector-effect: non-scaling-stroke;
 }
 
 .link-pins .pin-hole {
-  fill: var(--sumi);
+  fill: var(--bg);
 }
 
-/* Sidebar: the app's actions, then the projects and their workspaces, then the loose ones. */
+/* Sidebar */
 
+/* The inner box keeps its width while the outer one slides closed, so nothing reflows. */
 .sidebar {
-  display: flex;
-  flex-direction: column;
-  width: 236px;
+  width: var(--sidebar-width);
   flex-shrink: 0;
-  font-size: 13px;
-  color: var(--text-dim);
+  overflow: hidden;
   background: var(--bar);
   border-right: 1px solid var(--edge);
   user-select: none;
+  transition:
+    width var(--slow) var(--ease-out),
+    border-color var(--slow);
 }
 
-/* Same height as .overview-bar, so their bottom borders line up. */
+.app[data-sidebar='closed'] .sidebar {
+  width: 0;
+  border-right-color: transparent;
+}
+
+.sidebar-inner {
+  display: flex;
+  flex-direction: column;
+  width: var(--sidebar-width);
+  height: 100%;
+  color: var(--text-2);
+}
+
+/* Same height as .page-header, so their bottom borders line up. */
 .sidebar-top {
   display: flex;
   align-items: center;
-  height: 44px;
+  gap: 10px;
+  height: 52px;
   flex-shrink: 0;
-  padding: 0 14px;
-  border-bottom: 1px solid var(--edge);
+  padding: 0 10px 0 16px;
 }
 
 .brand {
+  flex: 1;
   font-family: var(--font-display);
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 800;
-  color: var(--washi);
+  letter-spacing: 0.01em;
+  color: var(--text);
+}
+
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 1px rgb(var(--shade) / 8%),
+    0 2px 6px rgb(var(--shade) / 12%);
+  transition: transform var(--slow) var(--ease-spring);
+}
+
+.sidebar-top:hover .brand-mark {
+  transform: rotate(-8deg);
 }
 
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  padding: 8px 6px 4px;
+  gap: 2px;
+  padding: 2px 8px 6px;
+}
+
+.nav-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px 0 10px;
+  border: 0;
+  border-radius: var(--radius-m);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  color: var(--text-2);
+  background: none;
+  cursor: pointer;
+  transition:
+    color var(--fast),
+    background-color var(--fast);
+}
+
+.nav-row .icon {
+  color: var(--text-3);
+  transition: color var(--fast);
+}
+
+.nav-row:hover {
+  color: var(--text);
+  background: var(--hover-soft);
+}
+
+.nav-row:hover .icon {
+  color: var(--text-2);
+}
+
+.nav-row.active {
+  color: var(--text);
+  background: var(--active-soft);
+}
+
+.nav-row.active .icon {
+  color: var(--accent-text);
+}
+
+.nav-row kbd {
+  opacity: 0;
+  transition: opacity var(--fast);
+}
+
+.nav-row:hover kbd,
+.nav-row:focus-visible kbd {
+  opacity: 1;
 }
 
 .sidebar-list {
   flex: 1;
   overflow-y: auto;
-  padding: 0 6px 10px;
+  padding: 0 8px 16px;
 }
 
 .sidebar-heading {
-  padding: 14px 8px 6px;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--faint);
+  padding: 18px 10px 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
 }
 
-.sidebar-items {
+.row-list {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.sidebar-items.nested {
-  margin-bottom: 4px;
-  padding-left: 8px;
-}
-
-.sidebar-row {
+/* A row: its main button (icon, name, count) and the buttons for what can be done to it. */
+.row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 28px;
-  padding: 0 6px 0 8px;
+  height: 32px;
+  border-radius: var(--radius-m);
+  transition:
+    color var(--fast),
+    background-color var(--fast);
+}
+
+.row:hover {
+  color: var(--text);
+  background: var(--hover-soft);
+}
+
+.row-main {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 4px 0 10px;
   border: 0;
-  border-radius: 6px;
+  border-radius: inherit;
+  font-size: 13px;
+  text-align: left;
+  color: inherit;
+  background: none;
   cursor: pointer;
 }
 
-.sidebar-row:hover {
-  color: var(--washi);
-  background: var(--stone);
+.row-main:focus-visible {
+  outline-offset: -2px;
 }
 
-.sidebar-row > svg {
-  flex-shrink: 0;
-  color: var(--muted);
+.row-main > .icon {
+  color: var(--text-4);
+  transition: color var(--fast);
 }
 
-.nav-row {
-  width: 100%;
-  font-size: 13px;
-  font-weight: 500;
-  text-align: left;
-  color: var(--text-dim);
-  background: none;
-}
-
-.nav-row.active,
-.workspace-row.active {
-  color: var(--washi);
-  background: var(--raised);
-}
-
-.nav-row.active > svg {
-  color: var(--washi);
-}
-
-kbd {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.04em;
-  color: var(--faint);
-}
-
-.project-row {
-  font-weight: 600;
-  color: var(--washi);
-}
-
-.workspace-row {
-  color: var(--muted);
-}
-
-.workspace-row.open {
-  color: var(--text-dim);
-}
-
-/* Open workspace: its terminals are running, whether it's on screen or not. */
-.workspace-row.open > svg,
-.card.open .card-top > svg {
-  color: var(--shu);
-}
-
-/* The project's initial: a tinted square, the letter in the full tone. */
-.badge {
-  display: grid;
-  place-items: center;
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--tone);
-  background: color-mix(in srgb, var(--tone) 22%, transparent);
-}
-
-.badge[data-tone='0'] {
-  --tone: var(--shu);
-}
-
-.badge[data-tone='1'] {
-  --tone: #7d8fc4;
-}
-
-.badge[data-tone='2'] {
-  --tone: #c9a45c;
-}
-
-.badge[data-tone='3'] {
-  --tone: #85a878;
-}
-
-.badge[data-tone='4'] {
-  --tone: #b48ab8;
+.row:hover .row-main > .icon {
+  color: var(--text-3);
 }
 
 .row-name {
@@ -535,79 +1302,211 @@ kbd {
   white-space: nowrap;
 }
 
-input.row-name {
-  padding: 2px 4px;
-  border: 1px solid var(--shu);
-  border-radius: 4px;
+.row-input {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--accent);
+  border-radius: 5px;
   outline: none;
   font: inherit;
-  color: inherit;
-  background: var(--sumi);
+  color: var(--text);
+  background: var(--bg);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 /* The count of a project or the age of a workspace, on the right of its row. */
 .row-meta {
   flex-shrink: 0;
-  font-size: 11.5px;
-  font-weight: 400;
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
-  color: var(--faint);
+  color: var(--text-4);
+  transition: opacity var(--fast);
 }
 
-.row-button {
+/* A row's buttons take the place of its count or age on hover or keyboard focus, so the name
+   doesn't shift. */
+.row-actions {
+  display: none;
+  align-items: center;
+  gap: 1px;
+  padding-right: 4px;
+}
+
+.row:hover .row-actions,
+.row:focus-within .row-actions,
+.row.active .row-actions {
+  display: flex;
+}
+
+.row:hover .row-meta,
+.row:focus-within .row-meta,
+.row.active .row-meta {
+  display: none;
+}
+
+.project-row {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.project-row .row-main {
+  padding-left: 2px;
+}
+
+/* The disclosure triangle on the left of a project. */
+.row-toggle {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
+  margin-left: 4px;
   flex-shrink: 0;
   padding: 0;
   border: 0;
-  border-radius: 4px;
-  font-size: 15px;
-  line-height: 1;
-  color: var(--faint);
+  border-radius: 5px;
+  color: var(--text-4);
   background: none;
   cursor: pointer;
 }
 
-.row-button svg {
-  width: 13px;
-  height: 13px;
+.row-toggle:hover {
+  color: var(--text);
+  background: var(--active-soft);
 }
 
-.row-button:hover {
-  color: var(--washi);
-  background: var(--hover);
+.row-toggle .icon {
+  transition: transform var(--base) var(--ease-out);
 }
 
-.row-button.danger:hover {
-  background: var(--shu);
-}
-
-/* A row's buttons take the place of its count or age on hover, so the name doesn't shift. The
-   chevron also shows on a collapsed project, which would look empty otherwise. */
-.sidebar-row .row-button {
-  display: none;
-}
-
-.sidebar-row:hover .row-button,
-.workspace-row.active .row-button,
-.project-row.collapsed .chevron {
-  display: grid;
-}
-
-.sidebar-row:hover .row-meta,
-.workspace-row.active .row-meta {
-  display: none;
-}
-
-.chevron {
-  font-size: 12px;
-  transition: transform 0.12s;
-}
-
-.chevron[aria-expanded='false'] {
+.row-toggle[aria-expanded='false'] .icon {
   transform: rotate(-90deg);
+}
+
+/* The project's workspaces fold away by animating the grid row from 1fr to 0fr. */
+.project-children {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--base) var(--ease-out);
+}
+
+.project-children > * {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.project-children[data-collapsed] {
+  grid-template-rows: 0fr;
+}
+
+.project-children .row-list {
+  padding: 1px 0 6px 24px;
+}
+
+.workspace-row {
+  color: var(--text-3);
+}
+
+.workspace-row.open {
+  color: var(--text-2);
+}
+
+/* The workspace on screen: raised, with an accent tick on its left. */
+.workspace-row.active {
+  color: var(--text);
+  background: var(--active-soft);
+}
+
+.workspace-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  transform: scaleY(0);
+  transition: transform var(--base) var(--ease-out);
+}
+
+.workspace-row.active::before {
+  transform: scaleY(1);
+}
+
+.workspace-row.active .row-main > .icon {
+  color: var(--text-2);
+}
+
+/* An open workspace's terminals are running, whether it's on screen or not. */
+.live-dot {
+  position: relative;
+  display: block;
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  margin: 0 4px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.live-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: breathe 2.4s var(--ease-out) infinite;
+}
+
+@keyframes breathe {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(2.8);
+  }
+}
+
+/* The project's initial: a tinted square, the letter in the full tone. */
+.badge {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 20%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 25%, transparent);
+}
+
+.badge[data-tone='0'] {
+  --tone: var(--tone-green);
+}
+
+.badge[data-tone='1'] {
+  --tone: var(--tone-olive);
+}
+
+.badge[data-tone='2'] {
+  --tone: var(--tone-umber);
+}
+
+.badge[data-tone='3'] {
+  --tone: var(--tone-leaf);
+}
+
+.badge[data-tone='4'] {
+  --tone: var(--tone-ink);
 }
 
 /* Overview: every workspace as a card, grouped by project, in place of the canvas. */
@@ -615,140 +1514,104 @@ input.row-name {
 .overview {
   position: absolute;
   inset: 0;
+  z-index: 3;
   display: flex;
   flex-direction: column;
-  background: var(--sumi);
+  background: var(--bg);
   user-select: none;
+  animation: fade-in var(--base) var(--ease-out);
 }
 
-.overview-bar {
+.page-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 44px;
+  height: 52px;
   flex-shrink: 0;
-  padding: 0 10px 0 16px;
+  padding: 0 16px 0 24px;
   border-bottom: 1px solid var(--edge);
 }
 
-.overview-bar h1 {
+/* Room for the floating sidebar button while the sidebar is hidden. */
+.app[data-sidebar='closed'] .page-header {
+  padding-left: 56px;
+}
+
+.page-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 800;
 }
 
-.count {
-  font-size: 12px;
+.count-pill {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 20px;
+  text-align: center;
   font-variant-numeric: tabular-nums;
-  color: var(--muted);
-}
-
-.ghost-button {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  margin-left: auto;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 6px;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--text-dim);
-  background: var(--stone);
-  cursor: pointer;
-}
-
-.ghost-button:hover {
-  color: var(--washi);
+  color: var(--text-2);
   background: var(--raised);
 }
 
-.ghost-button svg {
-  width: 13px;
-  height: 13px;
+.spacer {
+  flex: 1;
 }
 
 .overview-body {
   flex: 1;
   overflow-y: auto;
-  padding: 18px 16px 48px;
 }
 
-.overview-group {
-  margin-bottom: 28px;
+.overview-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 24px 24px 64px;
+}
+
+.overview-group + .overview-group {
+  margin-top: 32px;
 }
 
 .group-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
-  margin-bottom: 10px;
-  font-size: 13px;
+  min-height: 32px;
+  margin-bottom: 12px;
 }
 
 .group-name {
   margin: 0;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   white-space: nowrap;
-  color: var(--washi);
+  color: var(--text);
+  cursor: default;
 }
 
-input.group-name {
-  width: 200px;
-  padding: 2px 6px;
-  border: 1px solid var(--shu);
-  border-radius: 4px;
-  outline: none;
-  font: inherit;
+.group-name:focus-visible {
+  border-radius: 3px;
+}
+
+.group-head .row-input {
+  flex: 0 1 240px;
+  height: 28px;
+  font-size: 15px;
   font-weight: 600;
-  background: var(--sumi);
 }
 
-.separator {
-  color: var(--faint);
-}
-
-.group-folder {
-  max-width: 320px;
-}
-
-/* The small buttons beside a project's name. */
-.chip {
+.group-actions {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 22px;
+  gap: 2px;
+  margin-left: auto;
   flex-shrink: 0;
-  padding: 0 8px;
-  border: 0;
-  border-radius: 5px;
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--muted);
-  background: var(--stone);
-  cursor: pointer;
-}
-
-.chip:first-of-type {
-  margin-left: 4px;
-}
-
-.chip svg {
-  width: 12px;
-  height: 12px;
-}
-
-.chip:hover {
-  color: var(--washi);
-  background: var(--raised);
-}
-
-.chip.danger:hover {
-  background: var(--shu);
 }
 
 /* See Path in Overview.jsx: rtl puts the ellipsis at the start of the path. */
@@ -761,52 +1624,149 @@ input.group-name {
   text-align: left;
   font-family: var(--font-mono);
   font-size: 11.5px;
-  color: var(--faint);
+  color: var(--text-3);
 }
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(196px, 216px));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: 14px;
 }
 
 .cards-empty {
-  font-size: 12.5px;
-  color: var(--faint);
+  grid-column: 1 / -1;
+  padding: 18px;
+  border: 1px dashed var(--edge-strong);
+  border-radius: var(--radius-l);
+  font-size: 13px;
+  color: var(--text-3);
 }
 
+/* The whole card is one button (.card-hit, stretched over it); the buttons inside sit above. */
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
   min-width: 0;
-  min-height: 56px;
-  padding: 10px 8px 9px 10px;
-  border: 1px solid var(--edge-strong);
-  border-radius: 7px;
-  background: var(--bar);
-  cursor: pointer;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-l);
+  background: var(--stone);
+  box-shadow: var(--highlight);
+  overflow: hidden;
+  transition:
+    transform var(--base) var(--ease-out),
+    border-color var(--base),
+    box-shadow var(--base);
+  animation: card-in var(--slow) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 30ms);
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }
 
 .card:hover {
-  background: var(--stone);
+  transform: translateY(-2px);
+  border-color: var(--edge-strong);
+  box-shadow:
+    var(--highlight),
+    0 12px 28px rgb(var(--shade) / 35%);
+}
+
+.card:has(.card-hit:active) {
+  transform: translateY(0) scale(0.99);
 }
 
 /* The workspace that was on screen before the page opened. */
 .card.current {
-  border-color: var(--shu);
-  background: var(--stone);
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow:
+    var(--highlight),
+    0 0 0 3px var(--accent-softer);
+}
+
+.card-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  cursor: pointer;
+}
+
+.card-hit:focus-visible {
+  outline-offset: -2px;
+}
+
+/* A miniature of the canvas: each node where it sits, scaled down to fit. */
+.card-preview {
+  position: relative;
+  height: 96px;
+  border-bottom: 1px solid var(--edge);
+  background-color: var(--bar);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgb(var(--dot) / 14%) 0.8px,
+    transparent 1.2px
+  );
+  background-size: 10px 10px;
+}
+
+.card-preview svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.preview-terminal {
+  fill: var(--preview-terminal);
+}
+
+.preview-bar {
+  fill: var(--preview-bar);
+}
+
+.preview-note {
+  fill: var(--cream);
+  stroke: var(--edge-strong);
+}
+
+.preview-link {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.8;
+}
+
+.preview-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--text-4);
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 8px 10px 14px;
 }
 
 .card-top {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.card-top > svg {
-  flex-shrink: 0;
-  color: var(--muted);
+  height: 24px;
 }
 
 .card-name {
@@ -815,19 +1775,25 @@ input.group-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
-  color: var(--washi);
+  color: var(--text);
 }
 
-/* Like the sidebar rows, the button shows up only on hover. */
-.card .row-button {
-  visibility: hidden;
-  margin: -2px 0;
+/* Like the sidebar rows, the button shows up only on hover or focus. */
+.card .icon-button {
+  position: relative;
+  z-index: 2;
+  opacity: 0;
+  transition:
+    opacity var(--fast),
+    color var(--fast),
+    background-color var(--fast);
 }
 
-.card:hover .row-button {
-  visibility: visible;
+.card:hover .icon-button,
+.card:focus-within .icon-button {
+  opacity: 1;
 }
 
 .card-folder {
@@ -839,79 +1805,217 @@ input.group-name {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: auto;
-  font-size: 11.5px;
-  color: var(--faint);
+  padding-right: 6px;
+  font-size: 12px;
+  color: var(--text-3);
 }
 
 .running {
-  color: var(--shu);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--accent-text);
 }
 
-.overview-empty {
-  max-width: 420px;
-  margin: 80px auto;
-  font-size: 14px;
-  line-height: 1.6;
+.running .live-dot {
+  margin: 0;
+}
+
+/* Empty states: the overview without anything, and a blank canvas. */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 440px;
+  margin: 12vh auto 0;
   text-align: center;
-  color: var(--faint);
+  animation: card-in var(--slow) var(--ease-out);
 }
 
-/* Dock: the tools, floating at the bottom. Lives outside .world, so pan and zoom don't move it. */
+.empty-title {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.empty-text {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-3);
+}
+
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.canvas-empty {
+  position: absolute;
+  inset: 0 0 90px;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.canvas-empty .empty-state {
+  margin: 0;
+}
+
+.canvas-empty button {
+  pointer-events: auto;
+}
+
+.empty-hints {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 18px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.empty-hints kbd,
+.menu kbd {
+  display: inline-block;
+  min-width: 10px;
+  padding: 1px 5px;
+  border: 1px solid var(--edge-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  text-align: center;
+  color: var(--text-2);
+  background: var(--stone);
+}
+
+/* Floating bars over the canvas: the dock, the zoom and the note panel. They live outside
+   .world, so pan and zoom don't move them. */
+
+.floating {
+  position: absolute;
+  z-index: 1;
+  border: 1px solid var(--edge);
+  background: var(--stone);
+  box-shadow: var(--shadow-float);
+}
 
 .dock {
-  position: absolute;
   left: 50%;
-  bottom: 22px;
-  z-index: 1;
-  transform: translateX(-50%);
+  bottom: 20px;
   display: flex;
   align-items: center;
   gap: 2px;
   padding: 5px;
-  border: 1px solid var(--edge);
-  border-radius: 12px;
-  background: var(--stone);
-  box-shadow: 0 10px 28px rgb(0 0 0 / 45%);
-  font-size: 13px;
+  border-radius: 14px;
+  transform: translateX(-50%);
   white-space: nowrap;
+  animation: dock-in var(--slow) var(--ease-out);
 }
 
-.dock button {
+@keyframes dock-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+}
+
+.dock-button {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 36px;
+  height: 38px;
+  min-width: 38px;
+  justify-content: center;
   padding: 0 12px;
   border: 0;
-  border-radius: 8px;
-  color: var(--washi);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
   background: transparent;
   cursor: pointer;
+  transition:
+    color var(--fast),
+    background-color var(--fast),
+    transform var(--fast) var(--ease-out);
 }
 
-.dock button:hover {
+.dock-button .icon {
+  color: var(--text-3);
+  transition: color var(--fast);
+}
+
+.dock-button:hover {
+  color: var(--text);
   background: var(--raised);
 }
 
-.dock button.active {
-  color: var(--shu);
-  background: var(--shu-deep);
+.dock-button:hover .icon {
+  color: var(--text);
 }
 
-.dock .tool {
-  color: var(--muted);
+.dock-button:active {
+  transform: scale(0.94);
 }
 
-.dock-mono {
-  font-family: var(--font-mono);
+.dock-button.tool {
+  padding: 0;
+}
+
+.dock-button.active,
+.dock-button[aria-expanded='true'] {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.dock-button.active .icon,
+.dock-button[aria-expanded='true'] .icon {
+  color: var(--accent-text);
+}
+
+.dock-button .chevron {
+  margin: 0 -4px 0 -2px;
+  color: var(--text-4);
+  transform: rotate(180deg);
+  transition: transform var(--base) var(--ease-out);
+}
+
+.dock-button[aria-expanded='true'] .chevron {
+  transform: rotate(0);
 }
 
 .dock-divider {
   width: 1px;
   height: 22px;
-  margin: 0 4px;
-  background: var(--edge);
+  margin: 0 5px;
+  background: var(--edge-strong);
+}
+
+/* On a narrow canvas the dock keeps only its icons; the labels move to the tooltips. */
+@container workspace (max-width: 760px) {
+  .dock-label,
+  .dock-button .chevron {
+    display: none;
+  }
+
+  .dock-button {
+    padding: 0;
+  }
+}
+
+@container workspace (min-width: 761px) {
+  .dock-button:has(.dock-label)::after {
+    display: none;
+  }
 }
 
 /* Anchors the role menu above its button. */
@@ -919,54 +2023,482 @@ input.group-name {
   position: relative;
 }
 
-.role-menu {
+.menu {
   position: absolute;
-  bottom: calc(100% + 10px);
+  bottom: calc(100% + 12px);
   left: 50%;
-  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
-  width: 270px;
-  padding: 4px;
-  border: 1px solid var(--edge);
-  border-radius: 10px;
+  gap: 1px;
+  width: 290px;
+  padding: 5px;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-l);
   background: var(--stone);
-  box-shadow: 0 10px 28px rgb(0 0 0 / 45%);
+  box-shadow: var(--shadow-float);
   white-space: normal;
+  transform: translateX(-50%);
+  transform-origin: bottom center;
+  animation: menu-in var(--base) var(--ease-out);
 }
 
-.dock .role-menu button {
-  flex-direction: column;
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px) scale(0.97);
+  }
+}
+
+.menu-heading {
+  padding: 6px 10px 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.menu-item {
+  display: flex;
   align-items: flex-start;
-  gap: 2px;
-  height: auto;
+  gap: 10px;
   padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-m);
   text-align: left;
+  color: var(--text);
+  background: none;
+  cursor: pointer;
+  transition: background-color var(--fast);
 }
 
-.role-description {
-  font-size: 11.5px;
-  color: var(--muted);
+.menu-item:hover,
+.menu-item:focus-visible {
+  outline: none;
+  background: var(--raised);
 }
 
-/* Side panel with the selected note's text style, like Excalidraw's. */
+.menu-item kbd {
+  margin-left: auto;
+  align-self: center;
+}
 
-.note-panel {
+.role-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--tone, var(--text-4));
+}
+
+.menu-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.menu-label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.menu-description {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-3);
+}
+
+/* Zoom and the minimap: bottom right, out of the dock's way, the map above the zoom. */
+.zoom-area {
   position: absolute;
-  top: 16px;
-  left: 16px;
+  right: 16px;
+  bottom: 20px;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  width: 224px;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.zoom-area > .floating {
+  position: relative;
+}
+
+.zoom .icon-button.active {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.minimap {
+  width: 232px;
+  height: 152px;
+  overflow: hidden;
+  border-radius: var(--radius-l);
+  background-color: var(--bar);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgb(var(--dot) / 14%) 0.8px,
+    transparent 1.2px
+  );
+  background-size: 10px 10px;
+  transform-origin: bottom right;
+  animation: minimap-in var(--base) var(--ease-out);
+}
+
+@keyframes minimap-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+}
+
+.minimap svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+/* The camera: what's on screen right now. */
+.minimap-view {
+  fill: var(--accent-softer);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.zoom {
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 12px;
+  animation: fade-in var(--slow) var(--ease-out);
+}
+
+.zoom .icon-button {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.zoom-level {
+  width: 52px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+  background: none;
+  cursor: pointer;
+}
+
+.zoom-level:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.zoom .dock-divider {
+  height: 18px;
+  margin: 0 3px;
+}
+
+/* The dock is centered and the zoom on the right: on a narrow canvas they would meet. */
+@container workspace (max-width: 620px) {
+  .zoom-area {
+    bottom: 76px;
+  }
+}
+
+/* Side panel for the selected node, like Excalidraw's: a header, the tabs, and the tab's body,
+   which scrolls when the panel would run past the dock. */
+
+.node-panel {
+  top: 16px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 268px;
+  max-height: calc(100% - 120px);
   box-sizing: border-box;
-  padding: 16px;
-  border: 1px solid var(--edge);
-  border-radius: 10px;
+  padding: 12px 0 0;
+  border-radius: var(--radius-l);
   font-size: 12px;
-  background: var(--stone);
-  box-shadow: 0 10px 28px rgb(0 0 0 / 45%);
+  animation: panel-in var(--base) var(--ease-out);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px 0 16px;
+  color: var(--text-3);
+}
+
+.node-panel > .segmented {
+  margin: 0 16px;
+}
+
+.panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 16px 16px;
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+}
+
+.app[data-sidebar='closed'] .node-panel {
+  top: 64px;
+  max-height: calc(100% - 168px);
+}
+
+.panel-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.panel-group legend,
+.field-label {
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.text-input {
+  height: 32px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-m);
+  outline: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  transition:
+    border-color var(--fast),
+    box-shadow var(--fast);
+}
+
+.text-input:hover {
+  border-color: var(--edge-focus);
+}
+
+.text-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* The connector: grab it and pull a string out of the node, like the dot on its bar. */
+.connector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px 8px 8px;
+  border: 1.5px dashed var(--edge-focus);
+  border-radius: var(--radius-m);
+  text-align: left;
+  color: var(--text);
+  background: none;
+  cursor: grab;
+  touch-action: none;
+  transition:
+    border-color var(--fast),
+    background-color var(--fast);
+}
+
+.connector:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-softer);
+}
+
+.connector:active:not(:disabled) {
+  cursor: grabbing;
+}
+
+.connector:disabled {
+  border-color: var(--edge-strong);
+  color: var(--text-3);
+  cursor: default;
+}
+
+.connector-pin {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  color: var(--cream);
+  background: var(--accent-fill);
+  transition: transform var(--base) var(--ease-spring);
+}
+
+.connector:hover:not(:disabled) .connector-pin {
+  transform: rotate(-12deg) scale(1.06);
+}
+
+.connector:disabled .connector-pin {
+  color: var(--text-4);
+  background: var(--active-soft);
+}
+
+.connector-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* What to do while a string is out, at the top of the canvas. */
+.link-hint {
+  top: 16px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 18px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--text);
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: hint-in var(--base) var(--ease-out);
+}
+
+.link-hint .icon {
+  color: var(--accent-text);
+}
+
+.link-hint kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--edge-strong);
+  border-radius: 4px;
+  color: var(--text-2);
+}
+
+@keyframes hint-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+}
+
+/* The role picker: one row per role, the chosen one checked. */
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-m);
+  font-size: 13px;
+  text-align: left;
+  color: var(--text-2);
+  background: none;
+  cursor: pointer;
+  transition:
+    color var(--fast),
+    background-color var(--fast);
+}
+
+.choice:hover {
+  color: var(--text);
+  background: var(--active-soft);
+}
+
+.choice[aria-pressed='true'] {
+  color: var(--text);
+  background: var(--accent-softer);
+}
+
+.choice .role-dot {
+  margin-top: 0;
+}
+
+.choice .icon {
+  margin-left: auto;
+  color: var(--accent-text);
+  animation: pop-in var(--fast) var(--ease-out);
+}
+
+/* The nodes this one is linked to. */
+.peers {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.peer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 2px 0 10px;
+  border-radius: var(--radius-m);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--active-soft);
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+.peer .icon {
+  color: var(--text-3);
+}
+
+.peer-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.peer-id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-4);
 }
 
 .panel-group {
@@ -979,35 +2511,45 @@ input.group-name {
 }
 
 .panel-group legend {
-  padding: 0;
   margin-bottom: 8px;
-  color: var(--muted);
 }
 
 .panel-options {
   display: grid;
   grid-auto-columns: minmax(0, 1fr);
   grid-auto-flow: column;
-  gap: 4px;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-m);
+  background: var(--active-soft);
 }
 
 .panel-options button {
-  height: 32px;
+  display: grid;
+  place-items: center;
+  height: 30px;
   padding: 0;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--washi);
-  background: var(--raised);
+  border: 0;
+  border-radius: var(--radius-s);
+  font-size: 13px;
+  color: var(--text-3);
+  background: none;
   cursor: pointer;
+  transition:
+    color var(--fast),
+    background-color var(--fast);
 }
 
 .panel-options button:hover {
-  background: var(--hover);
+  color: var(--text);
 }
 
 .panel-options button[aria-pressed='true'] {
-  border-color: var(--edge-strong);
-  background: var(--hover);
+  color: var(--text);
+  background: var(--chip);
+  box-shadow:
+    var(--highlight),
+    0 1px 3px rgb(var(--shade) / 14%);
 }
 
 .panel-swatches {
@@ -1015,27 +2557,110 @@ input.group-name {
   gap: 6px;
 }
 
-.panel-swatches button {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  /* The dark ink would vanish into the panel without an edge. */
-  border: 1px solid var(--edge-strong);
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.panel-swatches button[aria-pressed='true'] {
-  outline: 2px solid var(--washi);
-  outline-offset: 1px;
-}
-
-.empty {
-  position: absolute;
-  inset: 0;
+/* Each swatch shows the color as it would look on the note: papers as paper, inks as an "A"
+   in that ink on the current paper. */
+.swatch {
+  --shade: 35 38 36;
   display: grid;
   place-items: center;
-  font-size: 14px;
-  color: var(--faint);
-  pointer-events: none;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 1px rgb(var(--shade) / 15%);
+  cursor: pointer;
+  transition: transform var(--fast) var(--ease-spring);
+}
+
+.swatch:hover {
+  transform: scale(1.08);
+}
+
+.swatch[aria-pressed='true'] {
+  box-shadow:
+    0 0 0 2px var(--stone),
+    0 0 0 4px var(--text);
+}
+
+.swatch .icon {
+  color: rgb(var(--shade) / 60%);
+  animation: pop-in var(--fast) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+  }
+}
+
+/* The theme switch at the bottom of the sidebar. */
+
+.sidebar-footer {
+  flex-shrink: 0;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--edge);
+}
+
+/* A row of options with one highlight under them, moved to the chosen one by --index; --count is
+   how many there are. The theme switch and the panel's tabs use it. */
+.segmented {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--count, 3), 1fr);
+  padding: 3px;
+  border-radius: var(--radius-m);
+  background: var(--active-soft);
+}
+
+.segmented::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / var(--count, 3));
+  border-radius: var(--radius-s);
+  background: var(--chip);
+  box-shadow:
+    var(--highlight),
+    0 1px 3px rgb(var(--shade) / 14%);
+  transform: translateX(calc(var(--index, 0) * 100%));
+  transition: transform var(--base) var(--ease-out);
+}
+
+.segmented button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+  background: none;
+  cursor: pointer;
+  transition: color var(--fast);
+}
+
+.segmented button:hover,
+.segmented button[aria-pressed='true'],
+.segmented button[aria-selected='true'] {
+  color: var(--text);
+}
+
+.segmented button:focus-visible {
+  outline-offset: -2px;
 }

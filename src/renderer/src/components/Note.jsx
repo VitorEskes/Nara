@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { FONTS, INKS, SIZES, resolveStyle } from '../noteStyle'
+import { FONTS, INKS, SIZES, resolveStyle } from '../nodeStyle'
 
 // A note: plain text that lives in the node and is saved with the workspace. `style` holds the
 // font, size, ink and alignment picked in the side panel (the paper color goes on the node).

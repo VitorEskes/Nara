@@ -1,8 +1,17 @@
+import { useState } from 'react'
+import { CloseIcon, NodeIcon } from './icons'
+
 const MIN_WIDTH = 240
 const MIN_HEIGHT = 120
 
+// The handles around a node: each edge moves only that edge, each corner the two that meet there.
+const EDGES = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw']
+
 // A box in the world: position and size are in world coordinates, not screen coordinates.
-// `agent` and `role` are labels for the bar, as { key, label }; `paper` is a note's color.
+// `label` is the name on the bar; `agent` and `role` are labels for it too, as { key, label };
+// `paper` is a note's color and `linked` says whether any string is pinned to it. While a string is
+// being pulled, `dimmed` marks a node it can't be tied to; `highlighted` lights the node up while
+// its row in the side panel's connections is hovered.
 export default function CanvasNode({
   id,
   type,
@@ -11,72 +20,119 @@ export default function CanvasNode({
   w,
   h,
   layer,
-  title,
+  label,
   agent,
   role,
   paper,
+  linked,
   selected,
   isLinkTarget,
+  dimmed,
+  highlighted,
   onChange,
   onRaise,
+  onMoveStart,
+  onMoveBy,
   onClose,
   onLinkStart,
   children
 }) {
+  const [dragging, setDragging] = useState(false)
+  // Closing plays a short animation first; the node goes away when it ends.
+  const [leaving, setLeaving] = useState(false)
+
+  // The bar moves the node, and with it the rest of the selection, which Workspace tracks.
   function move(e) {
-    drag(e, (dx, dy) => onChange({ x: x + dx, y: y + dy }))
+    if (e.button !== 0) return
+    onMoveStart()
+    drag(e, setDragging, onMoveBy)
   }
 
-  function resize(e) {
-    drag(e, (dx, dy) =>
-      onChange({ w: Math.max(MIN_WIDTH, w + dx), h: Math.max(MIN_HEIGHT, h + dy) })
-    )
+  function resize(e, edge) {
+    drag(e, setDragging, (dx, dy) => onChange(resized({ x, y, w, h }, edge, dx, dy)))
   }
 
+  const className = [
+    'node',
+    selected && 'selected',
+    isLinkTarget && 'link-target',
+    dimmed && 'dimmed',
+    highlighted && 'highlighted',
+    dragging && 'dragging',
+    leaving && 'leaving'
+  ]
   return (
     <div
-      className={['node', selected && 'selected', isLinkTarget && 'link-target']
-        .filter(Boolean)
-        .join(' ')}
+      className={className.filter(Boolean).join(' ')}
       // App finds the node under the cursor via the DOM (elementFromPoint) and reads its id here.
       data-id={id}
       data-type={type}
+      role="group"
+      aria-label={label}
       style={{ left: x, top: y, width: w, height: h, zIndex: layer, '--paper': paper }}
       // Capture: runs before any child (including xterm) gets a chance to swallow the event.
       onPointerDownCapture={onRaise}
+      onAnimationEnd={(e) => e.animationName === 'node-out' && onClose()}
     >
       <div className="node-bar" onPointerDown={move}>
         <div
-          className="node-port"
-          title="Drag onto another node to link them"
+          className={linked ? 'node-port linked' : 'node-port'}
+          title="Drag onto another node to connect them, or click and then pick one"
           onPointerDown={onLinkStart}
         />
-        <span className="node-title">{title}</span>
+        <NodeIcon type={type} agent={agent?.key} />
+        <span className="node-title">{label}</span>
         {agent && <span className="node-agent">{agent.label}</span>}
         {role && (
-          <span className="node-role" data-role={role.key}>
+          <span className="role-pill" data-role={role.key}>
             {role.label}
           </span>
         )}
         <button
-          className="node-close"
+          className="icon-button small node-close"
           title="Close"
+          aria-label={`Close ${label}`}
           // Without this the pointerdown bubbles up to the bar, which captures the pointer to drag
           // and the click never reaches the button.
           onPointerDown={(e) => e.stopPropagation()}
-          onClick={onClose}
+          onClick={() => setLeaving(true)}
         >
-          ×
+          <CloseIcon size={14} />
         </button>
       </div>
       <div className="node-body">{children}</div>
-      <div className="node-resize" onPointerDown={resize} />
+      {EDGES.map((edge) => (
+        <div
+          key={edge}
+          className="node-handle"
+          data-edge={edge}
+          onPointerDown={(e) => resize(e, edge)}
+        />
+      ))}
     </div>
   )
 }
 
+// The box after dragging `edge` by (dx, dy). The far side stays put: dragging the top edge up
+// grows the node upward, and at the minimum size the edge stops instead of pushing the node.
+function resized(box, edge, dx, dy) {
+  const next = { ...box }
+  if (edge.includes('e')) next.w = Math.max(MIN_WIDTH, box.w + dx)
+  if (edge.includes('s')) next.h = Math.max(MIN_HEIGHT, box.h + dy)
+  if (edge.includes('w')) {
+    next.w = Math.max(MIN_WIDTH, box.w - dx)
+    next.x = box.x + box.w - next.w
+  }
+  if (edge.includes('n')) {
+    next.h = Math.max(MIN_HEIGHT, box.h - dy)
+    next.y = box.y + box.h - next.h
+  }
+  return next
+}
+
 // Generic drag: calls onDrag(dx, dy) with the offset since the click, already in world units.
-function drag(e, onDrag) {
+// setDragging is told when the drag starts and ends, for the lifted look.
+function drag(e, setDragging, onDrag) {
   if (e.button !== 0) return
   const handle = e.currentTarget
   const node = handle.closest('.node')
@@ -86,11 +142,13 @@ function drag(e, onDrag) {
   const y0 = e.clientY
 
   handle.setPointerCapture(e.pointerId)
+  setDragging(true)
 
   function onMove(ev) {
     onDrag(Math.round((ev.clientX - x0) / scale), Math.round((ev.clientY - y0) / scale))
   }
   function onRelease() {
+    setDragging(false)
     handle.removeEventListener('pointermove', onMove)
     handle.removeEventListener('pointerup', onRelease)
     handle.removeEventListener('pointercancel', onRelease)
