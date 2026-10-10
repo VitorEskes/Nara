@@ -1,15 +1,9 @@
 import { app, dialog, ipcMain } from 'electron'
 import { randomUUID } from 'crypto'
-import {
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  renameSync,
-  rmSync,
-  statSync,
-  writeFileSync
-} from 'fs'
-import { basename, dirname, join } from 'path'
+import { readFileSync, readdirSync, rmSync, statSync } from 'fs'
+import { basename, join } from 'path'
+import { readJson, writeAtomic } from './files'
+import { pickFolder } from './folders'
 import { currentCwd } from './pty'
 
 // Each workspace is a canvas saved to its own JSON file, named after a random id so renaming a
@@ -31,8 +25,6 @@ export const workspaces = new Map()
 const timers = new Map()
 // Last JSON written for each workspace, to skip writes that wouldn't change the file.
 const written = new Map()
-// Where the folder picker opens when there's no better default: the last folder picked.
-let lastFolder = process.env.HOME
 
 const HANDLERS = [
   'workspace:session',
@@ -169,18 +161,6 @@ export function registerWorkspaces(win) {
     for (const name of HANDLERS) ipcMain.removeHandler(name)
     for (const name of LISTENERS) ipcMain.removeAllListeners(name)
   })
-}
-
-async function pickFolder(win, { title, defaultPath = lastFolder }) {
-  const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-    title,
-    defaultPath,
-    buttonLabel: 'Open here',
-    properties: ['openDirectory', 'createDirectory']
-  })
-  if (canceled || !filePaths[0]) return null
-  lastFolder = filePaths[0]
-  return lastFolder
 }
 
 async function confirm(win, { message, detail }) {
@@ -390,22 +370,6 @@ function saveProjects(projects) {
 
 function sortByName(items) {
   return items.sort((a, b) => a.name.localeCompare(b.name))
-}
-
-// Writes to a temp file and renames it over the old one. The rename is atomic, so a crash
-// mid-write leaves the previous file intact instead of a truncated one.
-function writeAtomic(file, text) {
-  mkdirSync(dirname(file), { recursive: true })
-  writeFileSync(`${file}.tmp`, text)
-  renameSync(`${file}.tmp`, file)
-}
-
-function readJson(file) {
-  try {
-    return JSON.parse(readFileSync(file, 'utf8'))
-  } catch {
-    return null
-  }
 }
 
 function statePath() {
