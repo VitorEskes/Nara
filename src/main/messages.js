@@ -64,11 +64,20 @@ function handle({ from, command, action, to, text }, win) {
   if (command === 'peers') {
     return {
       peers: peers.map((peerId) => {
-        if (nodeOf(peerId)?.type === 'note') return { nodeId: peerId, type: 'note' }
+        // The name the user gave the node, if any: new nodes are just "terminal 3".
+        const title = nodeOf(peerId)?.title
+        if (nodeOf(peerId)?.type === 'note') return { nodeId: peerId, type: 'note', title }
         const target = findTerminal(workspaceId, peerId)
         const program = target && foregroundProgram(target)
         const role = ROLES[nodeOf(peerId)?.role]?.label.toLowerCase()
-        return { nodeId: peerId, type: 'terminal', program, role, canReceive: !SHELLS.has(program) }
+        return {
+          nodeId: peerId,
+          type: 'terminal',
+          title,
+          program,
+          role,
+          canReceive: !SHELLS.has(program)
+        }
       })
     }
   }

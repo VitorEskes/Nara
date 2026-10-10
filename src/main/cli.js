@@ -34,14 +34,16 @@ async function main() {
   if (command === 'peers') {
     const { peers } = await request({ command })
     if (peers.length === 0) console.log('nothing linked to this terminal')
-    for (const { nodeId, type, program, role, canReceive } of peers) {
+    for (const { nodeId, type, title, program, role, canReceive } of peers) {
+      // A node the user renamed shows its name after the id, which is still what commands take.
+      const name = title && title !== `${type} ${nodeId}` ? `  "${title}"` : ''
       if (type === 'note') {
-        console.log(`note ${nodeId}`)
+        console.log(`note ${nodeId}${name}`)
         continue
       }
       const roleName = role ? `  (${role})` : ''
       const warning = canReceive ? '' : "  (shell only, can't receive messages)"
-      console.log(`terminal ${nodeId}  ${program}${roleName}${warning}`)
+      console.log(`terminal ${nodeId}${name}  ${program}${roleName}${warning}`)
     }
     return
   }
