@@ -26,6 +26,11 @@ const api = {
     remove: (id) => ipcRenderer.invoke('workspace:remove', id),
     onNoteWritten: (fn) => listen('workspace:note-written', fn)
   },
+  theme: {
+    // 'light', 'dark' or 'system'.
+    get: () => ipcRenderer.invoke('theme:get'),
+    set: (theme) => ipcRenderer.send('theme:set', theme)
+  },
   project: {
     list: () => ipcRenderer.invoke('project:list'),
     create: () => ipcRenderer.invoke('project:create'),

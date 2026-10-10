@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import { setUpDataFolder } from './dataFolder'
 import { registerMessages } from './messages'
 import { registerPty, terminalsExited } from './pty'
+import { loadTheme, registerTheme, windowBackground } from './theme'
 import { registerWorkspaces } from './workspaces'
 
 setUpDataFolder()
@@ -14,7 +15,8 @@ function createWindow() {
     width: 1280,
     height: 800,
     show: false,
-    backgroundColor: '#0d0d10',
+    // The renderer's --bg, so the window doesn't flash another color before it paints.
+    backgroundColor: windowBackground(),
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
@@ -23,6 +25,7 @@ function createWindow() {
     }
   })
 
+  registerTheme(mainWindow)
   registerWorkspaces(mainWindow)
   registerPty(mainWindow, registerMessages(mainWindow))
 
@@ -51,6 +54,7 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  loadTheme()
   createWindow()
 
   app.on('activate', function () {
