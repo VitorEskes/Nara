@@ -3297,6 +3297,153 @@ kbd {
   gap: 6px;
 }
 
+.role-editor-name {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* The settings that hold the agent to its role: rows of options, each with a line about the
+   chosen one. */
+.role-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-m);
+  background: var(--hover-soft);
+}
+
+.role-setting {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.role-setting-label {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.role-setting-label small {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-4);
+}
+
+.role-setting .panel-options button {
+  height: 26px;
+  font-size: 12px;
+}
+
+.role-setting-detail {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.role-editor .role-kickoff {
+  height: 56px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+/* The settings a role holds the agent to, as badges under its name. */
+.role-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.role-badge {
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--tone, var(--text-2));
+  background: color-mix(in srgb, var(--tone, var(--text-3)) 13%, transparent);
+}
+
+.role-kickoff-view {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-m);
+  background: var(--hover-soft);
+}
+
+.role-kickoff-view span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.role-kickoff-view p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+/* The whole prompt, folded away until asked for. */
+.prompt-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prompt-preview-toggle {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  padding: 2px 4px 2px 0;
+  border: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+  background: none;
+  cursor: pointer;
+}
+
+.prompt-preview-toggle:hover {
+  color: var(--text);
+}
+
+.prompt-preview-toggle .icon {
+  transform: rotate(-90deg);
+  transition: transform var(--base) var(--ease-out);
+}
+
+.prompt-preview[data-open] .prompt-preview-toggle .icon {
+  transform: none;
+}
+
+.prompt-preview-text {
+  max-height: 260px;
+  margin: 0;
+  overflow: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-m);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  color: var(--text-2);
+  background: var(--bg);
+  animation: fade-in var(--base) var(--ease-out);
+}
+
 .button.small {
   height: 28px;
   gap: 5px;

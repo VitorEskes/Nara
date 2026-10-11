@@ -26,7 +26,8 @@ const MEMORY = 'new-terminal'
 
 const NO_ROLE = {
   label: 'No role',
-  description: 'Knows how Nara works: links, messages and notes.'
+  description: 'Knows how Nara works: links, messages and notes.',
+  none: true
 }
 
 // The dialog behind the dock's Terminal button, in three tabs: General (the program, which is the
@@ -235,7 +236,7 @@ export default function Launcher({
               aria-controls="launcher-panel"
               tabIndex={tab === key ? 0 : -1}
               disabled={disabled}
-              title={disabled ? 'Only Claude Code takes a role' : undefined}
+              title={disabled ? 'A plain terminal has no role' : undefined}
               onClick={() => setTab(key)}
             >
               {label}
