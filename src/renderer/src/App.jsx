@@ -3,6 +3,8 @@ import Workspace from './components/Workspace'
 import Sidebar from './components/Sidebar'
 import Overview from './components/Overview'
 import ProjectBadge from './components/ProjectBadge'
+import Pet from './components/Pet'
+import { BUILT_IN_PET } from './pets'
 import { byName } from './workspaceList'
 import { SidebarIcon } from './components/icons'
 import { SHORTCUTS, shortcutFor } from './shortcuts'
@@ -10,6 +12,10 @@ import { ROLES } from '../../shared/roles'
 
 // Below this window width the sidebar hides itself, leaving the room to the canvas.
 const NARROW = 760
+
+// The preferences only the renderer needs: the pet (its id, or null for none) and its size.
+const PREFS = 'prefs'
+const PREF_DEFAULTS = { pet: BUILT_IN_PET, petSize: 'm' }
 
 export default function App() {
   // Every project as { id, name, folder }, and every saved workspace as { id, name, project,
@@ -29,6 +35,16 @@ export default function App() {
   const [loaded, setLoaded] = useState({})
   // The roles the user made, offered on every canvas after the built-in ones.
   const [customRoles, setCustomRoles] = useState([])
+  const [prefs] = useState(recallPrefs)
+  // What every agent is doing, for the pet (main's status.js).
+  const [statuses, setStatuses] = useState([])
+  // The node the pet sent the user to: the workspace it's in glides there once it's on screen.
+  const [jump, setJump] = useState(null)
+
+  useEffect(() => {
+    window.api.agents.status().then(setStatuses)
+    return window.api.agents.onStatus(setStatuses)
+  }, [])
   // Remembered across runs; the first run starts with it shown unless the window is narrow.
   const [sidebar, setSidebar] = useState(
     () => localStorage.getItem('sidebar') ?? (innerWidth < NARROW ? 'closed' : 'open')
@@ -215,6 +231,14 @@ export default function App() {
     }
   }
 
+  // The pet's click: to the agent's workspace and onto the agent. Its news has been seen.
+  function jumpTo({ workspaceId, nodeId, state }) {
+    if (!all.some((w) => w.id === workspaceId)) return
+    openWorkspace(workspaceId)
+    setJump({ workspaceId, nodeId, at: Date.now() })
+    if (state !== 'working') window.api.agents.seen(workspaceId, nodeId)
+  }
+
   function renameProject(id, name) {
     setProjects((current) => current.map((p) => (p.id === id ? { ...p, name } : p)))
     window.api.project.rename(id, name)
@@ -273,6 +297,7 @@ export default function App() {
               folder={folders.get(id)}
               onPickFolder={() => pickFolder(id)}
               roles={roles}
+              jump={jump?.workspaceId === id ? jump : null}
               onSaveRole={saveRole}
               onRemoveRole={removeRole}
             />
@@ -293,8 +318,19 @@ export default function App() {
           />
         )}
       </main>
+      {prefs.pet && (
+        <Pet pet={prefs.pet} size={prefs.petSize} statuses={statuses} onJump={jumpTo} />
+      )}
     </div>
   )
+}
+
+function recallPrefs() {
+  try {
+    return { ...PREF_DEFAULTS, ...JSON.parse(localStorage.getItem(PREFS)) }
+  } catch {
+    return PREF_DEFAULTS
+  }
 }
 
 // While the sidebar is hidden: the button that brings it back and, on a canvas, where you are:

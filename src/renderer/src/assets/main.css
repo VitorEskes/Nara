@@ -3625,3 +3625,536 @@ kbd {
 .cursor-sample[data-cursor='underline'] {
   box-shadow: inset 0 -2px 0 currentColor;
 }
+
+/* The pet (Pet.jsx), in the corner of the window over everything but the dialogs, with its
+   bubble above it. */
+
+.pet {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.pet-body {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+  filter: drop-shadow(0 6px 8px rgb(var(--shade) / 18%));
+}
+
+.pet-body:active {
+  cursor: grabbing;
+}
+
+.pet-body:focus-visible {
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
+.pet-sprite {
+  display: block;
+  background-repeat: no-repeat;
+}
+
+.pet .shika {
+  display: block;
+  width: 100%;
+}
+
+.pet-bubble {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 280px;
+  padding: 7px 12px;
+  border: 1px solid var(--edge-strong);
+  border-radius: 14px;
+  font-size: 12.5px;
+  white-space: nowrap;
+  color: var(--text);
+  background: var(--stone);
+  box-shadow: var(--shadow-float);
+  pointer-events: auto;
+  animation: bubble-in var(--base) var(--ease-spring);
+}
+
+/* The bubble opens toward the middle of the window, its tail over the pet. */
+.pet-bubble[data-side='left'] {
+  right: 10%;
+}
+
+.pet-bubble[data-side='right'] {
+  left: 10%;
+}
+
+.pet-bubble::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--text-4);
+}
+
+.pet-bubble[data-state='working']::before {
+  background: var(--accent);
+  animation: breathe 1.2s ease-in-out infinite;
+}
+
+.pet-bubble[data-state='waiting']::before {
+  background: var(--tone-umber);
+}
+
+.pet-bubble[data-state='review']::before {
+  background: var(--accent);
+}
+
+.pet-bubble[data-state='failed']::before {
+  background: var(--danger);
+}
+
+.pet-bubble[data-state='waiting'] {
+  border-color: color-mix(in srgb, var(--tone-umber) 50%, var(--edge-strong));
+}
+
+.pet-bubble-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.pet-bubble-where {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.pet-bubble-more {
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-2);
+  background: var(--active-soft);
+}
+
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.92);
+  }
+}
+
+/* Shika's moods: it breathes and blinks when idle, bobs while an agent works, tilts its head
+   when one waits on the user, hops when one is done, droops when one failed, and hops once when
+   clicked. */
+.shika {
+  overflow: visible;
+}
+
+.shika-shadow {
+  fill: rgb(var(--shade) / 14%);
+}
+
+.shika-body,
+.shika-head,
+.shika-antlers,
+.shika-eyes {
+  transform-box: fill-box;
+}
+
+.shika-body {
+  transform-origin: 50% 100%;
+  animation: shika-breathe 3.2s ease-in-out infinite;
+}
+
+.shika-head {
+  transform-origin: 50% 90%;
+}
+
+.shika-antlers {
+  transform-origin: 50% 100%;
+}
+
+.shika-eyes {
+  transform-origin: 50% 50%;
+  animation: shika-blink 4.6s infinite;
+}
+
+.shika-drop {
+  fill: #8aa7d6;
+  opacity: 0;
+}
+
+.shika[data-mood='working'] {
+  animation: shika-bob 0.5s ease-in-out infinite alternate;
+}
+
+.shika[data-mood='working'] .shika-antlers {
+  animation: shika-wiggle 0.5s ease-in-out infinite alternate;
+}
+
+.shika[data-mood='waiting'] .shika-head {
+  animation: shika-tilt 1.6s ease-in-out infinite alternate;
+}
+
+.shika[data-mood='review'] {
+  animation: shika-hop 1.6s var(--ease-out) infinite;
+}
+
+.shika[data-mood='jump'] {
+  animation: shika-hop 0.7s var(--ease-out);
+}
+
+.shika[data-mood='failed'] .shika-head {
+  transform: rotate(8deg) translateY(2px);
+}
+
+.shika[data-mood='failed'] .shika-drop {
+  opacity: 1;
+  animation: shika-drip 1.8s ease-in infinite;
+}
+
+.shika[data-mood='failed'] .shika-body {
+  animation-duration: 5s;
+}
+
+.shika[data-dragging] {
+  animation: shika-bob 0.25s ease-in-out infinite alternate;
+}
+
+@keyframes shika-breathe {
+  50% {
+    transform: scaleY(1.035);
+  }
+}
+
+@keyframes shika-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes shika-bob {
+  to {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes shika-wiggle {
+  from {
+    transform: rotate(-4deg);
+  }
+
+  to {
+    transform: rotate(4deg);
+  }
+}
+
+@keyframes shika-tilt {
+  from {
+    transform: rotate(-9deg);
+  }
+
+  to {
+    transform: rotate(9deg);
+  }
+}
+
+@keyframes shika-hop {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+
+  10% {
+    transform: translateY(0) scale(1.06, 0.94);
+  }
+
+  30% {
+    transform: translateY(-12px) scale(0.96, 1.05);
+  }
+
+  50% {
+    transform: translateY(0) scale(1.04, 0.96);
+  }
+}
+
+@keyframes shika-drip {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+}
+
+/* The command center (CommandCenter.jsx): a summary, then the agents by workspace, the most
+   urgent first. The pet opens it in a panel; the HUD is made of it. */
+
+.pet-panel {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  width: 360px;
+  max-height: min(460px, 70vh);
+  overflow-y: auto;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-l);
+  background: var(--stone);
+  box-shadow: var(--shadow-lift);
+  pointer-events: auto;
+  animation: bubble-in var(--base) var(--ease-out);
+}
+
+.pet-panel[data-side='left'] {
+  right: 0;
+}
+
+.pet-panel[data-side='right'] {
+  left: 0;
+}
+
+.command-center {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+}
+
+.command-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 2px 6px;
+}
+
+.command-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 11px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-2);
+  background: var(--active-soft);
+}
+
+.command-chip[data-state]::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--state, var(--text-4));
+}
+
+[data-state='waiting'] {
+  --state: var(--tone-umber);
+}
+
+[data-state='failed'] {
+  --state: var(--danger);
+}
+
+[data-state='review'] {
+  --state: var(--accent);
+}
+
+[data-state='working'] {
+  --state: var(--tone-leaf);
+}
+
+.command-empty {
+  margin: 6px 2px 4px;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
+.command-group h3 {
+  margin: 8px 4px 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.command-group ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.command-row {
+  border-radius: var(--radius-m);
+  transition: background-color var(--fast);
+}
+
+.command-row:hover,
+.command-row:focus-within {
+  background: var(--hover-soft);
+}
+
+.command-row[data-state='waiting'] {
+  background: color-mix(in srgb, var(--tone-umber) 9%, transparent);
+}
+
+.command-row-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 4px 0 8px;
+}
+
+.command-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  color: var(--text-2);
+  background: var(--active-soft);
+}
+
+/* The state, as a dot on the agent's icon. */
+.command-icon::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--stone);
+  border-radius: 50%;
+  background: var(--state, var(--text-4));
+}
+
+.command-row[data-state='working'] .command-icon::after {
+  animation: breathe 1.2s ease-in-out infinite;
+}
+
+.command-name {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  background: none;
+  cursor: pointer;
+}
+
+.command-name:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.command-state {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.command-row[data-state='waiting'] .command-state {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.command-ago {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-4);
+}
+
+.command-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.command-answer {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--edge-strong);
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--stone);
+  cursor: pointer;
+  transition:
+    background-color var(--fast),
+    border-color var(--fast),
+    transform var(--fast) var(--ease-out);
+}
+
+.command-answer:hover {
+  border-color: var(--edge-focus);
+  background: var(--raised);
+}
+
+.command-answer:active {
+  transform: scale(0.95);
+}
+
+.command-answer.yes {
+  border-color: transparent;
+  color: var(--cream);
+  background: var(--accent-fill);
+}
+
+.command-answer.yes:hover {
+  background: var(--accent-hover);
+}
+
+.command-reply {
+  display: flex;
+  gap: 6px;
+  padding: 2px 6px 8px 42px;
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+.command-reply .text-input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  font-size: 12.5px;
+}

@@ -56,7 +56,8 @@ const FIT_PADDING = { side: 64, top: 64, bottom: 110 }
 // An inactive workspace is hidden, not unmounted, so its terminals keep running. New terminals
 // and agents open in `folder`; a workspace from before folders existed has none, and onPickFolder
 // asks for one. `roles` has every role an agent can take, built-in and custom, by key; onSaveRole
-// and onRemoveRole change the custom ones.
+// and onRemoveRole change the custom ones. `jump` ({ nodeId, at }) is the pet sending the user to
+// one of this workspace's agents.
 export default function Workspace({
   workspaceId,
   saved,
@@ -64,6 +65,7 @@ export default function Workspace({
   folder,
   onPickFolder,
   roles,
+  jump,
   onSaveRole,
   onRemoveRole
 }) {
@@ -505,6 +507,18 @@ export default function Workspace({
     raise(id)
     setSelection([id])
   }
+
+  // The pet's jump: the camera glides to the agent, and its terminal takes the keyboard. Checked
+  // on every render, like the keys below, and done once per jump.
+  const jumped = useRef(null)
+  useEffect(() => {
+    if (!jump || !active || jumped.current === jump.at) return
+    jumped.current = jump.at
+    locate(jump.nodeId)
+    container.current
+      .querySelector(`.node[data-id="${jump.nodeId}"] .xterm-helper-textarea`)
+      ?.focus()
+  })
 
   function toolStart(point) {
     if (tool === 'draw') {

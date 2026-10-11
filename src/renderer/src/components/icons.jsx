@@ -370,6 +370,22 @@ export function BranchIcon(props) {
   )
 }
 
+export function ArrowUpRightIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M5 11l6-6M6 5h5v5" />
+    </Icon>
+  )
+}
+
+export function ChatIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M2.75 4.25a1.5 1.5 0 0 1 1.5-1.5h7.5a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 1-1.5 1.5H7l-3 2.5v-2.5h.25a1.5 1.5 0 0 1-1.5-1.5z" />
+    </Icon>
+  )
+}
+
 // The mark: the Nara deer, a nod to the clan that tends the deer of the Nara forest. Decorative
 // next to the name, so it has no alt text of its own.
 export function BrandMark() {

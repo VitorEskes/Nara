@@ -42,6 +42,25 @@ const api = {
     // { path, short, exists, branch } for the folder a terminal would open in.
     info: (path) => ipcRenderer.invoke('folder:info', path)
   },
+  agents: {
+    // [{ workspaceId, nodeId, agent, state, since, title, workspace }]; state is 'idle',
+    // 'working', 'waiting', 'review' or 'failed'.
+    status: () => ipcRenderer.invoke('agents:status'),
+    onStatus: (fn) => listen('agents:status', fn),
+    seen: (workspaceId, nodeId) => ipcRenderer.send('agents:seen', workspaceId, nodeId),
+    // reply: { kind: 'yes' | 'no' } or { kind: 'text', text }.
+    reply: (workspaceId, nodeId, reply) =>
+      ipcRenderer.invoke('agents:reply', workspaceId, nodeId, reply)
+  },
+  pets: {
+    list: () => ipcRenderer.invoke('pets:list'),
+    sprite: (id) => ipcRenderer.invoke('pets:sprite', id),
+    // 'nara' or 'codex'.
+    open: (source) => ipcRenderer.invoke('pets:open', source),
+    folders: () => ipcRenderer.invoke('pets:folders'),
+    // Asks for a Codex pet (its pet.json or a .zip) and adds it: { id }, { error } or null.
+    import: () => ipcRenderer.invoke('pets:import')
+  },
   project: {
     list: () => ipcRenderer.invoke('project:list'),
     create: () => ipcRenderer.invoke('project:create'),

@@ -4,6 +4,7 @@ import { existsSync, readlinkSync } from 'fs'
 import * as pty from 'node-pty'
 import { AGENTS } from '../shared/agents'
 import { agentLaunch, startupLaunch } from './agents'
+import { agentExited, agentOutput, agentTouched, trackAgent, untrackAgent } from './status'
 
 // Each canvas terminal is a real PTY, identified by an id.
 // The renderer never touches node-pty: everything goes through IPC.
@@ -44,28 +45,59 @@ export function registerPty(win, extraEnv) {
     // A killed program can still write on its way out (Claude Code restores the terminal), and
     // by then the window may be gone: sending to it would throw in main.
     term.onData((data) => {
+      agentOutput(id, data)
       if (!win.isDestroyed()) win.webContents.send('pty:data', id, data)
     })
     term.onExit(({ exitCode }) => {
+      agentExited(id, exitCode)
       terminals.delete(id)
       if (!win.isDestroyed()) win.webContents.send('pty:exit', id, exitCode)
     })
 
-    terminals.set(id, { workspaceId, nodeId, term })
+    terminals.set(id, { workspaceId, nodeId, term, agent: AGENTS[agent] ? agent : undefined })
+    // The pet follows the agents, not the shells.
+    if (AGENTS[agent]) trackAgent(id, { workspaceId, nodeId, agent })
     return id
   })
 
-  ipcMain.on('pty:write', (_ev, id, data) => terminals.get(id)?.term.write(data))
-  ipcMain.on('pty:resize', (_ev, id, cols, rows) => terminals.get(id)?.term.resize(cols, rows))
+  ipcMain.on('pty:write', (_ev, id, data) => {
+    agentTouched(id, true)
+    terminals.get(id)?.term.write(data)
+  })
+  ipcMain.on('pty:resize', (_ev, id, cols, rows) => {
+    agentTouched(id, false)
+    terminals.get(id)?.term.resize(cols, rows)
+  })
   ipcMain.on('pty:kill', (_ev, id) => kill(id))
+
+  // An answer from the pet's command center, to the agent in a node: yes or no to what it asked,
+  // or text, which arrives like a message from another agent (pasted, then Enter).
+  ipcMain.handle('agents:reply', (_ev, workspaceId, nodeId, reply = {}) => {
+    const target = findTerminal(workspaceId, nodeId)
+    const agent = AGENTS[target && agentOf(target.id)]
+    if (!target || !agent) return false
+    if (reply.kind === 'yes' || reply.kind === 'no') {
+      target.term.write(agent.answers[reply.kind])
+    } else if (reply.kind === 'text' && String(reply.text ?? '').trim()) {
+      if (win.isDestroyed()) return false
+      win.webContents.send('pty:paste', target.id, String(reply.text).trim())
+    } else return false
+    agentTouched(target.id, true)
+    return true
+  })
 
   win.on('closed', () => {
     for (const id of terminals.keys()) kill(id)
     ipcMain.removeHandler('pty:create')
+    ipcMain.removeHandler('agents:reply')
     ipcMain.removeAllListeners('pty:write')
     ipcMain.removeAllListeners('pty:resize')
     ipcMain.removeAllListeners('pty:kill')
   })
+}
+
+function agentOf(id) {
+  return terminals.get(id)?.agent
 }
 
 export function findTerminal(workspaceId, nodeId) {
@@ -106,6 +138,7 @@ function kill(id) {
   const terminal = terminals.get(id)
   if (!terminal) return
   terminals.delete(id)
+  untrackAgent(id)
   const { term } = terminal
 
   // SIGHUP, as when a terminal window closes: a shell saves its history and exits. A program

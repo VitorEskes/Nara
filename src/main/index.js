@@ -4,11 +4,13 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { setUpDataFolder } from './dataFolder'
 import { registerFolders } from './folders'
+import { registerPets } from './pets'
 import { registerMessages } from './messages'
 import { registerPty, terminalsExited } from './pty'
 import { registerRoles } from './roles'
+import { registerStatus } from './status'
 import { loadTheme, registerTheme, windowBackground } from './theme'
-import { registerWorkspaces } from './workspaces'
+import { registerWorkspaces, workspaces } from './workspaces'
 
 setUpDataFolder()
 
@@ -33,6 +35,13 @@ function createWindow() {
   registerWorkspaces(mainWindow)
   registerFolders(mainWindow)
   registerRoles(mainWindow)
+  registerPets(mainWindow)
+  // The pet's bubble names the agent and where it is.
+  registerStatus(mainWindow, (workspaceId, nodeId) => {
+    const workspace = workspaces.get(workspaceId)
+    const node = workspace?.nodes.find((n) => n.id === nodeId)
+    return { title: node?.title, workspace: workspace?.name }
+  })
   registerPty(mainWindow, registerMessages(mainWindow))
 
   mainWindow.on('ready-to-show', () => {
