@@ -94,6 +94,14 @@ export default function Workspace({
   const [launcher, setLauncher] = useState(null)
   // The side panel's tab, kept while the selection moves from node to node.
   const [panelTab, setPanelTab] = useState('config')
+  // The side panel folded up to its header: how it starts, until the user opens it. Remembered
+  // across nodes and runs.
+  const [panelCollapsed, setPanelCollapsed] = useState(
+    () => localStorage.getItem('panel') !== 'open'
+  )
+  useEffect(() => {
+    localStorage.setItem('panel', panelCollapsed ? 'collapsed' : 'open')
+  }, [panelCollapsed])
   // The node whose row the pointer is on in the panel's connections, lit up on the canvas.
   const [hoveredPeer, setHoveredPeer] = useState(null)
   // Stroke being drawn. The ref is what the handlers build on: pointerup can arrive before React
@@ -632,7 +640,8 @@ export default function Workspace({
           onPeerHover={setHoveredPeer}
           onDisconnect={removeLink}
           onLocate={locate}
-          onClose={() => setSelection([])}
+          collapsed={panelCollapsed}
+          onCollapse={() => setPanelCollapsed((current) => !current)}
         />
       )}
 

@@ -2202,33 +2202,78 @@ kbd {
   }
 }
 
-/* Side panel for the selected node, like Excalidraw's: a header, the tabs, and the tab's body,
-   which scrolls when the panel would run past the dock. */
+/* Side panel for the selected node, like Excalidraw's: a header, then the tabs and the tab's body,
+   which scrolls when the panel would run past the dock. Folded, it keeps only the header, as tall
+   as the bar that shows the sidebar back (.sidebar-peek) and as wide as when it's open; the rest
+   folds and unfolds by its height, a grid row going from nothing to all of it. */
 
 .node-panel {
   top: 16px;
   left: 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
   width: 268px;
   max-height: calc(100% - 120px);
   box-sizing: border-box;
-  padding: 12px 0 0;
   border-radius: var(--radius-l);
   font-size: 12px;
   animation: panel-in var(--base) var(--ease-out);
+  transition: border-radius var(--slow) var(--ease-out);
+}
+
+.node-panel.collapsed {
+  border-radius: 11px;
 }
 
 .panel-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 10px 0 16px;
+  height: 34px;
+  flex-shrink: 0;
+  padding: 0 3px 0 14px;
   color: var(--text-3);
 }
 
-.node-panel > .segmented {
+.panel-fold .icon {
+  transform: rotate(180deg);
+  transition: transform var(--slow) var(--ease-out);
+}
+
+.node-panel.collapsed .panel-fold .icon {
+  transform: rotate(0);
+}
+
+.panel-fold {
+  width: 28px;
+  height: 28px;
+}
+
+.panel-content {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-height: 0;
+  transition:
+    grid-template-rows var(--slow) var(--ease-out),
+    opacity var(--slow) var(--ease-out);
+}
+
+.node-panel.collapsed .panel-content {
+  grid-template-rows: minmax(0, 0fr);
+  opacity: 0;
+}
+
+.panel-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow: hidden;
+  padding-top: 6px;
+}
+
+.panel-inner > .segmented {
   margin: 0 16px;
 }
 
@@ -2249,9 +2294,11 @@ kbd {
   }
 }
 
+/* With the sidebar hidden, under its bar and lined up with it. */
 .app[data-sidebar='closed'] .node-panel {
-  top: 64px;
-  max-height: calc(100% - 168px);
+  top: 56px;
+  left: 12px;
+  max-height: calc(100% - 160px);
 }
 
 .panel-title {

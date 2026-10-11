@@ -2,8 +2,8 @@ import { useState } from 'react'
 import RoleEditor from './RoleEditor'
 import TerminalLook from './TerminalLook'
 import { Group, Options } from './fields'
+import { CheckIcon, ChevronIcon, LinkIcon, LocateIcon, PlusIcon, UnlinkIcon } from './icons'
 import NodeIcon from './NodeIcon'
-import { CheckIcon, CloseIcon, LinkIcon, LocateIcon, PlusIcon, UnlinkIcon } from './icons'
 import { ALIGNS, FONTS, INKS, PAPERS, SIZES, resolveStyle, terminalLook } from '../nodeStyle'
 import { defaultTitle, nodeLabel } from '../nodeLabel'
 import { AGENTS } from '../../../shared/agents'
@@ -18,7 +18,8 @@ const TABS = [
 // style or a terminal's look. `nodes` and `links` are the whole canvas, for the connections,
 // `roles` every role by key, and onSaveRole saves a new one. onChange gets the node's fields that
 // changed, e.g. { title: 'Backend' }. onConnectStart starts pulling a string from the node, the
-// same as its port on the bar does.
+// same as its port on the bar does. While `collapsed`, the panel folds up to its header, as long
+// as the sidebar's bar is tall; the header's arrow calls onCollapse to fold or unfold it.
 export default function NodePanel({
   node,
   nodes,
@@ -33,7 +34,8 @@ export default function NodePanel({
   onDisconnect,
   onLocate,
   onPeerHover,
-  onClose
+  collapsed,
+  onCollapse
 }) {
   const index = TABS.findIndex((t) => t.key === tab)
   const label = nodeLabel(node)
@@ -47,78 +49,88 @@ export default function NodePanel({
   }
 
   return (
-    <aside className="floating node-panel" aria-label={`${label} settings`}>
+    <aside
+      className={collapsed ? 'floating node-panel collapsed' : 'floating node-panel'}
+      aria-label={`${label} settings`}
+    >
       <header className="panel-head">
         <NodeIcon type={node.type} agent={node.agent} icon={node.style?.icon} />
         <h2 className="panel-title">{label}</h2>
         <button
-          className="icon-button small"
-          title="Close (Esc)"
-          aria-label="Close panel"
-          onClick={onClose}
+          className="icon-button small panel-fold"
+          title={collapsed ? 'Expand' : 'Minimize'}
+          aria-label={collapsed ? 'Expand panel' : 'Minimize panel'}
+          aria-expanded={!collapsed}
+          aria-controls="panel-body"
+          onClick={onCollapse}
         >
-          <CloseIcon size={14} />
+          <ChevronIcon size={14} />
         </button>
       </header>
 
-      <div
-        className="segmented"
-        role="tablist"
-        aria-label="Settings"
-        style={{ '--index': index, '--count': TABS.length }}
-        onKeyDown={onTabKeyDown}
-      >
-        {TABS.map(({ key, label }) => (
-          <button
-            key={key}
-            id={`panel-tab-${key}`}
-            role="tab"
-            aria-selected={tab === key}
-            aria-controls="panel-body"
-            tabIndex={tab === key ? 0 : -1}
-            onClick={() => onTab(key)}
+      {/* Folds and unfolds by its height (main.css). While folded nothing in it takes focus. */}
+      <div className="panel-content" inert={collapsed || undefined}>
+        <div className="panel-inner">
+          <div
+            className="segmented"
+            role="tablist"
+            aria-label="Settings"
+            style={{ '--index': index, '--count': TABS.length }}
+            onKeyDown={onTabKeyDown}
           >
-            {label}
-          </button>
-        ))}
-      </div>
+            {TABS.map(({ key, label }) => (
+              <button
+                key={key}
+                id={`panel-tab-${key}`}
+                role="tab"
+                aria-selected={tab === key}
+                aria-controls="panel-body"
+                tabIndex={tab === key ? 0 : -1}
+                onClick={() => onTab(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
 
-      {/* The key replays the fade when the tab changes. */}
-      <div
-        key={tab}
-        id="panel-body"
-        className="panel-body"
-        role="tabpanel"
-        aria-labelledby={`panel-tab-${tab}`}
-      >
-        {tab === 'config' ? (
-          <Config
-            // A role half written for one node doesn't follow the selection to another.
-            key={node.id}
-            node={node}
-            nodes={nodes}
-            links={links}
-            roles={roles}
-            onSaveRole={onSaveRole}
-            onChange={onChange}
-            canConnect={canConnect}
-            onConnectStart={onConnectStart}
-            onDisconnect={onDisconnect}
-            onLocate={onLocate}
-            onPeerHover={onPeerHover}
-          />
-        ) : node.type === 'note' ? (
-          <NoteStyle
-            style={node.style}
-            onChange={(change) => onChange({ style: { ...node.style, ...change } })}
-          />
-        ) : (
-          <TerminalLook
-            look={terminalLook(node.style)}
-            agent={node.agent}
-            onChange={(change) => onChange({ style: { ...node.style, ...change } })}
-          />
-        )}
+          {/* The key replays the fade when the tab changes. */}
+          <div
+            key={tab}
+            id="panel-body"
+            className="panel-body"
+            role="tabpanel"
+            aria-labelledby={`panel-tab-${tab}`}
+          >
+            {tab === 'config' ? (
+              <Config
+                // A role half written for one node doesn't follow the selection to another.
+                key={node.id}
+                node={node}
+                nodes={nodes}
+                links={links}
+                roles={roles}
+                onSaveRole={onSaveRole}
+                onChange={onChange}
+                canConnect={canConnect}
+                onConnectStart={onConnectStart}
+                onDisconnect={onDisconnect}
+                onLocate={onLocate}
+                onPeerHover={onPeerHover}
+              />
+            ) : node.type === 'note' ? (
+              <NoteStyle
+                style={node.style}
+                onChange={(change) => onChange({ style: { ...node.style, ...change } })}
+              />
+            ) : (
+              <TerminalLook
+                look={terminalLook(node.style)}
+                agent={node.agent}
+                onChange={(change) => onChange({ style: { ...node.style, ...change } })}
+              />
+            )}
+          </div>
+        </div>
       </div>
     </aside>
   )
