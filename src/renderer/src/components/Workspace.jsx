@@ -25,7 +25,6 @@ import { touches } from '../drawing'
 import { PAPERS, resolveStyle, terminalLook } from '../nodeStyle'
 import { defaultTitle, nodeLabel } from '../nodeLabel'
 import { AGENTS } from '../../../shared/agents'
-import { ROLES } from '../../../shared/roles'
 import { canvasKeyFor } from '../shortcuts'
 
 // Size of a new node of each type.
@@ -56,8 +55,17 @@ const FIT_PADDING = { side: 64, top: 64, bottom: 110 }
 // this component owns the state, and main keeps a copy that it saves.
 // An inactive workspace is hidden, not unmounted, so its terminals keep running. New terminals
 // and agents open in `folder`; a workspace from before folders existed has none, and onPickFolder
-// asks for one.
-export default function Workspace({ workspaceId, saved, active, folder, onPickFolder }) {
+// asks for one. `roles` has every role an agent can take, built-in and custom, by key, and
+// onSaveRole saves a new one.
+export default function Workspace({
+  workspaceId,
+  saved,
+  active,
+  folder,
+  onPickFolder,
+  roles,
+  onSaveRole
+}) {
   const container = useRef(null)
   const [cam, setCam] = useState(saved.camera)
   const [nodes, setNodes] = useState(saved.nodes)
@@ -558,7 +566,7 @@ export default function Workspace({ workspaceId, saved, active, folder, onPickFo
             {...node}
             label={nodeLabel(node)}
             agent={AGENTS[node.agent] && { key: node.agent, label: AGENTS[node.agent].label }}
-            role={ROLES[node.role]}
+            role={Object.hasOwn(roles, node.role ?? '') ? roles[node.role] : undefined}
             look={node.type === 'terminal' ? terminalLook(node.style) : undefined}
             paper={node.type === 'note' ? PAPERS[resolveStyle(node.style).paper].color : undefined}
             linked={linked.has(node.id)}
@@ -600,6 +608,8 @@ export default function Workspace({ workspaceId, saved, active, folder, onPickFo
           node={selectedNode}
           nodes={nodes}
           links={links}
+          roles={roles}
+          onSaveRole={onSaveRole}
           tab={panelTab}
           onTab={setPanelTab}
           onChange={(changes) => updateNode(selectedNode.id, changes)}

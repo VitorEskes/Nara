@@ -6,6 +6,7 @@ import ProjectBadge from './components/ProjectBadge'
 import { byName } from './workspaceList'
 import { SidebarIcon } from './components/icons'
 import { SHORTCUTS, shortcutFor } from './shortcuts'
+import { ROLES } from '../../shared/roles'
 
 // Below this window width the sidebar hides itself, leaving the room to the canvas.
 const NARROW = 760
@@ -26,6 +27,8 @@ export default function App() {
   // shown and stays mounted while open, hidden when inactive, so its terminals keep running in
   // the background.
   const [loaded, setLoaded] = useState({})
+  // The roles the user made, offered on every canvas after the built-in ones.
+  const [customRoles, setCustomRoles] = useState([])
   // Remembered across runs; the first run starts with it shown unless the window is narrow.
   const [sidebar, setSidebar] = useState(
     () => localStorage.getItem('sidebar') ?? (innerWidth < NARROW ? 'closed' : 'open')
@@ -82,6 +85,7 @@ export default function App() {
       const session = await window.api.workspace.session()
       setProjects(await window.api.project.list())
       setAll(await window.api.workspace.list())
+      setCustomRoles(await window.api.roles.list())
       setOpen(session.open)
       setActive(session.active)
       setOverview(!session.active)
@@ -193,6 +197,18 @@ export default function App() {
     return folder
   }
 
+  // Returns the role as saved, with its key, or null if main turned it down.
+  async function saveRole(role) {
+    const saved = await window.api.roles.save(role)
+    if (!saved) return null
+    setCustomRoles((current) =>
+      current.some((r) => r.key === saved.key)
+        ? current.map((r) => (r.key === saved.key ? saved : r))
+        : [...current, saved]
+    )
+    return saved
+  }
+
   function renameProject(id, name) {
     setProjects((current) => current.map((p) => (p.id === id ? { ...p, name } : p)))
     window.api.project.rename(id, name)
@@ -208,6 +224,7 @@ export default function App() {
   if (!started) return null
 
   const folders = new Map(all.map((w) => [w.id, w.folder]))
+  const roles = { ...ROLES, ...Object.fromEntries(customRoles.map((role) => [role.key, role])) }
   const workspaces = all.map((w) => ({ ...w, open: open.includes(w.id) }))
   return (
     <div className="app" data-sidebar={sidebar}>
@@ -249,6 +266,8 @@ export default function App() {
               active={id === active && !overview}
               folder={folders.get(id)}
               onPickFolder={() => pickFolder(id)}
+              roles={roles}
+              onSaveRole={saveRole}
             />
           ))}
         {(overview || !active) && (

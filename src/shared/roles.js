@@ -1,7 +1,7 @@
 // The roles an agent node can open with. Every agent that takes Nara's prompt learns how the
 // canvas works; a role adds how to behave in a team. Main appends `instructions` to that prompt,
 // the renderer shows `label` and `description` in the menu and `label` on the node, in `tone`
-// (one of the tones in the renderer's nodeStyle.js).
+// (one of the tones in the renderer's nodeStyle.js). The user can add their own (main/roles.js).
 export const ROLES = {
   orchestrator: {
     label: 'Orchestrator',

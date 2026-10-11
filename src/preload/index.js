@@ -31,6 +31,12 @@ const api = {
     get: () => ipcRenderer.invoke('theme:get'),
     set: (theme) => ipcRenderer.send('theme:set', theme)
   },
+  roles: {
+    // The roles the user made; the built-in ones are in shared/roles.js.
+    list: () => ipcRenderer.invoke('roles:list'),
+    save: (role) => ipcRenderer.invoke('roles:save', role),
+    remove: (key) => ipcRenderer.invoke('roles:remove', key)
+  },
   project: {
     list: () => ipcRenderer.invoke('project:list'),
     create: () => ipcRenderer.invoke('project:create'),

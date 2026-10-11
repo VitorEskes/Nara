@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import { setUpDataFolder } from './dataFolder'
 import { registerMessages } from './messages'
 import { registerPty, terminalsExited } from './pty'
+import { registerRoles } from './roles'
 import { loadTheme, registerTheme, windowBackground } from './theme'
 import { registerWorkspaces } from './workspaces'
 
@@ -29,6 +30,7 @@ function createWindow() {
 
   registerTheme(mainWindow)
   registerWorkspaces(mainWindow)
+  registerRoles(mainWindow)
   registerPty(mainWindow, registerMessages(mainWindow))
 
   mainWindow.on('ready-to-show', () => {

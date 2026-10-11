@@ -3,8 +3,8 @@ import { createServer } from 'net'
 import { tmpdir } from 'os'
 import { basename, delimiter, dirname, join } from 'path'
 import nara from '../../resources/bin/nara?asset'
-import { ROLES } from '../shared/roles'
 import { findTerminal, terminals } from './pty'
+import { findRole } from './roles'
 import { updateNode, workspaces } from './workspaces'
 
 // Agents talk by running the `nara` command in their own terminal. The command talks to this
@@ -69,7 +69,7 @@ function handle({ from, command, action, to, text }, win) {
         if (nodeOf(peerId)?.type === 'note') return { nodeId: peerId, type: 'note', title }
         const target = findTerminal(workspaceId, peerId)
         const program = target && foregroundProgram(target)
-        const role = ROLES[nodeOf(peerId)?.role]?.label.toLowerCase()
+        const role = findRole(nodeOf(peerId)?.role)?.label.toLowerCase()
         return {
           nodeId: peerId,
           type: 'terminal',

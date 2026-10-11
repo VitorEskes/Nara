@@ -1,26 +1,30 @@
+import { useState } from 'react'
+import RoleEditor from './RoleEditor'
 import TerminalLook from './TerminalLook'
 import { Group, Options } from './fields'
 import NodeIcon from './NodeIcon'
-import { CheckIcon, CloseIcon, LinkIcon, LocateIcon, UnlinkIcon } from './icons'
+import { CheckIcon, CloseIcon, LinkIcon, LocateIcon, PlusIcon, UnlinkIcon } from './icons'
 import { ALIGNS, FONTS, INKS, PAPERS, SIZES, resolveStyle, terminalLook } from '../nodeStyle'
 import { defaultTitle, nodeLabel } from '../nodeLabel'
 import { AGENTS } from '../../../shared/agents'
-import { ROLES } from '../../../shared/roles'
 
 const TABS = [
   { key: 'config', label: 'Config' },
   { key: 'style', label: 'Style' }
 ]
 
-// Side panel for the selected node, like Excalidraw's, in two tabs. Config holds the name, the
-// role and the connections; Style holds a note's text style or a terminal's look. `nodes`
-// and `links` are the whole canvas, for the connections. onChange gets the node's fields that
+// Side panel for the selected node, like Excalidraw's, in two tabs. Config holds the name, an
+// agent's role (with a new one written in place) and the connections; Style holds a note's text
+// style or a terminal's look. `nodes` and `links` are the whole canvas, for the connections,
+// `roles` every role by key, and onSaveRole saves a new one. onChange gets the node's fields that
 // changed, e.g. { title: 'Backend' }. onConnectStart starts pulling a string from the node, the
 // same as its port on the bar does.
 export default function NodePanel({
   node,
   nodes,
   links,
+  roles,
+  onSaveRole,
   tab,
   onTab,
   onChange,
@@ -89,9 +93,13 @@ export default function NodePanel({
       >
         {tab === 'config' ? (
           <Config
+            // A role half written for one node doesn't follow the selection to another.
+            key={node.id}
             node={node}
             nodes={nodes}
             links={links}
+            roles={roles}
+            onSaveRole={onSaveRole}
             onChange={onChange}
             canConnect={canConnect}
             onConnectStart={onConnectStart}
@@ -203,6 +211,8 @@ function Config({
   node,
   nodes,
   links,
+  roles,
+  onSaveRole,
   onChange,
   canConnect,
   onConnectStart,
@@ -211,6 +221,8 @@ function Config({
   onPeerHover
 }) {
   const agent = AGENTS[node.agent]
+  // The role being written, or null. A new one goes on the node once saved.
+  const [draft, setDraft] = useState(null)
   const byId = new Map(nodes.map((n) => [n.id, n]))
   const connections = links
     .filter((l) => l.from === node.id || l.to === node.id)
@@ -227,7 +239,7 @@ function Config({
       {agent?.prompt && (
         <Group label="Role">
           <div className="choices">
-            {[[undefined, { label: 'No role' }], ...Object.entries(ROLES)].map(
+            {[[undefined, { label: 'No role' }], ...Object.entries(roles)].map(
               ([key, { label, tone }]) => (
                 <button
                   key={key ?? 'none'}
@@ -245,7 +257,29 @@ function Config({
                 </button>
               )
             )}
+            {!draft && (
+              <button
+                className="choice new"
+                onClick={() => setDraft({ label: '', instructions: '', tone: 'leaf' })}
+              >
+                <PlusIcon size={14} />
+                New role
+              </button>
+            )}
           </div>
+          {draft && (
+            <RoleEditor
+              draft={draft}
+              onChange={(change) => setDraft((current) => ({ ...current, ...change }))}
+              onSave={async () => {
+                const saved = await onSaveRole(draft)
+                if (!saved) return
+                setDraft(null)
+                onChange({ role: saved.key })
+              }}
+              onCancel={() => setDraft(null)}
+            />
+          )}
         </Group>
       )}
 

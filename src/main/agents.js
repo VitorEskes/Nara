@@ -2,7 +2,7 @@ import { existsSync, readdirSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
 import { AGENTS } from '../shared/agents'
-import { ROLES } from '../shared/roles'
+import { findRole } from './roles'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -23,7 +23,7 @@ export function agentLaunch({ agent, session, role, nodeId }) {
   // text never has to be quoted into the command line. It's passed again on every resume: Claude
   // Code may reuse the one saved at the first launch, but where it doesn't, the role would be lost.
   if (prompt) {
-    env.NARA_PROMPT = agentPrompt(nodeId, ROLES[role])
+    env.NARA_PROMPT = agentPrompt(nodeId, findRole(role))
     args.push('--append-system-prompt', '"$NARA_PROMPT"')
   }
 
