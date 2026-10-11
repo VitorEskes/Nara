@@ -19,15 +19,24 @@ npm run dev
 - `src/main/workspaces.js` — keeps each open workspace in memory and saves it to `workspaces/<id>.json` in the app's data folder; `projects.json` holds the projects (a name and a default folder for their workspaces) and `state.json` remembers the open workspaces
 - `src/main/messages.js` — socket that takes requests from the `nara` command, delivers messages between linked terminals and reads or writes linked notes
 - `src/main/cli.js` + `resources/bin/nara` — the `nara` command (`peers`, `send`, `note`) available inside every terminal
-- `src/main/agents.js` — the command that opens each agent; Claude Code gets a session id so a restored node resumes its conversation, and a prompt that explains Nara and the node's role
+- `src/main/agents.js` — the command that opens each agent; Claude Code gets a session id so a restored node resumes its conversation, and a prompt that explains Nara and the node's role. Also the wrapper that runs a plain terminal's start command
+- `src/main/roles.js` — the roles the user made, saved in `roles.json` and offered on every canvas
+- `src/main/status.js` — what each agent is doing (working, waiting on the user, done, failed), read from its terminal's output, for the pet
+- `src/main/pets.js` — the pets in Nara's pets folder and in Codex's (a folder with `pet.json` and a sprite sheet, Codex's format), and adding one from its `pet.json` or a `.zip`
+- `src/main/hud.js` — the floating HUD: a window over every app with the pet's command center, toggled with a global shortcut (Ctrl+Alt+Space)
+- `src/main/folders.js` — the folder picker, and the short path and git branch the new terminal dialog shows
 - `src/shared/agents.js` — the agents a node can open with (Claude Code, Codex), used by main and the renderer
-- `src/shared/roles.js` — the roles an agent can open with (orchestrator, worker, reviewer) and the instructions each one adds to the prompt
+- `src/shared/roles.js` — the built-in roles an agent can open with (orchestrator, worker, reviewer) and the instructions each one adds to the prompt
 - `src/preload/index.js` — exposes `window.api.pty`, `window.api.workspace` and `window.api.project` to the renderer
 - `src/renderer/src/components/Sidebar.jsx` — the sidebar with the app's actions, the projects, their workspaces and the loose workspaces
 - `src/renderer/src/shortcuts.js` — the app-wide shortcuts (Ctrl+Shift+N new workspace, Ctrl+Shift+W all workspaces, Ctrl+Shift+O add project)
 - `src/renderer/src/components/Overview.jsx` — the page with every workspace as a card, grouped by project, shown in place of the canvas
 - `src/renderer/src/components/Terminal.jsx` — an xterm.js terminal connected to a PTY
-- `src/renderer/src/components/AgentButton.jsx` — the toolbar button that opens an agent, with the role menu
+- `src/renderer/src/components/Launcher.jsx` — the new terminal dialog behind the dock's Terminal button, in three tabs: General (program, name, start command, folder), Style (the look, with a preview) and Role (pick one and read its instructions, or write a new one)
+- `src/renderer/src/components/Settings.jsx` — the settings dialog (Ctrl+,): appearance, agents' commands, roles, pets, keyboard, about
+- `src/renderer/src/components/Pet.jsx` + `Shika.jsx` + `src/renderer/src/pets.js` — the pet in the corner of the window that follows the agents, Shika the built-in deer, and the sprite sheets of the others
+- `src/renderer/src/components/CommandCenter.jsx` + `Hud.jsx` + `src/renderer/src/agentStatus.js` — every agent by workspace and urgency, answered with yes, no or a line of text, and the HUD made of it
+- `src/renderer/src/components/TerminalLook.jsx` + `src/renderer/src/terminalThemes.js` — a terminal's look (color scheme, tone, icon, text size, cursor), in the dialog and the side panel, and the color schemes
 - `src/renderer/src/components/Note.jsx` — a note, whose text and text style are saved with the workspace
 - `src/renderer/src/components/NotePanel.jsx` + `src/renderer/src/noteStyle.js` — the side panel that styles the selected note (font, size, colors, alignment), and the options it offers
 - `src/renderer/src/components/Links.jsx` — links drawn as a string pinned between two nodes
