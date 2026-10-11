@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { setUpDataFolder } from './dataFolder'
 import { registerFolders } from './folders'
+import { registerHud } from './hud'
 import { registerPets } from './pets'
 import { registerMessages } from './messages'
 import { registerPty, terminalsExited } from './pty'
@@ -13,6 +14,11 @@ import { loadTheme, registerTheme, windowBackground } from './theme'
 import { registerWorkspaces, workspaces } from './workspaces'
 
 setUpDataFolder()
+
+// Under Wayland, global shortcuts (the HUD's) go through the desktop portal, which Chromium only
+// uses when asked. It has to be asked before the app is ready.
+if (process.platform === 'linux')
+  app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal')
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -36,6 +42,7 @@ function createWindow() {
   registerFolders(mainWindow)
   registerRoles(mainWindow)
   registerPets(mainWindow)
+  registerHud(mainWindow)
   // The pet's bubble names the agent and where it is.
   registerStatus(mainWindow, (workspaceId, nodeId) => {
     const workspace = workspaces.get(workspaceId)

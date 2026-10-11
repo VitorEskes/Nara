@@ -50,7 +50,15 @@ const api = {
     seen: (workspaceId, nodeId) => ipcRenderer.send('agents:seen', workspaceId, nodeId),
     // reply: { kind: 'yes' | 'no' } or { kind: 'text', text }.
     reply: (workspaceId, nodeId, reply) =>
-      ipcRenderer.invoke('agents:reply', workspaceId, nodeId, reply)
+      ipcRenderer.invoke('agents:reply', workspaceId, nodeId, reply),
+    // The HUD sent the user to an agent.
+    onJump: (fn) => listen('agents:jump', fn)
+  },
+  hud: {
+    enable: (on) => ipcRenderer.invoke('hud:enable', on),
+    toggle: () => ipcRenderer.send('hud:toggle'),
+    hide: () => ipcRenderer.send('hud:hide'),
+    jump: (status) => ipcRenderer.send('hud:jump', status)
   },
   pets: {
     list: () => ipcRenderer.invoke('pets:list'),

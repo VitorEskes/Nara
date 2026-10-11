@@ -4158,3 +4158,65 @@ kbd {
   height: 30px;
   font-size: 12.5px;
 }
+
+/* The floating HUD (Hud.jsx): a card on a transparent window, dragged by its header. */
+
+html.hud,
+html.hud body,
+html.hud #root {
+  background: transparent;
+}
+
+.hud-card {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: calc(100vh - 16px);
+  margin: 8px;
+  overflow: hidden;
+  border: 1px solid var(--edge-strong);
+  border-radius: 16px;
+  background: var(--stone);
+  box-shadow: 0 6px 18px rgb(var(--shade) / 22%);
+  animation: pop-in var(--base) var(--ease-out);
+}
+
+.hud-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 8px 14px;
+  border-bottom: 1px solid var(--edge);
+  background: var(--bar);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.hud-head button {
+  -webkit-app-region: no-drag;
+}
+
+.hud-pet {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 56px;
+}
+
+.hud-pet .shika {
+  width: 52px;
+}
+
+.hud-head h1 {
+  flex: 1;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.hud-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}

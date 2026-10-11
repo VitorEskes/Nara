@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Workspace from './components/Workspace'
 import Sidebar from './components/Sidebar'
 import Overview from './components/Overview'
@@ -13,9 +13,10 @@ import { ROLES } from '../../shared/roles'
 // Below this window width the sidebar hides itself, leaving the room to the canvas.
 const NARROW = 760
 
-// The preferences only the renderer needs: the pet (its id, or null for none) and its size.
+// The preferences only the renderer needs: the pet (its id, or null for none) and its size, and
+// whether the HUD's global shortcut is on.
 const PREFS = 'prefs'
-const PREF_DEFAULTS = { pet: BUILT_IN_PET, petSize: 'm' }
+const PREF_DEFAULTS = { pet: BUILT_IN_PET, petSize: 'm', hud: true }
 
 export default function App() {
   // Every project as { id, name, folder }, and every saved workspace as { id, name, project,
@@ -40,10 +41,25 @@ export default function App() {
   const [statuses, setStatuses] = useState([])
   // The node the pet sent the user to: the workspace it's in glides there once it's on screen.
   const [jump, setJump] = useState(null)
+  // What main's jumps read, always the latest.
+  const latest = useRef({})
+  useEffect(() => {
+    latest.current = { jumpTo }
+  })
+
+  useEffect(() => {
+    window.api.hud.enable(prefs.hud)
+  }, [prefs.hud])
 
   useEffect(() => {
     window.api.agents.status().then(setStatuses)
-    return window.api.agents.onStatus(setStatuses)
+    const offStatus = window.api.agents.onStatus(setStatuses)
+    // The HUD sent the user to an agent.
+    const offJump = window.api.agents.onJump((status) => latest.current.jumpTo(status))
+    return () => {
+      offStatus()
+      offJump()
+    }
   }, [])
   // Remembered across runs; the first run starts with it shown unless the window is narrow.
   const [sidebar, setSidebar] = useState(
