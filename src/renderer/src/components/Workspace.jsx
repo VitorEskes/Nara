@@ -56,8 +56,9 @@ const FIT_PADDING = { side: 64, top: 64, bottom: 110 }
 // An inactive workspace is hidden, not unmounted, so its terminals keep running. New terminals
 // and agents open in `folder`; a workspace from before folders existed has none, and onPickFolder
 // asks for one. `roles` has every role an agent can take, built-in and custom, by key; onSaveRole
-// and onRemoveRole change the custom ones. `jump` ({ nodeId, at }) is the pet sending the user to
-// one of this workspace's agents.
+// and onRemoveRole change the custom ones. `commands` are the agents' commands from the settings,
+// for the new terminal dialog. `jump` ({ nodeId, at }) is the pet sending the user to one of this
+// workspace's agents.
 export default function Workspace({
   workspaceId,
   saved,
@@ -65,6 +66,7 @@ export default function Workspace({
   folder,
   onPickFolder,
   roles,
+  commands,
   jump,
   onSaveRole,
   onRemoveRole
@@ -783,6 +785,7 @@ export default function Workspace({
           number={launcher.number}
           folder={folder}
           roles={roles}
+          commands={commands}
           onSaveRole={onSaveRole}
           onRemoveRole={onRemoveRole}
           onCreate={launch}

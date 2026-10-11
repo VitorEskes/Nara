@@ -3,6 +3,7 @@ import Workspace from './components/Workspace'
 import Sidebar from './components/Sidebar'
 import Overview from './components/Overview'
 import ProjectBadge from './components/ProjectBadge'
+import Settings from './components/Settings'
 import Pet from './components/Pet'
 import { BUILT_IN_PET } from './pets'
 import { byName } from './workspaceList'
@@ -13,10 +14,11 @@ import { ROLES } from '../../shared/roles'
 // Below this window width the sidebar hides itself, leaving the room to the canvas.
 const NARROW = 760
 
-// The preferences only the renderer needs: the pet (its id, or null for none) and its size, and
-// whether the HUD's global shortcut is on.
+// The preferences the settings change that only the renderer needs: the pet (its id, or null for
+// none) and its size, whether the HUD's global shortcut is on, and the command each agent starts
+// with instead of its own.
 const PREFS = 'prefs'
-const PREF_DEFAULTS = { pet: BUILT_IN_PET, petSize: 'm', hud: true }
+const PREF_DEFAULTS = { pet: BUILT_IN_PET, petSize: 'm', hud: true, commands: {} }
 
 export default function App() {
   // Every project as { id, name, folder }, and every saved workspace as { id, name, project,
@@ -36,11 +38,14 @@ export default function App() {
   const [loaded, setLoaded] = useState({})
   // The roles the user made, offered on every canvas after the built-in ones.
   const [customRoles, setCustomRoles] = useState([])
-  const [prefs] = useState(recallPrefs)
+  const [prefs, setPrefs] = useState(recallPrefs)
+  const [settings, setSettings] = useState(false)
   // What every agent is doing, for the pet (main's status.js).
   const [statuses, setStatuses] = useState([])
   // The node the pet sent the user to: the workspace it's in glides there once it's on screen.
   const [jump, setJump] = useState(null)
+  // Whether the HUD's shortcut is bound: the desktop may refuse it.
+  const [hudBound, setHudBound] = useState(null)
   // What main's jumps read, always the latest.
   const latest = useRef({})
   useEffect(() => {
@@ -48,7 +53,11 @@ export default function App() {
   })
 
   useEffect(() => {
-    window.api.hud.enable(prefs.hud)
+    localStorage.setItem(PREFS, JSON.stringify(prefs))
+  }, [prefs])
+
+  useEffect(() => {
+    window.api.hud.enable(prefs.hud).then(setHudBound)
   }, [prefs.hud])
 
   useEffect(() => {
@@ -145,7 +154,8 @@ export default function App() {
       overview: showOverview,
       newProject: createProject,
       sidebar: toggleSidebar,
-      theme: toggleTheme
+      theme: toggleTheme,
+      settings: () => setSettings(true)
     }
     function onKeyDown(e) {
       const name = shortcutFor(e)
@@ -293,6 +303,7 @@ export default function App() {
         onRemoveWorkspace={removeWorkspace}
         onRenameProject={renameProject}
         onRemoveProject={removeProject}
+        onSettings={() => setSettings(true)}
       />
       <main className="workspaces">
         {sidebar === 'closed' && (
@@ -313,6 +324,7 @@ export default function App() {
               folder={folders.get(id)}
               onPickFolder={() => pickFolder(id)}
               roles={roles}
+              commands={prefs.commands}
               jump={jump?.workspaceId === id ? jump : null}
               onSaveRole={saveRole}
               onRemoveRole={removeRole}
@@ -336,6 +348,19 @@ export default function App() {
       </main>
       {prefs.pet && (
         <Pet pet={prefs.pet} size={prefs.petSize} statuses={statuses} onJump={jumpTo} />
+      )}
+      {settings && (
+        <Settings
+          theme={theme}
+          onTheme={changeTheme}
+          prefs={prefs}
+          hudBound={hudBound}
+          onPrefs={(change) => setPrefs((current) => ({ ...current, ...change }))}
+          roles={roles}
+          onSaveRole={saveRole}
+          onRemoveRole={removeRole}
+          onClose={() => setSettings(false)}
+        />
       )}
     </div>
   )

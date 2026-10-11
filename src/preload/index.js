@@ -69,6 +69,10 @@ const api = {
     // Asks for a Codex pet (its pet.json or a .zip) and adds it: { id }, { error } or null.
     import: () => ipcRenderer.invoke('pets:import')
   },
+  app: {
+    info: () => ipcRenderer.invoke('app:info'),
+    openData: () => ipcRenderer.invoke('app:open-data')
+  },
   project: {
     list: () => ipcRenderer.invoke('project:list'),
     create: () => ipcRenderer.invoke('project:create'),

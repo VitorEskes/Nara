@@ -1,4 +1,4 @@
-import { dialog, ipcMain } from 'electron'
+import { app, dialog, ipcMain, shell } from 'electron'
 import { existsSync, readFileSync, statSync } from 'fs'
 import { homedir } from 'os'
 import { dirname, isAbsolute, join, resolve, sep } from 'path'
@@ -25,8 +25,15 @@ export function registerFolders(win) {
     pickFolder(win, { title: 'Open the terminal in', defaultPath: defaultPath || lastFolder })
   )
   ipcMain.handle('folder:info', (_ev, path) => folderInfo(path))
+  // For the settings' About: the version, and the folder Nara keeps its data in.
+  ipcMain.handle('app:info', () => ({
+    version: app.getVersion(),
+    data: folderInfo(app.getPath('userData')).short
+  }))
+  ipcMain.handle('app:open-data', () => shell.openPath(app.getPath('userData')))
+
   win.on('closed', () => {
-    for (const name of ['folder:pick', 'folder:info']) {
+    for (const name of ['folder:pick', 'folder:info', 'app:info', 'app:open-data']) {
       ipcMain.removeHandler(name)
     }
   })

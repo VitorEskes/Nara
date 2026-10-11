@@ -1,22 +1,27 @@
-// The app-wide shortcuts, shown next to their entries in the sidebar. All of them take Ctrl+Shift:
-// a terminal on the canvas reads Ctrl+letter, and the shells use most of those.
+// The app-wide shortcuts, shown next to their entries in the sidebar. They take Ctrl+Shift: a
+// terminal on the canvas reads Ctrl+letter, and the shells use most of those. Settings is the one
+// exception, on the Ctrl+, every app uses (`shift: false`), which no shell needs.
 export const SHORTCUTS = {
   newWorkspace: { code: 'KeyN', keys: 'Ctrl+Shift+N' },
   overview: { code: 'KeyW', keys: 'Ctrl+Shift+W' },
   newProject: { code: 'KeyO', keys: 'Ctrl+Shift+O' },
   sidebar: { code: 'KeyB', keys: 'Ctrl+Shift+B' },
-  theme: { code: 'KeyL', keys: 'Ctrl+Shift+L' }
+  theme: { code: 'KeyL', keys: 'Ctrl+Shift+L' },
+  settings: { code: 'Comma', keys: 'Ctrl+,', shift: false }
 }
 
 // The name of the shortcut matching a keydown, if any.
 export function shortcutFor(e) {
-  if (!e.ctrlKey || !e.shiftKey || e.altKey || e.metaKey) return null
-  return Object.keys(SHORTCUTS).find((name) => SHORTCUTS[name].code === e.code) ?? null
+  if (!e.ctrlKey || e.altKey || e.metaKey) return null
+  const found = Object.keys(SHORTCUTS).find(
+    (name) => SHORTCUTS[name].code === e.code && (SHORTCUTS[name].shift ?? true) === e.shiftKey
+  )
+  return found ?? null
 }
 
-// The short form shown in the sidebar: "⌃⇧N".
+// The short form shown in the sidebar: "⌃⇧N", "⌃,".
 export function keysLabel(shortcut) {
-  return shortcut.keys.replace('Ctrl+Shift+', '⌃⇧')
+  return shortcut.keys.replace('Ctrl+Shift+', '⌃⇧').replace('Ctrl+', '⌃')
 }
 
 // The canvas tools and actions on single keys, as in drawing apps. They only apply while nothing

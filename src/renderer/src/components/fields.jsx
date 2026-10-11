@@ -22,3 +22,24 @@ export function Options({ options, value, onPick }) {
     </div>
   )
 }
+
+// An on/off setting: its name and a line about it, the switch on the right, and anything else
+// (`children`, a shortcut) before the switch.
+export function Switch({ checked, label, detail, onChange, children }) {
+  return (
+    <label className="switch-row">
+      <span className="switch-text">
+        <span className="switch-label">{label}</span>
+        {detail && <span className="switch-detail">{detail}</span>}
+      </span>
+      {children}
+      <input
+        type="checkbox"
+        role="switch"
+        className="switch"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+    </label>
+  )
+}

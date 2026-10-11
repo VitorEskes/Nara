@@ -7,6 +7,7 @@ import {
   CloseIcon,
   FolderIcon,
   FolderPlusIcon,
+  GearIcon,
   GridIcon,
   MonitorIcon,
   MoonIcon,
@@ -43,7 +44,8 @@ export default function Sidebar({
   onRenameWorkspace,
   onRemoveWorkspace,
   onRenameProject,
-  onRemoveProject
+  onRemoveProject,
+  onSettings
 }) {
   const [collapsed, setCollapsed] = useState(() => new Set())
   const { groups, loose } = groupByProject(projects, workspaces)
@@ -104,6 +106,12 @@ export default function Sidebar({
             label="Add project"
             shortcut={SHORTCUTS.newProject}
             onClick={onCreateProject}
+          />
+          <NavItem
+            icon={<GearIcon />}
+            label="Settings"
+            shortcut={SHORTCUTS.settings}
+            onClick={onSettings}
           />
         </nav>
         <div className="sidebar-list">

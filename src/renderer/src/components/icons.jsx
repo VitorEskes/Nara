@@ -370,10 +370,99 @@ export function BranchIcon(props) {
   )
 }
 
+export function GearIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="8" cy="8" r="2" />
+      <path d="M8 1.75v1.5M8 12.75v1.5M1.75 8h1.5M12.75 8h1.5M3.6 3.6l1.05 1.05M11.35 11.35l1.05 1.05M3.6 12.4l1.05-1.05M11.35 4.65l1.05-1.05" />
+      <circle cx="8" cy="8" r="4.5" />
+    </Icon>
+  )
+}
+
+export function PaletteIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M8 1.75a6.25 6.25 0 1 0 0 12.5c.9 0 1.4-.7 1.1-1.5-.4-1 .3-1.9 1.3-1.9h1.4a2.45 2.45 0 0 0 2.45-2.45C14.25 4.6 11.45 1.75 8 1.75z" />
+      <circle cx="5" cy="7" r=".75" fill="currentColor" />
+      <circle cx="7.5" cy="4.75" r=".75" fill="currentColor" />
+      <circle cx="10.5" cy="5.5" r=".75" fill="currentColor" />
+    </Icon>
+  )
+}
+
+export function PawIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M8 8.5c-2 0-3.75 2.1-3.75 3.6 0 1.1.9 1.65 1.9 1.65.8 0 1.2-.4 1.85-.4s1.05.4 1.85.4c1 0 1.9-.55 1.9-1.65C11.75 10.6 10 8.5 8 8.5z" />
+      <ellipse cx="3.25" cy="6.75" rx="1.1" ry="1.4" />
+      <ellipse cx="6.1" cy="3.9" rx="1.1" ry="1.5" />
+      <ellipse cx="9.9" cy="3.9" rx="1.1" ry="1.5" />
+      <ellipse cx="12.75" cy="6.75" rx="1.1" ry="1.4" />
+    </Icon>
+  )
+}
+
+export function KeyboardIcon(props) {
+  return (
+    <Icon {...props}>
+      <rect x="1.75" y="3.75" width="12.5" height="8.5" rx="1.5" />
+      <path d="M4.5 6.5h.01M7 6.5h.01M9.5 6.5h.01M12 6.5h.01M4.5 9.5h7" />
+    </Icon>
+  )
+}
+
+export function InfoIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="8" cy="8" r="6.25" />
+      <path d="M8 7.25v3.75M8 5h.01" />
+    </Icon>
+  )
+}
+
+export function SearchIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="7" cy="7" r="4.25" />
+      <path d="M10.25 10.25l3.25 3.25" />
+    </Icon>
+  )
+}
+
+export function UsersIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="6" cy="5.5" r="2.25" />
+      <path d="M2 13c.3-2.2 1.9-3.5 4-3.5s3.7 1.3 4 3.5" />
+      <path d="M10.5 3.5a2.25 2.25 0 0 1 0 4.25M11.75 9.75c1.2.4 2 1.5 2.25 3.25" />
+    </Icon>
+  )
+}
+
+// Asleep: the pet slot left empty.
+export function SleepIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M12.2 9.6A5 5 0 0 1 6.4 3.8a5 5 0 1 0 5.8 5.8z" />
+      <path d="M10 2.25h3l-3 3h3" />
+    </Icon>
+  )
+}
+
 export function ArrowUpRightIcon(props) {
   return (
     <Icon {...props}>
       <path d="M5 11l6-6M6 5h5v5" />
+    </Icon>
+  )
+}
+
+export function RefreshIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M13.25 8A5.25 5.25 0 1 1 11.6 4.2" />
+      <path d="M12 1.75v2.75H9.25" />
     </Icon>
   )
 }

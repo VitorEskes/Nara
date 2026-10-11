@@ -3626,6 +3626,504 @@ kbd {
   box-shadow: inset 0 -2px 0 currentColor;
 }
 
+/* The settings (Settings.jsx): a dialog with the sections down the left, on the sidebar's color,
+   and the chosen one on the right. It opens and closes like the new terminal dialog. */
+
+.settings {
+  display: none;
+  width: min(880px, calc(100vw - 48px));
+  height: min(620px, calc(100vh - 48px));
+  max-width: none;
+  max-height: none;
+  box-sizing: border-box;
+  padding: 0;
+  border: 1px solid var(--edge-strong);
+  border-radius: 16px;
+  overflow: hidden;
+  color: var(--text);
+  background: var(--stone);
+  box-shadow:
+    var(--highlight),
+    0 2px 6px rgb(var(--shade) / 10%),
+    0 32px 80px rgb(var(--shade) / 30%);
+  animation: launcher-in var(--slow) var(--ease-out);
+}
+
+.settings[open] {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+}
+
+.settings:focus {
+  outline: none;
+}
+
+.settings::backdrop {
+  background: rgb(var(--shade) / 30%);
+  backdrop-filter: blur(3px);
+  animation: fade-in var(--slow) var(--ease-out);
+}
+
+.settings.closing {
+  pointer-events: none;
+  animation: launcher-out var(--base) var(--ease-in) forwards;
+}
+
+.settings.closing::backdrop {
+  animation: fade-out var(--base) var(--ease-in) forwards;
+}
+
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 10px;
+  border-right: 1px solid var(--edge);
+  background: var(--bar);
+}
+
+.settings-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-m);
+  color: var(--text-4);
+  background: var(--bg);
+  transition:
+    border-color var(--fast),
+    box-shadow var(--fast);
+}
+
+.settings-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.settings-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: none;
+}
+
+.settings-search input::placeholder {
+  color: var(--text-4);
+}
+
+.settings-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px 12px;
+  border-bottom: 1px solid var(--edge);
+}
+
+.settings-brand span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.settings-brand strong {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.settings-brand small {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  padding: 6px 0;
+  list-style: none;
+}
+
+.settings-group + .settings-group {
+  border-top: 1px solid var(--edge);
+}
+
+.settings-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-m);
+  font-size: 13px;
+  text-align: left;
+  color: var(--text-2);
+  background: none;
+  cursor: pointer;
+  transition:
+    color var(--fast),
+    background-color var(--fast);
+}
+
+.settings-link .icon {
+  color: var(--text-3);
+}
+
+.settings-link:hover {
+  color: var(--text);
+  background: var(--hover-soft);
+}
+
+.settings-link[aria-current='page'] {
+  font-weight: 500;
+  color: var(--text);
+  background: var(--active-soft);
+}
+
+.settings-link[aria-current='page'] .icon {
+  color: var(--accent-text);
+}
+
+.settings-none {
+  margin: 8px 10px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 14px 12px 28px;
+}
+
+.settings-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 28px 28px;
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+.settings-theme {
+  max-width: 360px;
+}
+
+.settings-lead,
+.settings-note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-3);
+}
+
+.settings-note code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-2);
+  background: var(--active-soft);
+}
+
+/* A framed block: a title, a line about it, and its settings. */
+.settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-l);
+  background: var(--bg);
+}
+
+.settings-card h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.settings-card p {
+  margin: -10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-3);
+}
+
+/* A row: an icon, a name and its control. */
+.settings-row {
+  display: grid;
+  grid-template-columns: 34px 120px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-row-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  color: var(--accent-text);
+  background: var(--accent-softer);
+}
+
+.settings-row-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.settings-row-label small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+.settings .text-input {
+  height: 36px;
+}
+
+/* The roles fill the page, as in the new terminal dialog. */
+.settings-body:has(.settings-roles) {
+  padding: 0;
+}
+
+.settings-roles {
+  border-top: 1px solid var(--edge);
+}
+
+.role-mine {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-4);
+}
+
+/* Pets: what the pet is, the library to pick one from, the size and the folders. */
+.pet-intro-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.pet-intro-head span {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent-text);
+}
+
+.pet-library {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
+  gap: 10px;
+}
+
+.pet-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 8px 12px;
+  border: 1.5px solid var(--edge);
+  border-radius: var(--radius-l);
+  color: var(--text);
+  background: var(--bg);
+  cursor: pointer;
+  transition:
+    border-color var(--fast),
+    background-color var(--fast),
+    transform var(--fast) var(--ease-out);
+}
+
+.pet-card:hover {
+  border-color: var(--edge-focus);
+}
+
+.pet-card:active {
+  transform: scale(0.97);
+}
+
+.pet-card[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-softer);
+}
+
+.pet-card-art {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 68px;
+  margin-bottom: 6px;
+  color: var(--text-3);
+}
+
+.pet-card-art .shika {
+  width: 58px;
+}
+
+.pet-card-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pet-card-source {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.pet-card-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: var(--cream);
+  background: var(--accent-fill);
+  animation: pop-in var(--fast) var(--ease-out);
+}
+
+.settings-size {
+  max-width: 200px;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* The shortcuts, label on the left and keys on the right. */
+.shortcut-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-m);
+  background: var(--bg);
+}
+
+.shortcut-list div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  padding: 0 12px;
+}
+
+.shortcut-list div + div {
+  border-top: 1px solid var(--edge);
+}
+
+.shortcut-list dt {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.shortcut-list dd {
+  margin: 0;
+}
+
+.shortcut-list kbd {
+  padding: 2px 7px;
+  border: 1px solid var(--edge-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-2);
+  background: var(--stone);
+}
+
+.settings-about {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-top: 28px;
+  text-align: center;
+}
+
+.settings-about .brand-mark {
+  width: 72px;
+  height: 72px;
+  margin-bottom: 8px;
+  border-radius: 18px;
+}
+
+.settings-about h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.settings-about p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.settings-version {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-4);
+}
+
+.about-data {
+  width: 100%;
+  max-width: 460px;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  margin-top: 28px;
+  padding: 10px 12px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-l);
+  text-align: left;
+  background: var(--bg);
+}
+
 /* The pet (Pet.jsx), in the corner of the window over everything but the dialogs, with its
    bubble above it. */
 
@@ -4219,4 +4717,105 @@ html.hud #root {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+}
+
+/* On/off settings (fields.jsx's Switch). */
+
+.settings-toggles {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-m);
+  background: var(--bg);
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.switch-row + .switch-row {
+  border-top: 1px solid var(--edge);
+}
+
+.switch-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.switch-label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.switch-detail {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.switch-row kbd {
+  padding: 2px 7px;
+  border: 1px solid var(--edge-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+  background: var(--stone);
+}
+
+.switch {
+  appearance: none;
+  position: relative;
+  width: 34px;
+  height: 20px;
+  flex-shrink: 0;
+  margin: 0;
+  border-radius: 10px;
+  background: var(--edge-strong);
+  cursor: pointer;
+  transition: background-color var(--base);
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--chip);
+  box-shadow: 0 1px 2px rgb(var(--shade) / 25%);
+  transition: transform var(--base) var(--ease-spring);
+}
+
+.switch:checked {
+  background: var(--accent-fill);
+}
+
+.switch:checked::after {
+  transform: translateX(14px);
+}
+
+.pet-card.add {
+  border-style: dashed;
+  border-color: var(--edge-focus);
+  color: var(--text-3);
+  background: none;
+}
+
+.pet-card.add:hover {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.pet-card.add .pet-card-name {
+  color: inherit;
 }
