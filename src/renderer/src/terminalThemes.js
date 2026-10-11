@@ -32,21 +32,21 @@ function scrollbar(rgb) {
 }
 
 export const TERMINAL_THEMES = {
-  // The one terminals always had: a neutral charcoal island on the cream canvas.
+  // The one terminals open with: a graphite island, a step above the canvas in either theme.
   nara: {
-    label: 'Charcoal',
-    bar: '#28282a',
-    barFocus: '#2e2e31',
+    label: 'Graphite',
+    bar: '#1f1f23',
+    barFocus: '#25252a',
     colors: {
-      background: '#1f1f21',
-      foreground: '#ece7db',
-      cursor: '#8cc4a4',
-      cursorAccent: '#1f1f21',
-      selectionBackground: '#2f4a3d',
-      selectionInactiveBackground: '#2e2e31',
-      ...scrollbar('236, 231, 219'),
-      black: '#2e2e31',
-      brightBlack: '#86847f',
+      background: '#19191c',
+      foreground: '#ededf0',
+      cursor: '#4fc48e',
+      cursorAccent: '#19191c',
+      selectionBackground: '#24493a',
+      selectionInactiveBackground: '#2a2a2f',
+      ...scrollbar('237, 237, 240'),
+      black: '#2a2a2f',
+      brightBlack: '#7c7c85',
       ...ANSI
     }
   },

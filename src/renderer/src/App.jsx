@@ -20,6 +20,11 @@ const NARROW = 760
 const PREFS = 'prefs'
 const PREF_DEFAULTS = { pet: BUILT_IN_PET, petSize: 'm', hud: true, commands: {} }
 
+// Stands in for a workspace with no agents yet, so it keeps the same empty map between renders.
+const NO_AGENTS = new Map()
+// How much of the window's right side the inspector takes (main.css, .inspector), for the pet.
+const INSPECTOR_ROOM = 344
+
 export default function App() {
   // Every project as { id, name, folder }, and every saved workspace as { id, name, project,
   // folder, terminals, notes }; `open` holds the ids of the open workspaces, in the order they
@@ -42,10 +47,18 @@ export default function App() {
   const [settings, setSettings] = useState(false)
   // What every agent is doing, for the pet (main's status.js).
   const [statuses, setStatuses] = useState([])
+  // What every agent has spent and is working on (main's telemetry.js): workspace id -> node id
+  // -> its report.
+  const [telemetry] = useState(new Map())
   // The node the pet sent the user to: the workspace it's in glides there once it's on screen.
   const [jump, setJump] = useState(null)
   // Whether the HUD's shortcut is bound: the desktop may refuse it.
   const [hudBound, setHudBound] = useState(null)
+  // The inspector on the right of the canvas, open or not, the same on every workspace.
+  const [inspector, setInspector] = useState(() => localStorage.getItem('inspector') !== 'closed')
+  useEffect(() => {
+    localStorage.setItem('inspector', inspector ? 'open' : 'closed')
+  }, [inspector])
   // What main's jumps read, always the latest.
   const latest = useRef({})
   useEffect(() => {
@@ -87,7 +100,7 @@ export default function App() {
   }, [])
 
   // 'light', 'dark' or 'system'; main applies it (see main/theme.js) and the CSS follows.
-  const [theme, setTheme] = useState('light')
+  const [theme, setTheme] = useState('dark')
 
   useEffect(() => {
     window.api.theme.get().then(setTheme)
@@ -280,6 +293,13 @@ export default function App() {
   if (!started) return null
 
   const folders = new Map(all.map((w) => [w.id, w.folder]))
+  const metas = new Map(all.map((w) => [w.id, w]))
+  // Each workspace's agents by node id.
+  const byWorkspace = new Map()
+  for (const status of statuses) {
+    if (!byWorkspace.has(status.workspaceId)) byWorkspace.set(status.workspaceId, new Map())
+    byWorkspace.get(status.workspaceId).set(status.nodeId, status)
+  }
   const roles = { ...ROLES, ...Object.fromEntries(customRoles.map((role) => [role.key, role])) }
   const workspaces = all.map((w) => ({ ...w, open: open.includes(w.id) }))
   return (
@@ -306,7 +326,7 @@ export default function App() {
         onSettings={() => setSettings(true)}
       />
       <main className="workspaces">
-        {sidebar === 'closed' && (
+        {sidebar === 'closed' && (overview || !active) && (
           <SidebarPeek
             workspace={overview ? null : all.find((w) => w.id === active)}
             projects={projects}
@@ -322,6 +342,14 @@ export default function App() {
               saved={loaded[id]}
               active={id === active && !overview}
               folder={folders.get(id)}
+              meta={metas.get(id)}
+              project={projects.find((p) => p.id === metas.get(id)?.project)}
+              statuses={byWorkspace.get(id) ?? NO_AGENTS}
+              telemetry={telemetry.get(id) ?? NO_AGENTS}
+              inspector={inspector}
+              onInspector={() => setInspector((open) => !open)}
+              sidebarHidden={sidebar === 'closed'}
+              onShowSidebar={toggleSidebar}
               onPickFolder={() => pickFolder(id)}
               roles={roles}
               commands={prefs.commands}
@@ -347,7 +375,14 @@ export default function App() {
         )}
       </main>
       {prefs.pet && (
-        <Pet pet={prefs.pet} size={prefs.petSize} statuses={statuses} onJump={jumpTo} />
+        <Pet
+          pet={prefs.pet}
+          size={prefs.petSize}
+          statuses={statuses}
+          onJump={jumpTo}
+          // Out of the inspector's way while it's open on a canvas.
+          reserved={inspector && !overview && active ? INSPECTOR_ROOM : 0}
+        />
       )}
       {settings && (
         <Settings

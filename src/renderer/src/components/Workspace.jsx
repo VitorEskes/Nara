@@ -6,7 +6,8 @@ import Terminal from './Terminal'
 import Note from './Note'
 import Drawings from './Drawings'
 import Launcher from './Launcher'
-import NodePanel from './NodePanel'
+import Inspector from './Inspector'
+import TopBar from './TopBar'
 import Minimap from './Minimap'
 import {
   EraserIcon,
@@ -26,6 +27,7 @@ import { PAPERS, resolveStyle, terminalLook } from '../nodeStyle'
 import { defaultTitle, nodeLabel } from '../nodeLabel'
 import { AGENTS } from '../../../shared/agents'
 import { canvasKeyFor } from '../shortcuts'
+import { totalUsage } from '../telemetry'
 
 // Size of a new node of each type.
 const SIZES = {
@@ -58,16 +60,26 @@ const FIT_PADDING = { side: 64, top: 64, bottom: 110 }
 // asks for one. `roles` has every role an agent can take, built-in and custom, by key; onSaveRole
 // and onRemoveRole change the custom ones. `commands` are the agents' commands from the settings,
 // for the new terminal dialog. `jump` ({ nodeId, at }) is the pet sending the user to one of this
-// workspace's agents.
+// workspace's agents. `meta` and `project` are the workspace's name and project, for the top bar;
+// `statuses` and `telemetry` what main reports about its agents, by node id. `inspector` says
+// whether the inspector is open, and onInspector opens or closes it.
 export default function Workspace({
   workspaceId,
   saved,
   active,
   folder,
+  meta,
+  project,
+  statuses,
+  telemetry,
   onPickFolder,
   roles,
   commands,
   jump,
+  inspector,
+  onInspector,
+  sidebarHidden,
+  onShowSidebar,
   onSaveRole,
   onRemoveRole
 }) {
@@ -96,16 +108,11 @@ export default function Workspace({
   const [minimap, setMinimap] = useState(() => localStorage.getItem('minimap') === 'open')
   // The new terminal dialog, while open: { number } is the id the terminal will get.
   const [launcher, setLauncher] = useState(null)
-  // The side panel's tab, kept while the selection moves from node to node.
-  const [panelTab, setPanelTab] = useState('config')
-  // The side panel folded up to its header: how it starts, until the user opens it. Remembered
-  // across nodes and runs.
-  const [panelCollapsed, setPanelCollapsed] = useState(
-    () => localStorage.getItem('panel') !== 'open'
-  )
-  useEffect(() => {
-    localStorage.setItem('panel', panelCollapsed ? 'collapsed' : 'open')
-  }, [panelCollapsed])
+  // The inspector's tab, kept while the selection moves from node to node.
+  const [panelTab, setPanelTab] = useState('overview')
+  // How many times each node's agent was restarted from the inspector: a new count remounts its
+  // terminal, which starts the agent again and resumes its conversation.
+  const [restarts, setRestarts] = useState({})
   // The node whose row the pointer is on in the panel's connections, lit up on the canvas.
   const [hoveredPeer, setHoveredPeer] = useState(null)
   // Stroke being drawn. The ref is what the handlers build on: pointerup can arrive before React
@@ -240,6 +247,11 @@ export default function Workspace({
     setSelection([id])
   }
 
+  // New notes are graphite cards; any paper can be picked in the inspector.
+  function newNote() {
+    createNodeAtCenter('note', { text: '', style: { paper: 'graphite' } })
+  }
+
   // Center of the viewport converted to world coordinates: world = (screen - (x, y)) / z.
   function createNodeAtCenter(type, fields) {
     const { width, height } = container.current.getBoundingClientRect()
@@ -336,7 +348,8 @@ export default function Workspace({
       draw: () => setTool('draw'),
       erase: () => setTool('erase'),
       terminal: openLauncher,
-      note: () => createNodeAtCenter('note', { text: '' }),
+      inspector: onInspector,
+      note: newNote,
       zoomIn: () => zoomTo(camRef.current.z * ZOOM_STEP),
       zoomOut: () => zoomTo(camRef.current.z / ZOOM_STEP),
       zoomReset: () => zoomTo(1),
@@ -571,13 +584,16 @@ export default function Workspace({
   const dimmed = (node) => draft && node.id !== draft.from && !canLink(draft.from, node.id)
   const linkSource = draft && nodes.find((n) => n.id === draft.from)
   const hasTargets = draft && nodes.some((n) => canLink(draft.from, n.id))
-  const newNote = () => createNodeAtCenter('note', { text: '' })
+  const workspaceUsage = totalUsage(
+    nodes.filter((n) => n.type === 'terminal').map((n) => telemetry.get(n.id)?.usage)
+  )
 
   return (
     <div
       className={draft ? 'workspace linking' : 'workspace'}
       ref={container}
       hidden={!active}
+      data-inspector={inspector || undefined}
       onPointerDownCapture={pointerDownAnywhere}
     >
       <Canvas
@@ -626,6 +642,7 @@ export default function Workspace({
               />
             ) : (
               <Terminal
+                key={restarts[node.id] ?? 0}
                 workspaceId={workspaceId}
                 nodeId={node.id}
                 agent={node.agent}
@@ -641,23 +658,94 @@ export default function Workspace({
         ))}
       </Canvas>
 
-      {selectedNode && (
-        <NodePanel
-          node={selectedNode}
+      <TopBar
+        workspace={meta}
+        project={project}
+        folder={folder}
+        agents={[...statuses.values()]}
+        usage={workspaceUsage}
+        sidebarHidden={sidebarHidden}
+        onShowSidebar={onShowSidebar}
+        inspector={inspector}
+        onInspector={onInspector}
+        onLocate={locate}
+      >
+        <div className="zoom" role="toolbar" aria-label="Zoom">
+          <button
+            className="icon-button"
+            data-tip-side="bottom"
+            data-tip="Zoom out · −"
+            aria-label="Zoom out"
+            onClick={() => zoomTo(cam.z / ZOOM_STEP)}
+          >
+            <MinusIcon />
+          </button>
+          <button
+            className="zoom-level"
+            data-tip-side="bottom"
+            data-tip="Reset to 100% · 0"
+            onClick={() => zoomTo(1)}
+          >
+            {Math.round(cam.z * 100)}%
+          </button>
+          <button
+            className="icon-button"
+            data-tip-side="bottom"
+            data-tip="Zoom in · +"
+            aria-label="Zoom in"
+            onClick={() => zoomTo(cam.z * ZOOM_STEP)}
+          >
+            <PlusIcon />
+          </button>
+          <span className="dock-divider" />
+          <button
+            className="icon-button"
+            data-tip-side="bottom"
+            data-tip="Fit everything · 1"
+            aria-label="Fit everything on screen"
+            onClick={zoomToFit}
+          >
+            <FitIcon />
+          </button>
+          <button
+            className={minimap ? 'icon-button active' : 'icon-button'}
+            data-tip-side="bottom"
+            data-tip="Minimap · M"
+            aria-label="Minimap"
+            aria-pressed={minimap}
+            onClick={() => setMinimap((open) => !open)}
+          >
+            <MapIcon />
+          </button>
+        </div>
+      </TopBar>
+
+      {inspector && (
+        <Inspector
+          node={selectedNode || null}
           nodes={nodes}
           links={links}
           roles={roles}
+          folder={folder}
+          workspace={meta}
+          statuses={statuses}
+          telemetry={telemetry}
           onSaveRole={onSaveRole}
           tab={panelTab}
           onTab={setPanelTab}
           onChange={(changes) => updateNode(selectedNode.id, changes)}
-          canConnect={nodes.some((n) => canLink(selectedNode.id, n.id))}
+          onRestart={() =>
+            setRestarts((current) => ({
+              ...current,
+              [selectedNode.id]: (current[selectedNode.id] ?? 0) + 1
+            }))
+          }
+          canConnect={selectedNode && nodes.some((n) => canLink(selectedNode.id, n.id))}
           onConnectStart={(e) => startLink(selectedNode.id, e)}
           onPeerHover={setHoveredPeer}
           onDisconnect={removeLink}
           onLocate={locate}
-          collapsed={panelCollapsed}
-          onCollapse={() => setPanelCollapsed((current) => !current)}
+          onClose={onInspector}
         />
       )}
 
@@ -739,45 +827,6 @@ export default function Workspace({
             }
           />
         )}
-        <div className="floating zoom" role="toolbar" aria-label="Zoom">
-          <button
-            className="icon-button"
-            data-tip="Zoom out · −"
-            aria-label="Zoom out"
-            onClick={() => zoomTo(cam.z / ZOOM_STEP)}
-          >
-            <MinusIcon />
-          </button>
-          <button className="zoom-level" data-tip="Reset to 100% · 0" onClick={() => zoomTo(1)}>
-            {Math.round(cam.z * 100)}%
-          </button>
-          <button
-            className="icon-button"
-            data-tip="Zoom in · +"
-            aria-label="Zoom in"
-            onClick={() => zoomTo(cam.z * ZOOM_STEP)}
-          >
-            <PlusIcon />
-          </button>
-          <span className="dock-divider" />
-          <button
-            className="icon-button"
-            data-tip="Fit everything · 1"
-            aria-label="Fit everything on screen"
-            onClick={zoomToFit}
-          >
-            <FitIcon />
-          </button>
-          <button
-            className={minimap ? 'icon-button active' : 'icon-button'}
-            data-tip="Minimap · M"
-            aria-label="Minimap"
-            aria-pressed={minimap}
-            onClick={() => setMinimap((open) => !open)}
-          >
-            <MapIcon />
-          </button>
-        </div>
       </div>
 
       {launcher && (

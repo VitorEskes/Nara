@@ -475,6 +475,193 @@ export function ChatIcon(props) {
   )
 }
 
+export function PanelRightIcon(props) {
+  return (
+    <Icon {...props}>
+      <rect x="2" y="2.75" width="12" height="10.5" rx="1.75" />
+      <path d="M10 2.75v10.5" />
+    </Icon>
+  )
+}
+
+export function SquareIcon(props) {
+  return (
+    <Icon {...props}>
+      <rect x="2.75" y="2.75" width="10.5" height="10.5" rx="1.5" />
+    </Icon>
+  )
+}
+
+export function CircleIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="8" cy="8" r="5.5" />
+    </Icon>
+  )
+}
+
+export function TriangleIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M8 2.75l5.75 10H2.25z" />
+    </Icon>
+  )
+}
+
+export function DiamondIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M8 2l6 6-6 6-6-6z" />
+    </Icon>
+  )
+}
+
+export function LineIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M3 13L13 3" />
+    </Icon>
+  )
+}
+
+export function ArrowIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M3 13L13 3M7 3h6v6" />
+    </Icon>
+  )
+}
+
+export function TextIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M3 4.5V3h10v1.5M8 3v10M6 13h4" />
+    </Icon>
+  )
+}
+
+export function ShapesIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="5.5" cy="5.5" r="3" />
+      <path d="M8.5 9h5v5h-5z" />
+    </Icon>
+  )
+}
+
+export function UndoIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M5.5 3L2.5 6l3 3" />
+      <path d="M2.5 6h7a3.5 3.5 0 0 1 0 7H7" />
+    </Icon>
+  )
+}
+
+export function RedoIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M10.5 3l3 3-3 3" />
+      <path d="M13.5 6h-7a3.5 3.5 0 0 0 0 7H9" />
+    </Icon>
+  )
+}
+
+export function CopyIcon(props) {
+  return (
+    <Icon {...props}>
+      <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
+      <path d="M10.5 5.5v-2a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2" />
+    </Icon>
+  )
+}
+
+export function BringFrontIcon(props) {
+  return (
+    <Icon {...props}>
+      <rect x="2.5" y="2.5" width="7" height="7" rx="1" />
+      <path d="M11.5 6.5h1a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-1" />
+    </Icon>
+  )
+}
+
+export function SendBackIcon(props) {
+  return (
+    <Icon {...props}>
+      <rect x="6.5" y="6.5" width="7" height="7" rx="1" />
+      <path d="M4.5 9.5h-1a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v1" />
+    </Icon>
+  )
+}
+
+export function MicIcon(props) {
+  return (
+    <Icon {...props}>
+      <rect x="5.75" y="1.75" width="4.5" height="8" rx="2.25" />
+      <path d="M3.5 7.5a4.5 4.5 0 0 0 9 0M8 12v2.25" />
+    </Icon>
+  )
+}
+
+export function StopIcon(props) {
+  return (
+    <Icon {...props}>
+      <rect x="4" y="4" width="8" height="8" rx="1.5" fill="currentColor" />
+    </Icon>
+  )
+}
+
+export function SendIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M8 13V3.5M3.75 7.5L8 3.25l4.25 4.25" />
+    </Icon>
+  )
+}
+
+export function ListChecksIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M2.5 4l1.25 1.25L6 3M2.5 10l1.25 1.25L6 9M8.5 4.25h5M8.5 10.25h5" />
+    </Icon>
+  )
+}
+
+export function ActivityIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M1.75 8h2.5l1.75-4.5 3.5 9L11.25 8h3" />
+    </Icon>
+  )
+}
+
+export function DiffIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M4.5 2.5v6M1.5 5.5h6M8.5 12.5h6" />
+      <rect x="9.5" y="2.5" width="4" height="6" rx="1" />
+    </Icon>
+  )
+}
+
+export function RestartIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M13 8a5 5 0 1 1-1.6-3.65" />
+      <path d="M13 2.75v3h-3" />
+    </Icon>
+  )
+}
+
+export function TokenIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="8" cy="8" r="5.5" />
+      <path d="M8 5v6M6 6.5h3a1.25 1.25 0 0 1 0 2.5H7" />
+    </Icon>
+  )
+}
+
 // The mark: the Nara deer, a nod to the clan that tends the deer of the Nara forest. Decorative
 // next to the name, so it has no alt text of its own.
 export function BrandMark() {

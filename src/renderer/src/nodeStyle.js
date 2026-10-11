@@ -17,22 +17,31 @@ export const SIZES = {
   xl: { label: 'XL', px: 24 }
 }
 
-// Every paper is light and every ink dark, so any pair stays readable. The keys stay as they were
-// first saved; the colors follow the app's palette.
+// Papers are light or dark (`dark`), and each ink has a version for each (`color` on light paper,
+// `light` on dark), so any pair stays readable. The keys stay as they were first saved; the colors
+// follow the app's palette.
 export const INKS = {
-  ink: { label: 'Charcoal', color: '#232624' },
-  shu: { label: 'Graphite', color: '#5a605b' },
-  ai: { label: 'Forest', color: '#24503d' },
-  moss: { label: 'Leaf', color: '#2f6a50' },
-  umber: { label: 'Olive', color: '#5c6b2e' }
+  ink: { label: 'Charcoal', color: '#1f1f23', light: '#ededf0' },
+  shu: { label: 'Graphite', color: '#55555e', light: '#b4b4bc' },
+  ai: { label: 'Forest', color: '#1c7a4f', light: '#6bd3a2' },
+  moss: { label: 'Leaf', color: '#23756b', light: '#7fd6c4' },
+  umber: { label: 'Olive', color: '#5c6b2e', light: '#bcd27e' },
+  slate: { label: 'Slate', color: '#3461a8', light: '#84aef0' }
 }
 
 export const PAPERS = {
-  washi: { label: 'Paper', color: '#fdfbf5' },
-  sand: { label: 'Cream', color: '#f1e8d3' },
-  rose: { label: 'Sand', color: '#e5d9bd' },
-  mist: { label: 'Fog', color: '#dfe2dc' },
-  sage: { label: 'Sage', color: '#d6e2cf' }
+  graphite: { label: 'Graphite', color: '#1f1f23', dark: true },
+  forest: { label: 'Forest', color: '#14231c', dark: true },
+  washi: { label: 'Paper', color: '#fbfbf9' },
+  sand: { label: 'Cream', color: '#f6edd6' },
+  rose: { label: 'Sand', color: '#ebdfc6' },
+  mist: { label: 'Fog', color: '#e3e6ea' },
+  sage: { label: 'Sage', color: '#dbe8d8' }
+}
+
+// An ink as it reads on a paper: dark papers take the light version.
+export function inkColor(ink, paper) {
+  return PAPERS[paper]?.dark ? INKS[ink].light : INKS[ink].color
 }
 
 export const ALIGNS = {

@@ -1,149 +1,179 @@
-/* Tokens. A light theme in three families: cream for surfaces, a green-tinted charcoal for text
-   and terminals, and a dark forest green as the one accent. Nothing is pure black: shadows and
-   translucent marks use the charcoal too. The text tiers are checked against every cream surface:
-   --text-3 stays above 4.5:1 (body text), --text-4 above 3:1 (icons, placeholders, disabled). */
+/* Tokens. Nara Pro: graphite surfaces, one accent (Nara's green, the forest's), and color kept
+   for meaning: the state of an agent, a tone the user picked. The dark theme is the default and
+   the one designed first; the light one mirrors it. Surfaces step up in lightness as they come
+   forward (canvas, window, sidebar, panels, raised controls) and are told apart by hairline edges
+   more than by shadows. The text tiers clear 4.5:1 (--text-3, body text) and 3:1 (--text-4,
+   icons, placeholders) on every surface of their theme. */
 :root {
-  --bg: #f4f0e6;
-  --canvas: #f4f0e6;
-  --bar: #ece7da;
-  --stone: #fbf9f3;
-  --raised: #e4ddcd;
-  --hover: #ebe5d8;
-  --pressed: #e0d9c8;
-  --hover-soft: rgb(35 38 36 / 5%);
-  --active-soft: rgb(35 38 36 / 8%);
+  --bg: #141416;
+  --canvas: #0e0e10;
+  --bar: #161618;
+  --stone: #1b1b1e;
+  --raised: #252529;
+  --hover: #232327;
+  --pressed: #2b2b30;
+  --hover-soft: rgb(255 255 255 / 4%);
+  --active-soft: rgb(255 255 255 / 7%);
   /* The chosen option in a row of options: raised off its track. */
-  --chip: #fdfcf8;
+  --chip: #303036;
 
-  --edge: #e0d9ca;
-  --edge-strong: #d2cab8;
-  --edge-focus: #a9a08b;
+  --edge: #242428;
+  --edge-strong: #2e2e33;
+  --edge-focus: #4d4d55;
+  /* Panels floating over the canvas: the surface, see-through, over a blur of what's behind. */
+  --material: rgb(27 27 30 / 86%);
+  --material-edge: rgb(255 255 255 / 8%);
 
-  --cream: #fbf9f3;
-  --text: #232624;
-  --text-2: #3e433f;
-  --text-3: #5a605b;
-  --text-4: #7d817a;
+  --cream: #f7f7f5;
+  --text: #ededf0;
+  --text-2: #c6c6cc;
+  --text-3: #9b9ba3;
+  --text-4: #71717a;
 
-  --accent: #24503d;
-  --accent-text: #24503d;
-  --accent-fill: #24503d;
-  --accent-hover: #1c4232;
-  --accent-soft: rgb(36 80 61 / 12%);
-  --accent-softer: rgb(36 80 61 / 7%);
-  --danger: #9c3d2c;
-  --danger-soft: rgb(156 61 44 / 12%);
+  --accent: #4fc48e;
+  --accent-text: #6bd3a2;
+  --accent-fill: #1c7a4f;
+  --accent-hover: #22895a;
+  --accent-soft: rgb(79 196 142 / 15%);
+  --accent-softer: rgb(79 196 142 / 8%);
+  --danger: #ff7b6e;
+  --danger-soft: rgb(255 123 110 / 14%);
 
-  /* The terminals: dark islands on the cream canvas, in a neutral charcoal. The same in both
-     themes, since xterm's own colors (Terminal.jsx) don't follow the theme. */
-  --terminal: #1f1f21;
-  --terminal-bar: #28282a;
+  /* An agent's state, the same everywhere it shows: the node, the top bar, the command center. */
+  --state-working: #6aa9ff;
+  --state-waiting: #f3b54a;
+  --state-review: var(--accent);
+  --state-failed: var(--danger);
+  --state-idle: var(--text-4);
+
+  /* The terminals: dark islands in both themes, since xterm's own colors (Terminal.jsx) don't
+     follow the theme. */
+  --terminal: #19191c;
+  --terminal-bar: #1f1f23;
 
   /* Channels for colors used at many strengths: shadows, and the dots of the canvas. */
-  --shade: 35 38 36;
-  --dot: 35 38 36;
-  --selection: rgb(36 80 61 / 22%);
-  --tip-bg: var(--terminal-bar);
-  --tip-text: var(--cream);
+  --shade: 0 0 0;
+  --dot: 255 255 255;
+  --dot-major: 13%;
+  --selection: rgb(79 196 142 / 26%);
+  --tip-bg: #e9e9ec;
+  --tip-text: #18181b;
   --preview-terminal: var(--terminal);
-  --preview-bar: #3d3d40;
+  --preview-bar: #2c2c31;
 
-  /* Tones for roles, projects and terminals: the green, olive and charcoal families, plus a clay,
-     a slate and a plum, muted to sit with them. Each has a dark version for dark surfaces. */
-  --tone-green: #24503d;
-  --tone-leaf: #2f6a50;
-  --tone-olive: #5c6b2e;
-  --tone-umber: #6b5a2a;
-  --tone-ink: #3e433f;
-  --tone-clay: #9a4a34;
-  --tone-slate: #3f5a78;
-  --tone-plum: #6b4868;
+  /* Tones for roles, projects and terminals, muted to sit together. Each has a light version for
+     light surfaces. */
+  --tone-green: #5fcf98;
+  --tone-leaf: #7fd6c4;
+  --tone-olive: #bcd27e;
+  --tone-umber: #e3c07a;
+  --tone-ink: #c6c6cc;
+  --tone-clay: #f0917c;
+  --tone-slate: #84aef0;
+  --tone-plum: #c79be8;
 
   --font-ui: 'Geist Sans', system-ui, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
+  /* Nara's wordmark, and the serif option of the notes. */
   --font-display: 'Shippori Mincho B1', serif;
 
   --radius-s: 6px;
   --radius-m: 8px;
   --radius-l: 12px;
+  --radius-xl: 16px;
 
-  --highlight: inset 0 1px 0 rgb(255 255 255 / 70%);
-  --shadow-node: 0 1px 2px rgb(var(--shade) / 10%), 0 10px 30px rgb(var(--shade) / 14%);
-  --shadow-lift: 0 2px 4px rgb(var(--shade) / 12%), 0 24px 50px rgb(var(--shade) / 24%);
+  --highlight: inset 0 1px 0 rgb(255 255 255 / 5%);
+  --shadow-node:
+    0 0 0 1px rgb(0 0 0 / 30%), 0 2px 4px rgb(0 0 0 / 25%), 0 16px 40px rgb(0 0 0 / 35%);
+  --shadow-lift:
+    0 0 0 1px rgb(0 0 0 / 30%), 0 4px 8px rgb(0 0 0 / 30%), 0 30px 70px rgb(0 0 0 / 50%);
   --shadow-float:
-    var(--highlight), 0 1px 2px rgb(var(--shade) / 8%), 0 12px 32px rgb(var(--shade) / 12%);
+    var(--highlight), 0 0 0 1px rgb(0 0 0 / 25%), 0 8px 24px rgb(0 0 0 / 35%),
+    0 24px 60px rgb(0 0 0 / 25%);
 
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-in: cubic-bezier(0.5, 0, 0.75, 0);
-  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ease-spring: cubic-bezier(0.34, 1.3, 0.64, 1);
   --fast: 120ms;
   --base: 180ms;
-  --slow: 280ms;
+  --slow: 260ms;
 
   --sidebar-width: 248px;
+  --topbar-height: 44px;
 
-  color-scheme: light;
+  color-scheme: dark;
   accent-color: var(--accent);
 }
 
-/* The dark theme: neutral, slightly warm grays for the surfaces (no green in them, or the whole
-   window reads tinted), cream for the text, and the green, lightened, only as the accent. Electron's nativeTheme decides which applies (see main/theme.js):
-   light, dark, or whatever the system uses. */
-@media (prefers-color-scheme: dark) {
+/* The light theme: near-white surfaces with the same steps, charcoal text, and the green deeper so
+   it reads on white. Electron's nativeTheme decides which applies (see main/theme.js): light,
+   dark, or whatever the system uses. */
+@media (prefers-color-scheme: light) {
   :root {
-    --bg: #19191a;
-    --canvas: #19191a;
-    --bar: #1e1e20;
-    --stone: #242426;
-    --raised: #2c2c2f;
-    --hover: #2a2a2d;
-    --pressed: #323235;
-    --hover-soft: rgb(236 231 219 / 5%);
-    --active-soft: rgb(236 231 219 / 9%);
-    --chip: #38383b;
+    --bg: #f6f6f7;
+    --canvas: #f2f2f3;
+    --bar: #efeff1;
+    --stone: #ffffff;
+    --raised: #ececef;
+    --hover: #ececee;
+    --pressed: #e2e2e6;
+    --hover-soft: rgb(0 0 0 / 3.5%);
+    --active-soft: rgb(0 0 0 / 6%);
+    --chip: #ffffff;
 
-    --edge: #2a2a2d;
-    --edge-strong: #353538;
-    --edge-focus: #58585d;
+    --edge: #e5e5e9;
+    --edge-strong: #d8d8de;
+    --edge-focus: #a9a9b2;
+    --material: rgb(255 255 255 / 86%);
+    --material-edge: rgb(0 0 0 / 8%);
 
-    --text: #ece7db;
-    --text-2: #c8c6c0;
-    --text-3: #a3a19b;
-    --text-4: #82807b;
+    --text: #1b1b1f;
+    --text-2: #3b3b42;
+    --text-3: #5d5d66;
+    --text-4: #8a8a94;
 
-    --accent: #7fb898;
-    --accent-text: #8cc4a4;
-    --accent-fill: #2f6a50;
-    --accent-hover: #367a5c;
-    --accent-soft: rgb(127 184 152 / 16%);
-    --accent-softer: rgb(127 184 152 / 9%);
-    --danger: #e59a88;
-    --danger-soft: rgb(229 154 136 / 14%);
+    --accent: #1c7a4f;
+    --accent-text: #186b45;
+    --accent-fill: #1c7a4f;
+    --accent-hover: #166640;
+    --accent-soft: rgb(28 122 79 / 12%);
+    --accent-softer: rgb(28 122 79 / 6%);
+    --danger: #c23a2b;
+    --danger-soft: rgb(194 58 43 / 10%);
 
-    --tone-green: #8cc4a4;
-    --tone-leaf: #9fcfc3;
-    --tone-olive: #c3cf9e;
-    --tone-umber: #dcc28c;
-    --tone-ink: #c8c6c0;
-    --tone-clay: #e59a88;
-    --tone-slate: #8aa7d6;
-    --tone-plum: #c49ac6;
+    --state-working: #2f6fd6;
+    --state-waiting: #b7790f;
 
-    --shade: 8 8 9;
-    --dot: 236 231 219;
-    --selection: rgb(127 184 152 / 28%);
-    --tip-bg: var(--text);
-    --tip-text: var(--terminal);
-    --preview-terminal: #2c2c2f;
-    --preview-bar: #444447;
+    --tone-green: #1c7a4f;
+    --tone-leaf: #23756b;
+    --tone-olive: #5c6b2e;
+    --tone-umber: #8a6420;
+    --tone-ink: #3b3b42;
+    --tone-clay: #b2492f;
+    --tone-slate: #3461a8;
+    --tone-plum: #7a4aa0;
 
-    --highlight: inset 0 1px 0 rgb(255 255 255 / 4%);
-    --shadow-node: 0 1px 2px rgb(var(--shade) / 40%), 0 10px 30px rgb(var(--shade) / 40%);
-    --shadow-lift: 0 2px 4px rgb(var(--shade) / 40%), 0 24px 50px rgb(var(--shade) / 55%);
+    --shade: 20 20 30;
+    --dot: 20 20 30;
+    --dot-major: 16%;
+    --selection: rgb(28 122 79 / 20%);
+    --tip-bg: #1f1f23;
+    --tip-text: #f2f2f4;
+    --preview-terminal: var(--terminal);
+    --preview-bar: #3a3a40;
+
+    --highlight: inset 0 1px 0 rgb(255 255 255 / 80%);
+    --shadow-node:
+      0 0 0 1px rgb(var(--shade) / 6%), 0 1px 2px rgb(var(--shade) / 8%),
+      0 12px 32px rgb(var(--shade) / 12%);
+    --shadow-lift:
+      0 0 0 1px rgb(var(--shade) / 6%), 0 4px 8px rgb(var(--shade) / 10%),
+      0 28px 60px rgb(var(--shade) / 20%);
     --shadow-float:
-      var(--highlight), 0 1px 2px rgb(var(--shade) / 30%), 0 12px 32px rgb(var(--shade) / 40%);
+      var(--highlight), 0 0 0 1px rgb(var(--shade) / 6%), 0 4px 12px rgb(var(--shade) / 8%),
+      0 18px 44px rgb(var(--shade) / 10%);
 
-    color-scheme: dark;
+    color-scheme: light;
   }
 }
 
@@ -491,7 +521,7 @@ kbd {
   overflow: hidden;
   background-color: var(--canvas);
   background-image:
-    radial-gradient(circle at 1px 1px, rgb(var(--dot) / 20%) 1.1px, transparent 1.6px),
+    radial-gradient(circle at 1px 1px, rgb(var(--dot) / var(--dot-major)) 1.1px, transparent 1.6px),
     radial-gradient(
       circle at 1px 1px,
       rgb(var(--dot) / var(--dot-minor, 7%)) 0.9px,
@@ -607,55 +637,59 @@ kbd {
    preview in the new terminal dialog is an island too. */
 .island {
   --stone: var(--terminal-bar);
-  --hover: #343437;
-  --edge: #323235;
-  --edge-strong: #2d2d30;
-  --edge-focus: #55555a;
-  --text: #ece7db;
-  --text-2: #c8c6c0;
-  --text-3: #a9a7a1;
-  --text-4: #86847f;
-  --hover-soft: rgb(236 231 219 / 6%);
-  --active-soft: rgb(236 231 219 / 10%);
-  --accent: #6fae8e;
-  --accent-soft: rgb(111 174 142 / 22%);
-  --danger: #e59a88;
-  --danger-soft: rgb(229 154 136 / 16%);
-  --tone-green: #8cc4a4;
-  --tone-leaf: #9fcfc3;
-  --tone-olive: #c3cf9e;
-  --tone-umber: #dcc28c;
-  --tone-ink: #c8c6c0;
-  --tone-clay: #e59a88;
-  --tone-slate: #8aa7d6;
-  --tone-plum: #c49ac6;
+  --hover: #2c2c31;
+  --edge: #2a2a2f;
+  --edge-strong: #2f2f35;
+  --edge-focus: #50505a;
+  --text: #ededf0;
+  --text-2: #c6c6cc;
+  --text-3: #a2a2aa;
+  --text-4: #7c7c85;
+  --hover-soft: rgb(255 255 255 / 5%);
+  --active-soft: rgb(255 255 255 / 9%);
+  --accent: #4fc48e;
+  --accent-soft: rgb(79 196 142 / 20%);
+  --danger: #ff7b6e;
+  --danger-soft: rgb(255 123 110 / 16%);
+  --tone-green: #5fcf98;
+  --tone-leaf: #7fd6c4;
+  --tone-olive: #bcd27e;
+  --tone-umber: #e3c07a;
+  --tone-ink: #c6c6cc;
+  --tone-clay: #f0917c;
+  --tone-slate: #84aef0;
+  --tone-plum: #c79be8;
+  --state-working: #6aa9ff;
+  --state-waiting: #f3b54a;
   color: var(--text);
 }
 
 .island[data-scheme='light'] {
-  --hover: #e4ddcd;
-  --edge: #e0d9ca;
-  --edge-strong: #d2cab8;
-  --edge-focus: #a9a08b;
-  --text: #232624;
-  --text-2: #3e433f;
-  --text-3: #5a605b;
-  --text-4: #7d817a;
-  --hover-soft: rgb(35 38 36 / 5%);
-  --active-soft: rgb(35 38 36 / 8%);
-  --accent: #24503d;
-  --accent-soft: rgb(36 80 61 / 12%);
-  --danger: #9c3d2c;
-  --danger-soft: rgb(156 61 44 / 12%);
-  --tone-green: #24503d;
-  --tone-leaf: #2f6a50;
+  --hover: #e6e6ea;
+  --edge: #e2e2e7;
+  --edge-strong: #d6d6dc;
+  --edge-focus: #a9a9b2;
+  --text: #1b1b1f;
+  --text-2: #3b3b42;
+  --text-3: #5d5d66;
+  --text-4: #8a8a94;
+  --hover-soft: rgb(0 0 0 / 4%);
+  --active-soft: rgb(0 0 0 / 7%);
+  --accent: #1c7a4f;
+  --accent-soft: rgb(28 122 79 / 12%);
+  --danger: #c23a2b;
+  --danger-soft: rgb(194 58 43 / 10%);
+  --tone-green: #1c7a4f;
+  --tone-leaf: #23756b;
   --tone-olive: #5c6b2e;
-  --tone-umber: #6b5a2a;
-  --tone-ink: #3e433f;
-  --tone-clay: #9a4a34;
-  --tone-slate: #3f5a78;
-  --tone-plum: #6b4868;
-  --shade: 35 38 36;
+  --tone-umber: #8a6420;
+  --tone-ink: #3b3b42;
+  --tone-clay: #b2492f;
+  --tone-slate: #3461a8;
+  --tone-plum: #7a4aa0;
+  --state-working: #2f6fd6;
+  --state-waiting: #b7790f;
+  --shade: 20 20 30;
 }
 
 /* A terminal with a tone: a line of it along the top of the bar, a wash of it on the bar, and the
@@ -700,11 +734,11 @@ kbd {
 }
 
 .island:focus-within > .node-bar {
-  background: var(--terminal-bar-focus, #2e2e31);
+  background: var(--terminal-bar-focus, #24242a);
 }
 
 .island[data-tone]:focus-within > .node-bar {
-  background: color-mix(in srgb, var(--tone) 14%, var(--terminal-bar-focus, #2e2e31));
+  background: color-mix(in srgb, var(--tone) 14%, var(--terminal-bar-focus, #24242a));
 }
 
 .node.dragging .node-bar {
@@ -1611,9 +1645,10 @@ kbd {
 
 .page-title {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: 19px;
-  font-weight: 800;
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 .count-pill {
@@ -1822,7 +1857,7 @@ kbd {
   inset: 0;
   display: grid;
   place-items: center;
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: 13px;
   color: var(--text-4);
 }
@@ -1909,9 +1944,10 @@ kbd {
 
 .empty-title {
   margin: 4px 0 0;
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: 24px;
-  font-weight: 800;
+  font-weight: 600;
+  letter-spacing: -0.015em;
   color: var(--text);
 }
 
@@ -1975,9 +2011,10 @@ kbd {
 .floating {
   position: absolute;
   z-index: 1;
-  border: 1px solid var(--edge);
-  background: var(--stone);
+  border: 1px solid var(--material-edge);
+  background: var(--material);
   box-shadow: var(--shadow-float);
+  backdrop-filter: blur(24px) saturate(1.6);
 }
 
 .dock {
@@ -2202,115 +2239,800 @@ kbd {
   }
 }
 
-/* Side panel for the selected node, like Excalidraw's: a header, then the tabs and the tab's body,
-   which scrolls when the panel would run past the dock. Folded, it keeps only the header, as tall
-   as the bar that shows the sidebar back (.sidebar-peek) and as wide as when it's open; the rest
-   folds and unfolds by its height, a grid row going from nothing to all of it. */
-
-.node-panel {
-  top: 16px;
-  left: 16px;
+/* The top bar of a canvas: where you are on the left, the agents and the inspector's switch on the
+   right. Translucent, the canvas running on under it. */
+.topbar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 2;
   display: flex;
-  flex-direction: column;
-  width: 268px;
-  max-height: calc(100% - 120px);
+  align-items: center;
+  gap: 6px;
+  height: var(--topbar-height);
   box-sizing: border-box;
-  border-radius: var(--radius-l);
-  font-size: 12px;
-  animation: panel-in var(--base) var(--ease-out);
-  transition: border-radius var(--slow) var(--ease-out);
+  padding: 0 8px 0 12px;
+  border-bottom: 1px solid var(--material-edge);
+  background: color-mix(in srgb, var(--canvas) 72%, transparent);
+  backdrop-filter: blur(20px) saturate(1.5);
+  user-select: none;
 }
 
-.node-panel.collapsed {
+.topbar .crumbs {
+  padding: 0 0 0 4px;
+  border-left: 0;
+}
+
+.topbar-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  margin-left: 4px;
+  padding: 0 8px;
+  border: 1px solid var(--edge);
   border-radius: 11px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+  background: var(--hover-soft);
 }
 
-.panel-head {
+.topbar-end {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 34px;
-  flex-shrink: 0;
-  padding: 0 3px 0 14px;
+  margin-left: auto;
+}
+
+.topbar-states {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.state-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 13px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--text-2);
+  background: color-mix(in srgb, var(--state, var(--text-4)) 12%, transparent);
+  cursor: pointer;
+  animation: pop-in var(--base) var(--ease-out);
+  transition: background-color var(--fast);
+}
+
+.state-pill:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--state, var(--text-4)) 20%, transparent);
+}
+
+.state-pill.quiet {
   color: var(--text-3);
+  background: none;
+  cursor: default;
 }
 
-.panel-fold .icon {
-  transform: rotate(180deg);
-  transition: transform var(--slow) var(--ease-out);
+/* A state as a dot in its color; working breathes. */
+.state-dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--state, var(--text-4));
 }
 
-.node-panel.collapsed .panel-fold .icon {
-  transform: rotate(0);
+[data-state='working'] > .state-dot,
+.state-dot[data-state='working'] {
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--state) 60%, transparent);
+  animation: pulse 1.6s ease-out infinite;
 }
 
-.panel-fold {
-  width: 28px;
-  height: 28px;
+[data-state='waiting'] > .state-dot {
+  animation: blink 1.4s ease-in-out infinite;
 }
 
-.panel-content {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr);
-  flex: 1 1 auto;
-  min-height: 0;
-  transition:
-    grid-template-rows var(--slow) var(--ease-out),
-    opacity var(--slow) var(--ease-out);
-}
-
-.node-panel.collapsed .panel-content {
-  grid-template-rows: minmax(0, 0fr);
-  opacity: 0;
-}
-
-.panel-inner {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 0;
-  overflow: hidden;
-  padding-top: 6px;
-}
-
-.panel-inner > .segmented {
-  margin: 0 16px;
-}
-
-.panel-body {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 4px 16px 16px;
-  animation: fade-in var(--base) var(--ease-out);
-}
-
-@keyframes panel-in {
-  from {
-    opacity: 0;
-    transform: translateX(-8px);
+@keyframes pulse {
+  70% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
   }
 }
 
-/* With the sidebar hidden, under its bar and lined up with it. */
-.app[data-sidebar='closed'] .node-panel {
-  top: 56px;
-  left: 12px;
-  max-height: calc(100% - 160px);
+@keyframes blink {
+  50% {
+    opacity: 0.35;
+  }
 }
 
-.panel-title {
+.topbar-usage {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 26px;
+  padding: 0 10px;
+  border-left: 1px solid var(--edge);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+}
+
+.topbar-cost {
+  color: var(--text-2);
+}
+
+.topbar .icon-button.active {
+  color: var(--text);
+  background: var(--active-soft);
+}
+
+/* The zoom, in the top bar: smaller buttons, a hairline on each side. */
+.topbar .zoom {
+  padding: 0 6px;
+  border-right: 1px solid var(--edge);
+  border-left: 1px solid var(--edge);
+  border-radius: 0;
+  animation: none;
+}
+
+.topbar .zoom .icon-button {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+}
+
+.topbar .zoom .zoom-level {
+  width: 46px;
+  height: 26px;
+  border-radius: 7px;
+}
+
+.topbar .zoom .dock-divider {
+  height: 14px;
+  margin: 0 2px;
+  background: var(--edge);
+}
+
+/* The canvas's own controls clear the top bar, and the inspector while it's open. */
+.workspace {
+  --inspector-width: 320px;
+  --inspector-room: 0px;
+}
+
+.workspace[data-inspector] {
+  --inspector-room: calc(var(--inspector-width) + 24px);
+}
+
+.workspace .dock {
+  left: calc((100% - var(--inspector-room)) / 2);
+  transition: left var(--slow) var(--ease-out);
+}
+
+.workspace .zoom-area {
+  right: auto;
+  left: 16px;
+  align-items: flex-start;
+}
+
+.workspace .minimap {
+  transform-origin: bottom left;
+}
+
+.workspace .link-hint {
+  top: calc(var(--topbar-height) + 14px);
+}
+
+/* The inspector: everything about the selected node, or the workspace, on the right of the
+   canvas. A header with what it is, the tabs, and the tab's body, which scrolls. */
+.inspector {
+  top: calc(var(--topbar-height) + 10px);
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  width: var(--inspector-width);
+  box-sizing: border-box;
+  border-radius: var(--radius-xl);
+  font-size: 12.5px;
+  animation: inspector-in var(--slow) var(--ease-out);
+}
+
+@keyframes inspector-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+}
+
+.inspector-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  padding: 14px 10px 12px 16px;
+}
+
+.inspector-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
   flex: 1;
   min-width: 0;
+}
+
+.inspector-kicker {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-4);
+}
+
+.inspector-title {
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+/* A node's icon on a tile, with its agent's state as a dot on the corner. */
+.inspector-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: 1px solid var(--edge-strong);
+  border-radius: 10px;
+  color: var(--text-2);
+  background: var(--raised);
+}
+
+.inspector-icon.small {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.inspector-icon[data-state]:not([data-state='idle'])::after {
+  content: '';
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--stone);
+  border-radius: 50%;
+  background: var(--state);
+}
+
+.inspector-tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--count), auto);
+  justify-content: start;
+  gap: 2px;
+  flex-shrink: 0;
+  margin: 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--edge);
+}
+
+.inspector-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-3);
+  background: none;
+  cursor: pointer;
+  transition:
+    color var(--fast),
+    background-color var(--fast);
+}
+
+.inspector-tabs button:hover {
+  color: var(--text);
+}
+
+.inspector-tabs button[aria-selected='true'] {
+  color: var(--text);
+  background: var(--active-soft);
+}
+
+.tab-count {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-4);
+}
+
+.inspector-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px 18px;
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+.inspector-empty {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-3);
+}
+
+.inspector-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-m);
+  color: var(--text-3);
+  background: var(--hover-soft);
+}
+
+/* See Path in Overview.jsx: rtl puts the ellipsis at the start of the path. */
+.inspector-row-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
+.inspector-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  max-width: 45%;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+  color: var(--accent-text);
+}
+
+/* The workspace at a glance: two figures side by side. */
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-l);
+  background: var(--hover-soft);
+}
+
+.stat-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.stat-detail {
+  font-size: 11.5px;
+  color: var(--text-4);
+}
+
+.agent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agent-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px 6px 6px;
+  border: 0;
+  border-radius: var(--radius-m);
+  text-align: left;
+  color: var(--text);
+  background: none;
+  cursor: pointer;
+  transition: background-color var(--fast);
+}
+
+.agent-item:hover {
+  background: var(--active-soft);
+}
+
+.agent-item > .icon {
+  color: var(--text-4);
+}
+
+.agent-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.agent-item-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.agent-item-name .role-pill {
+  height: 18px;
+  padding: 0 7px;
+  font-size: 10.5px;
+  line-height: 18px;
+}
+
+.agent-item-state {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.agent-item-state:not([data-state='idle']) {
+  color: var(--state);
+}
+
+/* How full an agent's context is: a ring that warms as it fills. */
+.context-ring {
+  flex-shrink: 0;
+}
+
+.context-ring circle {
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.context-ring-track {
+  stroke: var(--active-soft);
+}
+
+.context-ring-fill {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  transition: stroke-dasharray var(--slow) var(--ease-out);
+}
+
+.context-ring[data-level='high'] .context-ring-fill,
+.meter[data-level='high'] .meter-fill {
+  stroke: var(--state-waiting);
+  background: var(--state-waiting);
+}
+
+.context-ring[data-level='full'] .context-ring-fill,
+.meter[data-level='full'] .meter-fill {
+  stroke: var(--danger);
+  background: var(--danger);
+}
+
+/* An agent's card: its state, what it's on, its context and what it has spent. */
+.agent-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-l);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--state, var(--text-4)) 8%, transparent),
+    transparent 70%
+  );
+}
+
+.agent-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-card-state {
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
+}
+
+.agent-card-ago {
+  font-size: 12px;
+  color: var(--text-4);
+}
+
+.agent-card-model {
+  margin-left: auto;
+  padding: 2px 7px;
+  border: 1px solid var(--edge-strong);
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+
+.agent-card-doing {
+  margin: -4px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.agent-card-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-4);
+}
+
+.meter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.meter-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.meter-head span:last-child {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.meter-track {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--active-soft);
+}
+
+.meter-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+  transition: width var(--slow) var(--ease-out);
+}
+
+.usage-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin: 0;
+}
+
+.usage-grid div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.usage-grid dt {
+  font-size: 10.5px;
+  color: var(--text-4);
+}
+
+.usage-grid dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+/* The agent's task list: a check that fills when done, the current one highlighted. */
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: var(--radius-m);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-2);
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+.task-check {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--edge-focus);
+  border-radius: 50%;
+  color: var(--canvas);
+}
+
+.task[data-status='completed'] {
+  color: var(--text-4);
+}
+
+.task[data-status='completed'] .task-text {
+  text-decoration: line-through;
+  text-decoration-color: var(--edge-focus);
+}
+
+.task[data-status='completed'] .task-check {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.task[data-status='in_progress'] {
+  color: var(--text);
+  background: color-mix(in srgb, var(--state-working) 10%, transparent);
+}
+
+.task[data-status='in_progress'] .task-check {
+  border-color: var(--state-working);
+  border-top-color: transparent;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* What the agent did, newest first. */
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activity {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 2px;
+  border-bottom: 1px solid var(--edge);
+  font-size: 12px;
+}
+
+.activity-tool {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--accent-text);
+}
+
+.activity[data-kind='read'] .activity-tool {
+  color: var(--text-3);
+}
+
+.activity[data-kind='run'] .activity-tool {
+  color: var(--state-working);
+}
+
+.activity[data-kind='prompt'] .activity-tool {
+  color: var(--state-waiting);
+}
+
+.activity[data-status='error'] .activity-tool {
+  color: var(--danger);
+}
+
+.activity-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.activity[data-kind='prompt'] .activity-summary {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text);
+}
+
+.activity-time {
+  font-size: 10.5px;
+  color: var(--text-4);
+}
+
+.lines-changed {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.lines-changed .added,
+.lines-changed .removed {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.lines-changed .added {
+  color: var(--accent-text);
+}
+
+.lines-changed .removed {
+  color: var(--danger);
+}
+
+.role-current {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.role-current .role-summary {
+  margin: 0;
+}
+
+.button.restart {
+  align-self: flex-start;
 }
 
 .field {
@@ -2322,10 +3044,8 @@ kbd {
 .panel-group legend,
 .field-label {
   padding: 0;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 11.5px;
+  font-weight: 600;
   color: var(--text-3);
 }
 
@@ -2619,9 +3339,9 @@ kbd {
   padding: 0;
   border: 0;
   border-radius: var(--radius-s);
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 700;
   box-shadow: inset 0 0 0 1px rgb(var(--shade) / 15%);
   cursor: pointer;
   transition: transform var(--fast) var(--ease-spring);
@@ -2800,9 +3520,10 @@ kbd {
 
 .launcher-head h2 {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: 19px;
-  font-weight: 800;
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 /* The tabs: words on a line, the chosen one underlined in green. The Role tab carries the dot of
@@ -3170,9 +3891,10 @@ kbd {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 .role-summary {
@@ -3222,7 +3944,7 @@ kbd {
   animation: fade-in var(--base) var(--ease-out);
 }
 
-.node-panel .role-editor {
+.inspector .role-editor {
   margin-top: 4px;
   padding: 10px;
   border: 1px solid color-mix(in srgb, var(--tone) 45%, var(--edge-strong));
@@ -3231,7 +3953,7 @@ kbd {
   animation: pop-in var(--base) var(--ease-out);
 }
 
-.node-panel .role-editor .tone-dot[aria-pressed='true'] {
+.inspector .role-editor .tone-dot[aria-pressed='true'] {
   box-shadow:
     0 0 0 2px var(--bg),
     0 0 0 3.5px var(--tone);
@@ -3241,7 +3963,7 @@ kbd {
   flex-shrink: 0;
 }
 
-.node-panel .role-editor .text-input {
+.inspector .role-editor .text-input {
   font-size: 12.5px;
 }
 
@@ -3255,7 +3977,7 @@ kbd {
   resize: none;
 }
 
-.node-panel .role-editor .role-instructions {
+.inspector .role-editor .role-instructions {
   min-height: 112px;
   padding: 8px 10px;
   font-size: 12px;
@@ -3640,7 +4362,7 @@ kbd {
 }
 
 /* The side panel is too narrow for the names; the tooltips have them. */
-.node-panel .theme-name {
+.inspector .theme-name {
   display: none;
 }
 
@@ -3670,11 +4392,11 @@ kbd {
 }
 
 /* Eight tones fit on one line in the side panel. */
-.node-panel .tones {
+.inspector .tones {
   gap: 6px;
 }
 
-.node-panel .tone-dot {
+.inspector .tone-dot {
   width: 22px;
   height: 22px;
 }
@@ -3966,9 +4688,10 @@ kbd {
 
 .settings-head h2 {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 .settings-body {
@@ -4352,12 +5075,12 @@ kbd {
 }
 
 .pet-bubble[data-state='working']::before {
-  background: var(--accent);
+  background: var(--state-working);
   animation: breathe 1.2s ease-in-out infinite;
 }
 
 .pet-bubble[data-state='waiting']::before {
-  background: var(--tone-umber);
+  background: var(--state-waiting);
 }
 
 .pet-bubble[data-state='review']::before {
@@ -4369,7 +5092,7 @@ kbd {
 }
 
 .pet-bubble[data-state='waiting'] {
-  border-color: color-mix(in srgb, var(--tone-umber) 50%, var(--edge-strong));
+  border-color: color-mix(in srgb, var(--state-waiting) 50%, var(--edge-strong));
 }
 
 .pet-bubble-text {
@@ -4616,19 +5339,23 @@ kbd {
 }
 
 [data-state='waiting'] {
-  --state: var(--tone-umber);
+  --state: var(--state-waiting);
 }
 
 [data-state='failed'] {
-  --state: var(--danger);
+  --state: var(--state-failed);
 }
 
 [data-state='review'] {
-  --state: var(--accent);
+  --state: var(--state-review);
 }
 
 [data-state='working'] {
-  --state: var(--tone-leaf);
+  --state: var(--state-working);
+}
+
+[data-state='idle'] {
+  --state: var(--state-idle);
 }
 
 .command-empty {
@@ -4855,9 +5582,10 @@ html.hud #root {
 .hud-head h1 {
   flex: 1;
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 .hud-body {

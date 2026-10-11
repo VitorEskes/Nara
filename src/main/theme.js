@@ -4,13 +4,13 @@ import { join } from 'path'
 
 // The theme the user picked: 'light', 'dark' or 'system'. It goes to nativeTheme.themeSource,
 // which is what the renderer's prefers-color-scheme follows, so the CSS needs nothing else. The
-// choice is kept in theme.json in the data folder; without one the app opens in the light theme,
-// the brand's own.
+// choice is kept in theme.json in the data folder; without one the app opens in the dark theme,
+// the one Nara is designed in first.
 const SOURCES = ['light', 'dark', 'system']
-const DEFAULT = 'light'
+const DEFAULT = 'dark'
 
 // The renderer's --bg in each theme, for the window to paint before the page does.
-const BACKGROUNDS = { light: '#f4f0e6', dark: '#19191a' }
+const BACKGROUNDS = { light: '#f6f6f7', dark: '#141416' }
 
 // Must run once the app is ready and before the window opens, so it opens in the right colors.
 export function loadTheme() {

@@ -28,7 +28,7 @@ const POSITION = 'pet-position'
 // status.js). Clicking it opens the command center, where each agent can be answered or visited
 // (onJump); dragging moves it, and it stays where it's left. `pet` is the chosen pet's id
 // ('builtin:shika' or a pet folder's).
-export default function Pet({ pet, size, statuses, onJump }) {
+export default function Pet({ pet, size, statuses, onJump, reserved = 0 }) {
   const width = PET_SIZES[size]?.px ?? PET_SIZES.m.px
   const [position, setPosition] = useState(recall)
   const [hover, setHover] = useState(false)
@@ -103,7 +103,12 @@ export default function Pet({ pet, size, statuses, onJump }) {
       ref={root}
       className="pet"
       data-mood={mood}
-      style={{ right: position.right, bottom: position.bottom, width }}
+      // Kept clear of `reserved` pixels on the right (the inspector) when it sits in them.
+      style={{
+        right: position.right < reserved ? position.right + reserved : position.right,
+        bottom: position.bottom,
+        width
+      }}
     >
       {bubble && (
         <div className="pet-bubble" data-state={focus?.state} data-side={side} role="status">
