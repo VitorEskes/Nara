@@ -1957,7 +1957,7 @@ kbd {
 }
 
 .empty-hints kbd,
-.menu kbd {
+.launcher kbd {
   display: inline-block;
   min-width: 10px;
   padding: 1px 5px;
@@ -2090,71 +2090,6 @@ kbd {
   }
 }
 
-/* Anchors the role menu above its button. */
-.agent-button {
-  position: relative;
-}
-
-.menu {
-  position: absolute;
-  bottom: calc(100% + 12px);
-  left: 50%;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  width: 290px;
-  padding: 5px;
-  border: 1px solid var(--edge-strong);
-  border-radius: var(--radius-l);
-  background: var(--stone);
-  box-shadow: var(--shadow-float);
-  white-space: normal;
-  transform: translateX(-50%);
-  transform-origin: bottom center;
-  animation: menu-in var(--base) var(--ease-out);
-}
-
-@keyframes menu-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 6px) scale(0.97);
-  }
-}
-
-.menu-heading {
-  padding: 6px 10px 4px;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-3);
-}
-
-.menu-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 8px 10px;
-  border: 0;
-  border-radius: var(--radius-m);
-  text-align: left;
-  color: var(--text);
-  background: none;
-  cursor: pointer;
-  transition: background-color var(--fast);
-}
-
-.menu-item:hover,
-.menu-item:focus-visible {
-  outline: none;
-  background: var(--raised);
-}
-
-.menu-item kbd {
-  margin-left: auto;
-  align-self: center;
-}
-
 .role-dot {
   width: 8px;
   height: 8px;
@@ -2162,24 +2097,6 @@ kbd {
   flex-shrink: 0;
   border-radius: 50%;
   background: var(--tone, var(--text-4));
-}
-
-.menu-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.menu-label {
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.menu-description {
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--text-3);
 }
 
 /* Zoom and the minimap: bottom right, out of the dock's way, the map above the zoom. */
@@ -2752,10 +2669,510 @@ kbd {
   outline-offset: -2px;
 }
 
+/* The new terminal dialog (Launcher.jsx): a title, three tabs and the actions, at a fixed size
+   so it doesn't jump between tabs. A native modal <dialog>, so it sits over everything, keeps the
+   focus inside and closes on Escape. */
+
+.launcher {
+  width: min(520px, calc(100vw - 48px));
+  height: min(var(--height, 520px), calc(100vh - 48px));
+  max-width: none;
+  max-height: none;
+  box-sizing: border-box;
+  padding: 0;
+  border: 1px solid var(--edge-strong);
+  border-radius: 16px;
+  overflow: hidden;
+  color: var(--text);
+  background: var(--stone);
+  box-shadow:
+    var(--highlight),
+    0 2px 6px rgb(var(--shade) / 10%),
+    0 32px 80px rgb(var(--shade) / 30%);
+  animation: launcher-in var(--slow) var(--ease-out);
+}
+
+/* Launcher sets --height to the tab's; from the first fit on, a new height glides in. */
+.launcher[data-sized] {
+  transition: height var(--slow) var(--ease-out);
+}
+
+/* The dialog itself takes the focus when it opens, without a ring. */
+.launcher:focus {
+  outline: none;
+}
+
+.launcher::backdrop {
+  background: rgb(var(--shade) / 30%);
+  backdrop-filter: blur(3px);
+  animation: fade-in var(--slow) var(--ease-out);
+}
+
+/* Closing plays this first; Launcher goes away when it ends. */
+.launcher.closing {
+  pointer-events: none;
+  animation: launcher-out var(--base) var(--ease-in) forwards;
+}
+
+.launcher.closing::backdrop {
+  animation: fade-out var(--base) var(--ease-in) forwards;
+}
+
+@keyframes launcher-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+
+@keyframes launcher-out {
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.launcher-sheet {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  height: 100%;
+}
+
+.launcher-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 14px 14px 22px;
+}
+
+.launcher-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 800;
+}
+
+/* The tabs: words on a line, the chosen one underlined in green. The Role tab carries the dot of
+   the chosen role. */
+.launcher-tabs {
+  display: flex;
+  gap: 22px;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--edge);
+}
+
+.launcher-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  margin-bottom: -1px;
+  padding: 0 1px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-3);
+  background: none;
+  cursor: pointer;
+  transition:
+    color var(--fast),
+    border-color var(--base);
+}
+
+.launcher-tabs button:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.launcher-tabs button[aria-selected='true'] {
+  border-bottom-color: var(--accent);
+  color: var(--text);
+}
+
+.launcher-tabs button:disabled {
+  color: var(--text-4);
+  opacity: 0.6;
+  cursor: default;
+}
+
+.launcher-tabs button:focus-visible {
+  outline-offset: -2px;
+}
+
+.launcher-tabs .role-dot {
+  margin-top: 0;
+  width: 7px;
+  height: 7px;
+}
+
+.launcher-body {
+  min-height: 0;
+  overflow-y: auto;
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+/* What the tab holds, measured for the dialog's height. */
+.launcher-content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 22px 22px;
+}
+
+.launcher-body.general .launcher-content {
+  gap: 22px;
+  padding: 24px 22px 28px;
+}
+
+.launcher .text-input {
+  height: 36px;
+}
+
+.text-input.mono {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.field-hint {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.field-hint.warning {
+  color: var(--danger);
+}
+
+.link-button {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--accent-text);
+  background: none;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* The programs in one track, an icon over each name; a chip slides under the chosen one, which
+   turns green. */
+.program-switch {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--count), minmax(0, 1fr));
+  padding: 4px;
+  border-radius: var(--radius-l);
+  background: var(--active-soft);
+}
+
+.program-switch::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / var(--count));
+  border-radius: 9px;
+  background: var(--chip);
+  box-shadow:
+    var(--highlight),
+    0 1px 3px rgb(var(--shade) / 14%),
+    inset 0 0 0 1px var(--accent-soft);
+  transform: translateX(calc(var(--index) * 100%));
+  transition: transform var(--base) var(--ease-out);
+}
+
+.program-switch button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 76px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-3);
+  background: none;
+  cursor: pointer;
+  transition: color var(--fast);
+}
+
+.program-switch button:hover {
+  color: var(--text);
+}
+
+.program-switch button[aria-checked='true'] {
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.program-switch button .icon {
+  transition: transform var(--base) var(--ease-spring);
+}
+
+.program-switch button[aria-checked='true'] .icon {
+  transform: scale(1.12);
+}
+
+.program-switch button:focus-visible {
+  outline-offset: -2px;
+}
+
+.field-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* Where the terminal opens: the whole row picks another folder. The path keeps its end in
+   view. */
+.folder-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-m);
+  font: inherit;
+  text-align: left;
+  color: var(--text);
+  background: var(--bg);
+  cursor: pointer;
+  transition: border-color var(--fast);
+}
+
+.folder-row:hover {
+  border-color: var(--edge-focus);
+}
+
+.folder-row > .icon {
+  flex-shrink: 0;
+  color: var(--accent-text);
+}
+
+.folder-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.folder-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 35%;
+  height: 22px;
+  flex-shrink: 0;
+  padding: 0 8px;
+  overflow: hidden;
+  border-radius: 11px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  white-space: nowrap;
+  color: var(--accent-text);
+  background: var(--accent-softer);
+}
+
+.folder-branch .icon {
+  flex-shrink: 0;
+}
+
+.folder-change {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.folder-row:hover .folder-change {
+  color: var(--text);
+}
+
+/* The Role tab: the roles in a list on the left, and on the right what the chosen one tells the
+   agent, or the role being written. */
+/* The Role tab keeps one height whatever the role shows; its two sides scroll. */
+.launcher-body.role .launcher-content {
+  height: 440px;
+  padding: 0;
+}
+
+.role-pane {
+  display: grid;
+  grid-template-columns: 172px minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}
+
+.role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 10px;
+  border-right: 1px solid var(--edge);
+}
+
+.role-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 34px;
+  flex-shrink: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-m);
+  font-size: 13px;
+  text-align: left;
+  color: var(--text-2);
+  background: none;
+  cursor: pointer;
+  transition:
+    color var(--fast),
+    background-color var(--fast);
+}
+
+.role-item:hover {
+  color: var(--text);
+  background: var(--hover-soft);
+}
+
+.role-item[aria-selected='true'],
+.role-item[aria-pressed='true'] {
+  font-weight: 500;
+  color: var(--text);
+  background: color-mix(in srgb, var(--tone, var(--accent)) 12%, transparent);
+}
+
+.role-item .role-dot {
+  margin-top: 0;
+}
+
+.role-item .role-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role-item > .icon {
+  flex-shrink: 0;
+  color: var(--tone, var(--accent-text));
+}
+
+.role-item.new {
+  margin-top: 6px;
+  color: var(--text-3);
+}
+
+.role-item.new:hover,
+.role-item.new[aria-pressed='true'] {
+  color: var(--accent-text);
+  background: var(--accent-softer);
+}
+
+.role-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 22px 22px;
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+.role-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.role-detail-head .role-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 0;
+}
+
+.role-detail-head h3 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.role-summary {
+  margin: -6px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-3);
+}
+
+/* The instructions, read-only, on a sheet edged in the role's tone. */
+.role-instructions-view {
+  padding: 4px 14px 4px 16px;
+  border-left: 2px solid var(--tone, var(--edge-strong));
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+
+.role-instructions-view p {
+  margin: 8px 0;
+}
+
+.role-instructions-view ul {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0;
+  padding-left: 16px;
+}
+
+.role-instructions-view li::marker {
+  color: var(--tone, var(--text-4));
+}
+
 .role-editor {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* In the dialog the editor takes the right side; in the side panel it's a card under the roles,
+   edged in the role's tone. */
+.role-pane > .role-editor {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 22px 22px;
+  animation: fade-in var(--base) var(--ease-out);
 }
 
 .node-panel .role-editor {
@@ -2844,6 +3261,108 @@ kbd {
   opacity: 0.5;
   cursor: default;
   transform: none;
+}
+
+.button.subtle.danger.confirm {
+  color: var(--danger);
+  background: var(--danger-soft);
+  animation: pop-in var(--fast) var(--ease-out);
+}
+
+.command-input {
+  position: relative;
+  display: flex;
+}
+
+.command-prompt {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--accent-text);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.command-input .text-input {
+  flex: 1;
+  min-width: 0;
+  padding-left: 28px;
+}
+
+.launcher-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 22px;
+  border-top: 1px solid var(--edge);
+}
+
+.launcher-foot .button {
+  height: 36px;
+  padding: 0 16px;
+}
+
+/* The node as it will look: its bar and a few lines in its colors, size and cursor. */
+.preview-node {
+  flex-shrink: 0;
+  border: 1px solid var(--edge-strong);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--terminal);
+  box-shadow: var(--shadow-node);
+  transition:
+    background-color var(--base),
+    border-color var(--base);
+}
+
+.preview-node .node-bar,
+.preview-node .node-port {
+  cursor: default;
+}
+
+.preview-screen {
+  height: 108px;
+  box-sizing: border-box;
+  padding: 10px 12px 10px 14px;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  line-height: 1.5;
+  transition: font-size var(--base) var(--ease-out);
+}
+
+.preview-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre;
+}
+
+.preview-cursor {
+  display: inline-block;
+  width: 0.6em;
+  height: 1.2em;
+  vertical-align: text-bottom;
+  animation: blink 1.1s steps(1) infinite;
+}
+
+.preview-cursor[data-cursor='bar'] {
+  width: 2px;
+  background: var(--cursor);
+}
+
+.preview-cursor[data-cursor='block'] {
+  background: var(--cursor);
+}
+
+.preview-cursor[data-cursor='underline'] {
+  box-shadow: inset 0 -2px 0 var(--cursor);
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
 }
 
 /* A terminal's look (TerminalLook.jsx), in the dialog and in the side panel. */

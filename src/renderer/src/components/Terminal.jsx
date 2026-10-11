@@ -11,10 +11,22 @@ const ENTER_DELAY = 500
 // A real terminal: xterm.js draws it, the PTY in main runs it.
 // `workspaceId` and `nodeId` say which canvas node the PTY belongs to, and so which links apply.
 // With `agent` (a key of AGENTS), the PTY opens straight into that agent instead of a shell, and
-// `session` is the id its conversation is saved under. `role` (a key of ROLES) goes into the
-// prompt the agent opens with: changing it restarts the agent, which resumes its conversation
-// under the new role. `look` (terminalLook) changes in place, without touching the PTY.
-export default function Terminal({ workspaceId, nodeId, agent, session, role, cwd, look, onExit }) {
+// `session` is the id its conversation is saved under. `role` (a key of ROLES or a custom role)
+// goes into the prompt the agent opens with: changing it restarts the agent, which resumes its
+// conversation under the new role. `command` is what the user
+// typed to start it, in place of the agent's own; without an agent it runs in the shell as it
+// opens. `look` (terminalLook) changes in place, without touching the PTY.
+export default function Terminal({
+  workspaceId,
+  nodeId,
+  agent,
+  session,
+  role,
+  command,
+  cwd,
+  look,
+  onExit
+}) {
   const container = useRef(null)
   // The open terminal and the function that fits it to its box, for the look effect.
   const live = useRef(null)
@@ -76,6 +88,7 @@ export default function Terminal({ workspaceId, nodeId, agent, session, role, cw
       agent,
       session,
       role,
+      command,
       cwd,
       cols: term.cols,
       rows: term.rows
@@ -114,7 +127,7 @@ export default function Terminal({ workspaceId, nodeId, agent, session, role, cw
       if (id) window.api.pty.kill(id)
       term.dispose()
     }
-  }, [workspaceId, nodeId, agent, session, role, cwd])
+  }, [workspaceId, nodeId, agent, session, role, command, cwd])
 
   // The colors and the cursor change in place. A new size changes how many rows and columns fit
   // in the same box, so the PTY hears about it.

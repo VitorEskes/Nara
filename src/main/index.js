@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { setUpDataFolder } from './dataFolder'
+import { registerFolders } from './folders'
 import { registerMessages } from './messages'
 import { registerPty, terminalsExited } from './pty'
 import { registerRoles } from './roles'
@@ -30,6 +31,7 @@ function createWindow() {
 
   registerTheme(mainWindow)
   registerWorkspaces(mainWindow)
+  registerFolders(mainWindow)
   registerRoles(mainWindow)
   registerPty(mainWindow, registerMessages(mainWindow))
 

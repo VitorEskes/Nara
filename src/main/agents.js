@@ -8,9 +8,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // How to open an agent in a node: the shell command, plus the variables it needs in its
 // environment. Claude Code runs under a session id that Nara picked and saved with the node, so
-// after a restart the node picks its conversation back up instead of starting over.
-export function agentLaunch({ agent, session, role, nodeId }) {
-  const { command, prompt } = AGENTS[agent]
+// after a restart the node picks its conversation back up instead of starting over. `command` is
+// the one the user typed in the new terminal dialog in place of the agent's own (`claude --model
+// opus`, a path): it's their command line, run as if they had typed it, with Nara's flags after it.
+export function agentLaunch({ agent, command: typed, session, role, nodeId }) {
+  const { prompt } = AGENTS[agent]
+  const command = typeof typed === 'string' && typed.trim() ? typed.trim() : AGENTS[agent].command
   const args = []
   const env = {}
 
@@ -28,6 +31,17 @@ export function agentLaunch({ agent, session, role, nodeId }) {
   }
 
   return { command: [command, ...args].join(' '), env }
+}
+
+// A plain terminal can run a command as it opens (a dev server, a watcher) and stay a shell after
+// it: `exec` swaps in an interactive shell once the command ends or is stopped with Ctrl+C. Like
+// an agent's prompt, the command goes through the environment, so its text is never quoted into
+// the command line; it runs again whenever the node reopens.
+export function startupLaunch(command, shell) {
+  return {
+    command: 'eval "$NARA_STARTUP"; exec "$NARA_SHELL"',
+    env: { NARA_STARTUP: command, NARA_SHELL: shell }
+  }
 }
 
 // What every agent is told about Nara, followed by its role's instructions, if it has one.

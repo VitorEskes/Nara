@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react'
-import { CheckIcon } from './icons'
+import { useEffect, useRef, useState } from 'react'
+import { CheckIcon, PenIcon, TrashIcon } from './icons'
 import { TONES } from '../nodeStyle'
 
 // Starting points for a new role. Main puts "Your role is <name>." before the instructions, so
@@ -116,6 +116,76 @@ export default function RoleEditor({ draft, onChange, onSave, onCancel }) {
           Save
         </button>
       </div>
+    </div>
+  )
+}
+
+// What the chosen role tells the agent. Built-in roles can only be read; custom ones can be
+// edited and deleted, the deletion after a second click.
+export function RoleDetail({ role, custom, onEdit, onRemove }) {
+  const [confirming, setConfirming] = useState(false)
+  return (
+    <div className="role-detail" data-tone={role.tone}>
+      <div className="role-detail-head">
+        <span className="role-dot" />
+        <h3>{role.label}</h3>
+        {custom && (
+          <>
+            <button
+              type="button"
+              className="icon-button small"
+              title="Edit"
+              aria-label={`Edit ${role.label}`}
+              onClick={onEdit}
+            >
+              <PenIcon size={13} />
+            </button>
+            {confirming ? (
+              <button type="button" className="button subtle danger confirm" onClick={onRemove}>
+                Delete?
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="icon-button small danger"
+                title="Delete"
+                aria-label={`Delete ${role.label}`}
+                onClick={() => setConfirming(true)}
+              >
+                <TrashIcon size={13} />
+              </button>
+            )}
+          </>
+        )}
+      </div>
+      {role.description && <p className="role-summary">{role.description}</p>}
+      {role.instructions && <Instructions text={role.instructions} />}
+    </div>
+  )
+}
+
+// Instructions as they read best: lines starting with "- " as a list, the rest as paragraphs.
+function Instructions({ text }) {
+  const blocks = []
+  for (const line of text.split('\n').filter((l) => l.trim())) {
+    const item = line.match(/^\s*-\s+(.*)$/)?.[1]
+    const last = blocks[blocks.length - 1]
+    if (item && Array.isArray(last)) last.push(item)
+    else blocks.push(item ? [item] : line)
+  }
+  return (
+    <div className="role-instructions-view">
+      {blocks.map((block, i) =>
+        Array.isArray(block) ? (
+          <ul key={i}>
+            {block.map((item, j) => (
+              <li key={j}>{item}</li>
+            ))}
+          </ul>
+        ) : (
+          <p key={i}>{block}</p>
+        )
+      )}
     </div>
   )
 }

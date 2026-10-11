@@ -209,6 +209,12 @@ export default function App() {
     return saved
   }
 
+  async function removeRole(key) {
+    if (await window.api.roles.remove(key)) {
+      setCustomRoles((current) => current.filter((r) => r.key !== key))
+    }
+  }
+
   function renameProject(id, name) {
     setProjects((current) => current.map((p) => (p.id === id ? { ...p, name } : p)))
     window.api.project.rename(id, name)
@@ -268,6 +274,7 @@ export default function App() {
               onPickFolder={() => pickFolder(id)}
               roles={roles}
               onSaveRole={saveRole}
+              onRemoveRole={removeRole}
             />
           ))}
         {(overview || !active) && (

@@ -37,6 +37,11 @@ const api = {
     save: (role) => ipcRenderer.invoke('roles:save', role),
     remove: (key) => ipcRenderer.invoke('roles:remove', key)
   },
+  folder: {
+    pick: (defaultPath) => ipcRenderer.invoke('folder:pick', defaultPath),
+    // { path, short, exists, branch } for the folder a terminal would open in.
+    info: (path) => ipcRenderer.invoke('folder:info', path)
+  },
   project: {
     list: () => ipcRenderer.invoke('project:list'),
     create: () => ipcRenderer.invoke('project:create'),

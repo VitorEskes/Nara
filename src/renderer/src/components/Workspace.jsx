@@ -5,7 +5,7 @@ import CanvasNode from './CanvasNode'
 import Terminal from './Terminal'
 import Note from './Note'
 import Drawings from './Drawings'
-import AgentButton from './AgentButton'
+import Launcher from './Launcher'
 import NodePanel from './NodePanel'
 import Minimap from './Minimap'
 import {
@@ -55,8 +55,8 @@ const FIT_PADDING = { side: 64, top: 64, bottom: 110 }
 // this component owns the state, and main keeps a copy that it saves.
 // An inactive workspace is hidden, not unmounted, so its terminals keep running. New terminals
 // and agents open in `folder`; a workspace from before folders existed has none, and onPickFolder
-// asks for one. `roles` has every role an agent can take, built-in and custom, by key, and
-// onSaveRole saves a new one.
+// asks for one. `roles` has every role an agent can take, built-in and custom, by key; onSaveRole
+// and onRemoveRole change the custom ones.
 export default function Workspace({
   workspaceId,
   saved,
@@ -64,7 +64,8 @@ export default function Workspace({
   folder,
   onPickFolder,
   roles,
-  onSaveRole
+  onSaveRole,
+  onRemoveRole
 }) {
   const container = useRef(null)
   const [cam, setCam] = useState(saved.camera)
@@ -89,6 +90,8 @@ export default function Workspace({
   // The viewport's size in pixels, for the minimap's view of the camera.
   const [size, setSize] = useState({ w: 0, h: 0 })
   const [minimap, setMinimap] = useState(() => localStorage.getItem('minimap') === 'open')
+  // The new terminal dialog, while open: { number } is the id the terminal will get.
+  const [launcher, setLauncher] = useState(null)
   // The side panel's tab, kept while the selection moves from node to node.
   const [panelTab, setPanelTab] = useState('config')
   // The node whose row the pointer is on in the panel's connections, lit up on the canvas.
@@ -200,7 +203,7 @@ export default function Workspace({
   function pointerDownAnywhere(e) {
     // Panning (other buttons, Space, the hand) leaves the selection alone.
     if (e.button !== 0 || grab || tool === 'hand') return
-    if (e.target.closest('.node, .floating')) return
+    if (e.target.closest('.node, .floating, .launcher')) return
     if (!(e.shiftKey || e.ctrlKey || e.metaKey)) setSelection([])
   }
 
@@ -231,18 +234,22 @@ export default function Workspace({
     createNode(type, { x: (width / 2 - cam.x) / cam.z, y: (height / 2 - cam.y) / cam.z }, fields)
   }
 
-  // An agent node is a terminal that opens straight into the agent. It keeps the "terminal N"
-  // title, since that's how other agents and `nara send` refer to it. The session id lets the
-  // node resume its conversation after a restart; agents that can't resume ignore it. The role,
-  // if any, is fixed for the node's lifetime: it's part of the prompt the conversation began with.
-  async function createAgent(agent, role) {
-    const cwd = folder ?? (await onPickFolder())
-    if (!cwd) return
+  // The dock's Terminal button and T open the new terminal dialog, which picks what runs in it.
+  function openLauncher() {
+    setLauncher({ number: nextId.current })
+  }
+
+  // Opens what the dialog chose. An agent node is a terminal that opens straight into the agent;
+  // other agents and `nara send` still call it "terminal N", whatever its title. The session id
+  // lets the node resume its conversation after a restart; agents that can't resume ignore it.
+  // An agent needs a folder, so a workspace without one asks for it first.
+  async function launch({ agent, cwd, ...fields }) {
+    const dir = cwd ?? (agent ? await onPickFolder() : undefined)
+    if (agent && !dir) return
     createNodeAtCenter('terminal', {
-      agent,
-      cwd,
-      session: crypto.randomUUID(),
-      ...(role && { role })
+      ...fields,
+      ...(dir && { cwd: dir }),
+      ...(agent && { agent, session: crypto.randomUUID() })
     })
   }
 
@@ -300,16 +307,23 @@ export default function Workspace({
     })
   }
 
+  // A workspace that's put away takes its dialog with it.
+  const [wasActive, setWasActive] = useState(active)
+  if (active !== wasActive) {
+    setWasActive(active)
+    if (!active) setLauncher(null)
+  }
+
   // Single-key tools and zoom, while this workspace is on screen and nothing takes text.
   useEffect(() => {
-    if (!active) return
+    if (!active || launcher) return
     const actions = {
       select: () => setTool(null),
       hand: () => setTool('hand'),
       minimap: () => setMinimap((open) => !open),
       draw: () => setTool('draw'),
       erase: () => setTool('erase'),
-      terminal: () => createNodeAtCenter('terminal', folder && { cwd: folder }),
+      terminal: openLauncher,
       note: () => createNodeAtCenter('note', { text: '' }),
       zoomIn: () => zoomTo(camRef.current.z * ZOOM_STEP),
       zoomOut: () => zoomTo(camRef.current.z / ZOOM_STEP),
@@ -533,7 +547,6 @@ export default function Workspace({
   const dimmed = (node) => draft && node.id !== draft.from && !canLink(draft.from, node.id)
   const linkSource = draft && nodes.find((n) => n.id === draft.from)
   const hasTargets = draft && nodes.some((n) => canLink(draft.from, n.id))
-  const newTerminal = () => createNodeAtCenter('terminal', folder && { cwd: folder })
   const newNote = () => createNodeAtCenter('note', { text: '' })
 
   return (
@@ -594,6 +607,7 @@ export default function Workspace({
                 agent={node.agent}
                 session={node.session}
                 role={node.role}
+                command={node.command}
                 cwd={node.cwd}
                 look={terminalLook(node.style)}
                 onExit={() => closeNode(node.id)}
@@ -654,13 +668,16 @@ export default function Workspace({
           <HandIcon />
         </button>
         <span className="dock-divider" />
-        <button className="dock-button" data-tip="Terminal · T" onClick={newTerminal}>
+        <button
+          className="dock-button"
+          data-tip="Terminal or agent · T"
+          aria-haspopup="dialog"
+          aria-expanded={Boolean(launcher)}
+          onClick={openLauncher}
+        >
           <TerminalIcon />
           <span className="dock-label">Terminal</span>
         </button>
-        {Object.keys(AGENTS).map((agent) => (
-          <AgentButton key={agent} agent={agent} onCreate={(role) => createAgent(agent, role)} />
-        ))}
         <button className="dock-button" data-tip="Note · N" onClick={newNote}>
           <NoteIcon />
           <span className="dock-label">Note</span>
@@ -738,6 +755,18 @@ export default function Workspace({
         </div>
       </div>
 
+      {launcher && (
+        <Launcher
+          number={launcher.number}
+          folder={folder}
+          roles={roles}
+          onSaveRole={onSaveRole}
+          onRemoveRole={onRemoveRole}
+          onCreate={launch}
+          onClose={() => setLauncher(null)}
+        />
+      )}
+
       {nodes.length === 0 && strokes.length === 0 && (
         <div className="canvas-empty">
           <div className="empty-state">
@@ -747,7 +776,7 @@ export default function Workspace({
               link them: linked agents can message each other and share notes.
             </p>
             <div className="empty-actions">
-              <button className="button primary" onClick={newTerminal}>
+              <button className="button primary" onClick={openLauncher}>
                 <TerminalIcon />
                 Terminal
               </button>

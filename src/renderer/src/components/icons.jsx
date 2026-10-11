@@ -359,6 +359,17 @@ export function CupIcon(props) {
   )
 }
 
+export function BranchIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="4.5" cy="3.75" r="1.5" />
+      <circle cx="4.5" cy="12.25" r="1.5" />
+      <circle cx="11.5" cy="5.25" r="1.5" />
+      <path d="M4.5 5.25v5.5M11.5 6.75c0 2.5-2 3.25-7 4" />
+    </Icon>
+  )
+}
+
 // The mark: the Nara deer, a nod to the clan that tends the deer of the Nara forest. Decorative
 // next to the name, so it has no alt text of its own.
 export function BrandMark() {

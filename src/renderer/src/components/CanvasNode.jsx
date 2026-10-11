@@ -101,7 +101,8 @@ export default function CanvasNode({
         />
         <NodeIcon type={type} agent={agent?.key} icon={look?.icon} className="node-icon" />
         <span className="node-title">{label}</span>
-        {agent && <span className="node-agent">{agent.label}</span>}
+        {/* Unless the node is named after its agent already. */}
+        {agent && label !== agent.label && <span className="node-agent">{agent.label}</span>}
         {role && (
           <span className="role-pill" data-tone={role.tone}>
             {role.label}
