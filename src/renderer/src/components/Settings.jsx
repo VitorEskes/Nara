@@ -662,14 +662,24 @@ function Keyboard() {
     ['Switch light and dark', SHORTCUTS.theme],
     ['Settings', SHORTCUTS.settings]
   ]
+  const anywhere = [
+    ['Floating HUD', 'Ctrl+Alt+Space'],
+    ['Voice bar', 'Ctrl+Alt+V']
+  ]
   const canvas = {
     select: 'Pointer',
     hand: 'Hand',
     terminal: 'New terminal',
     note: 'New note',
     draw: 'Draw',
+    rect: 'Rectangle',
+    ellipse: 'Ellipse',
+    line: 'Line',
+    arrow: 'Arrow',
+    text: 'Text',
     erase: 'Erase',
     minimap: 'Minimap',
+    inspector: 'Inspector',
     zoomFit: 'Fit everything',
     zoomReset: 'Zoom to 100%'
   }
@@ -677,6 +687,14 @@ function Keyboard() {
     label,
     Object.keys(CANVAS_KEYS).find((key) => CANVAS_KEYS[key] === action)
   ])
+  const board = [
+    ['Undo, redo', 'Ctrl+Z, Ctrl+Shift+Z'],
+    ['Duplicate', 'Ctrl+D'],
+    ['Copy, paste', 'Ctrl+C, Ctrl+V'],
+    ['Bring forward, send back', '], ['],
+    ['Square, straight line', 'Shift + Drag'],
+    ['Edit text', 'Enter or double-click']
+  ]
   const pointer = [
     ['Pan', 'Drag'],
     ['Select several', 'Shift + Drag'],
@@ -687,7 +705,9 @@ function Keyboard() {
   return (
     <>
       <ShortcutList title="App" rows={app.map(([label, s]) => [label, keysLabel(s)])} />
+      <ShortcutList title="From any app" rows={anywhere} />
       <ShortcutList title="Canvas" rows={keys.map(([label, key]) => [label, key.toUpperCase()])} />
+      <ShortcutList title="Whiteboard" rows={board} />
       <ShortcutList title="Pointer" rows={pointer} />
     </>
   )
