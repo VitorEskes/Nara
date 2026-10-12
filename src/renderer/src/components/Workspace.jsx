@@ -4,15 +4,20 @@ import Links, { LinkPins } from './Links'
 import CanvasNode from './CanvasNode'
 import Terminal from './Terminal'
 import Note from './Note'
-import Drawings from './Drawings'
+import Shapes from './Shapes'
+import StyleBar from './StyleBar'
 import Launcher from './Launcher'
 import Inspector from './Inspector'
 import TopBar from './TopBar'
 import Minimap from './Minimap'
 import {
+  ArrowIcon,
+  CircleIcon,
+  DiamondIcon,
   EraserIcon,
   FitIcon,
   HandIcon,
+  LineIcon,
   LinkIcon,
   MapIcon,
   MinusIcon,
@@ -20,9 +25,12 @@ import {
   PenIcon,
   PlusIcon,
   PointerIcon,
-  TerminalIcon
+  SquareIcon,
+  TerminalIcon,
+  TextIcon,
+  TriangleIcon
 } from './icons'
-import { touches } from '../drawing'
+import { useWhiteboard } from '../whiteboard'
 import { PAPERS, resolveStyle, terminalLook } from '../nodeStyle'
 import { defaultTitle, nodeLabel } from '../nodeLabel'
 import { AGENTS } from '../../../shared/agents'
@@ -35,13 +43,6 @@ const SIZES = {
   note: { w: 280, h: 200 }
 }
 
-// Drawing sizes, in screen pixels at the zoom in use: a stroke drawn zoomed out is as thick on
-// screen as one drawn up close, and both scale with the canvas afterwards.
-const STROKE_WIDTH = 3
-// A new point is only recorded this far from the last one, which keeps the saved file small.
-const MIN_STEP = 2
-const ERASER_RADIUS = 8
-
 // Each step of the zoom buttons and keys multiplies the zoom by this.
 const ZOOM_STEP = 1.25
 // How far the pointer can wander, in screen pixels, for a press on a link handle to still count
@@ -53,7 +54,7 @@ const FLY_TIME = 260
 // clears the dock.
 const FIT_PADDING = { side: 64, top: 64, bottom: 110 }
 
-// One canvas with its camera, nodes, links and drawings. `saved` is what was loaded from disk: from then on
+// One canvas with its camera, nodes, links and whiteboard. `saved` is what was loaded from disk: from then on
 // this component owns the state, and main keeps a copy that it saves.
 // An inactive workspace is hidden, not unmounted, so its terminals keep running. New terminals
 // and agents open in `folder`; a workspace from before folders existed has none, and onPickFolder
@@ -91,9 +92,12 @@ export default function Workspace({
   // Link being dragged: source node, tip in world coordinates and the valid node under the
   // cursor (or null).
   const [draft, setDraft] = useState(null)
-  const [strokes, setStrokes] = useState(saved.strokes)
-  // 'hand', 'draw', 'erase' or null (the pointer works on the nodes as usual).
+  // 'hand', 'erase', a whiteboard tool (whiteboard.js) or null: the pointer works on the nodes
+  // and shapes as usual.
   const [tool, setTool] = useState(null)
+  // The shape the dock's shapes button draws: the last one picked from its menu.
+  const [shapeKind, setShapeKind] = useState(() => localStorage.getItem('shape-kind') ?? 'rect')
+  const [shapeMenu, setShapeMenu] = useState(false)
   // Space held down: the pointer pans the camera from anywhere, like the hand tool.
   const [grab, setGrab] = useState(false)
   // The selected nodes' ids. The side panel edits the node when there's exactly one; several move
@@ -101,6 +105,7 @@ export default function Workspace({
   const [selection, setSelection] = useState([])
   // What was selected when a selection box started, for a box that adds to it.
   const boxBase = useRef([])
+  const shapeBoxBase = useRef([])
   // Where each node of the group being dragged started.
   const moveOrigin = useRef(null)
   // The viewport's size in pixels, for the minimap's view of the camera.
@@ -115,15 +120,9 @@ export default function Workspace({
   const [restarts, setRestarts] = useState({})
   // The node whose row the pointer is on in the panel's connections, lit up on the canvas.
   const [hoveredPeer, setHoveredPeer] = useState(null)
-  // Stroke being drawn. The ref is what the handlers build on: pointerup can arrive before React
-  // renders the last move, and the state would still have the old points.
-  const [sketch, setSketch] = useState(null)
-  const sketchRef = useRef(null)
-  const lastErase = useRef(null)
   // Counters pick up after the saved ids and layers.
   const nextId = useRef(highest(saved.nodes, 'id') + 1)
   const nextLinkId = useRef(highest(saved.links, 'id') + 1)
-  const nextStrokeId = useRef(highest(saved.strokes, 'id') + 1)
   const topLayer = useRef(highest(saved.nodes, 'layer'))
   // The link drag reads the camera from its listeners; the ref avoids using a stale camera
   // if the user zooms mid-drag.
@@ -133,10 +132,27 @@ export default function Workspace({
   }, [cam])
   const flight = useRef(0)
 
+  const board = useWhiteboard({
+    saved,
+    camRef,
+    tool,
+    setTool,
+    clearNodes: () => setSelection([]),
+    // A drag of shapes takes the selected nodes along.
+    group: {
+      start: () => moveStartGroup(selection),
+      by: moveBy
+    }
+  })
+
+  useEffect(() => {
+    localStorage.setItem('shape-kind', shapeKind)
+  }, [shapeKind])
+
   // Main saves the workspace to disk and delivers agent messages along its links.
   useEffect(() => {
-    window.api.workspace.update(workspaceId, { camera: cam, nodes, links, strokes })
-  }, [workspaceId, cam, nodes, links, strokes])
+    window.api.workspace.update(workspaceId, { camera: cam, nodes, links, shapes: board.shapes })
+  }, [workspaceId, cam, nodes, links, board.shapes])
 
   // An agent wrote to a note with `nara note`. Main has already changed its own copy; this
   // brings the screen in line with it.
@@ -181,6 +197,7 @@ export default function Workspace({
   // moves them all.
   function pointerDownOnNode(node, e) {
     raise(node.id)
+    if (!(e.shiftKey || e.ctrlKey || e.metaKey)) board.setSelected([])
     if (e.shiftKey || e.ctrlKey || e.metaKey) {
       setSelection((current) =>
         current.includes(node.id) ? current.filter((id) => id !== node.id) : [...current, node.id]
@@ -190,16 +207,22 @@ export default function Workspace({
     }
   }
 
-  // Dragging a node's bar moves it, and the rest of the selection with it if it's selected.
+  // Dragging a node's bar moves it, and the rest of the selection with it if it's selected: the
+  // other nodes and the selected shapes.
   function moveStart(id) {
-    const group = selection.includes(id) ? selection : [id]
+    moveStartGroup(selection.includes(id) ? selection : [id])
+    board.startGroupMove()
+  }
+
+  function moveStartGroup(group) {
     moveOrigin.current = new Map(
       nodes.filter((n) => group.includes(n.id)).map((n) => [n.id, { x: n.x, y: n.y }])
     )
   }
 
-  function moveBy(dx, dy) {
+  function moveNodesBy(dx, dy) {
     const origin = moveOrigin.current
+    if (!origin?.size) return
     setNodes((current) =>
       current.map((n) =>
         origin.has(n.id) ? { ...n, x: origin.get(n.id).x + dx, y: origin.get(n.id).y + dy } : n
@@ -207,9 +230,18 @@ export default function Workspace({
     )
   }
 
+  function moveBy(dx, dy) {
+    moveNodesBy(dx, dy)
+    board.groupMoveBy(dx, dy)
+  }
+
   // A selection box picks every node it touches, plus what was selected before if it adds.
   function selectBox(box, additive, first) {
-    if (first) boxBase.current = additive ? selection : []
+    if (first) {
+      boxBase.current = additive ? selection : []
+      shapeBoxBase.current = additive ? board.selected : []
+    }
+    board.selectInBox(box, shapeBoxBase.current)
     const inside = nodes
       .filter((n) => n.x < box.x + box.w && n.x + n.w > box.x)
       .filter((n) => n.y < box.y + box.h && n.y + n.h > box.y)
@@ -222,8 +254,11 @@ export default function Workspace({
   function pointerDownAnywhere(e) {
     // Panning (other buttons, Space, the hand) leaves the selection alone.
     if (e.button !== 0 || grab || tool === 'hand') return
-    if (e.target.closest('.node, .floating, .launcher')) return
-    if (!(e.shiftKey || e.ctrlKey || e.metaKey)) setSelection([])
+    if (e.target.closest('.node, .floating, .launcher, .shape, .shape-frame')) return
+    if (!(e.shiftKey || e.ctrlKey || e.metaKey)) {
+      setSelection([])
+      board.setSelected([])
+    }
   }
 
   // Creates a node centered on the point (in world coordinates), in front of the others, with any
@@ -307,9 +342,9 @@ export default function Workspace({
     flyTo({ x: width / 2 - wx * next, y: height / 2 - wy * next, z: next })
   }
 
-  // Frames every node (or, with none, every stroke), never zooming in past 100%.
+  // Frames every node and shape, never zooming in past 100%.
   function zoomToFit() {
-    const boxes = nodes.length ? nodes : strokes.map(strokeBox)
+    const boxes = [...nodes, ...board.bounds()]
     if (!boxes.length) return flyTo({ x: 0, y: 0, z: 1 })
     const left = Math.min(...boxes.map((b) => b.x))
     const top = Math.min(...boxes.map((b) => b.y))
@@ -347,6 +382,11 @@ export default function Workspace({
       minimap: () => setMinimap((open) => !open),
       draw: () => setTool('draw'),
       erase: () => setTool('erase'),
+      text: () => setTool('text'),
+      rect: () => pickShape('rect'),
+      ellipse: () => pickShape('ellipse'),
+      line: () => pickShape('line'),
+      arrow: () => pickShape('arrow'),
       terminal: openLauncher,
       inspector: onInspector,
       note: newNote,
@@ -361,6 +401,12 @@ export default function Workspace({
       if (e.key === 'Escape') {
         setTool(null)
         setSelection([])
+        board.setSelected([])
+        setShapeMenu(false)
+        return
+      }
+      if (board.onKeyDown(e)) {
+        e.preventDefault()
         return
       }
       // Space on a focused button still presses it.
@@ -372,6 +418,7 @@ export default function Workspace({
       if ((e.ctrlKey || e.metaKey) && e.code === 'KeyA') {
         e.preventDefault()
         setSelection(nodes.map((n) => n.id))
+        board.setSelected(board.shapes.map((shape) => shape.id))
         return
       }
       const name = canvasKeyFor(e)
@@ -535,47 +582,11 @@ export default function Workspace({
       ?.focus()
   })
 
-  function toolStart(point) {
-    if (tool === 'draw') {
-      updateSketch({ width: round(STROKE_WIDTH / cam.z, 100), points: [roundPoint(point)] })
-    } else {
-      lastErase.current = point
-      erase(point, point)
-    }
-  }
-
-  function toolMove(point) {
-    if (tool === 'draw') {
-      const current = sketchRef.current
-      const [lx, ly] = current.points[current.points.length - 1]
-      if (Math.hypot(point.x - lx, point.y - ly) < MIN_STEP / cam.z) return
-      updateSketch({ ...current, points: [...current.points, roundPoint(point)] })
-    } else {
-      erase(lastErase.current, point)
-      lastErase.current = point
-    }
-  }
-
-  function toolEnd() {
-    const current = sketchRef.current
-    updateSketch(null)
-    if (!current) return
-    const stroke = { id: nextStrokeId.current++, ...current }
-    setStrokes((all) => [...all, stroke])
-  }
-
-  function updateSketch(next) {
-    sketchRef.current = next
-    setSketch(next)
-  }
-
-  // The eraser removes whole strokes: any stroke it touches on its way from `from` to `to`.
-  function erase(from, to) {
-    const radius = ERASER_RADIUS / cam.z
-    setStrokes((all) => {
-      const kept = all.filter((stroke) => !touches(stroke, from, to, radius))
-      return kept.length === all.length ? all : kept
-    })
+  // The dock's shapes button draws the last shape picked from its menu.
+  function pickShape(kind) {
+    setShapeKind(kind)
+    setTool(kind)
+    setShapeMenu(false)
   }
 
   const selectedNode = selection.length === 1 && nodes.find((node) => node.id === selection[0])
@@ -602,13 +613,24 @@ export default function Workspace({
         tool={tool}
         grab={grab}
         onSelectBox={selectBox}
-        onToolStart={toolStart}
-        onToolMove={toolMove}
-        onToolEnd={toolEnd}
+        onToolStart={board.toolStart}
+        onToolMove={board.toolMove}
+        onToolEnd={board.toolEnd}
         overlay={
           <>
             <LinkPins nodes={nodes} links={links} draft={draft} />
-            <Drawings strokes={strokes} sketch={sketch} />
+            <Shapes
+              shapes={board.shapes}
+              draft={board.draft}
+              selected={new Set(board.selected)}
+              editing={board.editing}
+              zoom={cam.z}
+              onShapeDown={board.onShapeDown}
+              onShapeDoubleClick={board.onShapeDoubleClick}
+              onHandleDown={board.onHandleDown}
+              onText={board.onText}
+              onTextDone={board.onTextDone}
+            />
           </>
         }
       >
@@ -796,20 +818,54 @@ export default function Workspace({
           <span className="dock-label">Note</span>
         </button>
         <span className="dock-divider" />
-        {TOOLS.map(({ name, label, key, Icon }) => (
-          <button
-            key={name}
-            className={tool === name ? 'dock-button tool active' : 'dock-button tool'}
-            data-tip={`${label} · ${key}`}
-            aria-label={label}
-            aria-pressed={tool === name}
-            // Clicking the active tool turns it off.
-            onClick={() => setTool((current) => (current === name ? null : name))}
+        <ToolButton tool={tool} name="draw" label="Draw" keys="D" onTool={setTool}>
+          <PenIcon />
+        </ToolButton>
+        <div className="dock-menu-anchor">
+          <ToolButton
+            tool={tool}
+            name={shapeKind}
+            label={`${SHAPES[shapeKind].label} · ${SHAPES[shapeKind].key}`}
+            onTool={setTool}
+            menu={shapeMenu}
+            onMenu={() => setShapeMenu((open) => !open)}
           >
-            <Icon />
-          </button>
-        ))}
+            {SHAPES[shapeKind].icon}
+          </ToolButton>
+          {shapeMenu && (
+            <div className="floating dock-menu" role="menu">
+              {Object.entries(SHAPES).map(([kind, { label, key, icon }]) => (
+                <button
+                  key={kind}
+                  role="menuitemradio"
+                  aria-checked={shapeKind === kind}
+                  className="dock-menu-item"
+                  onClick={() => pickShape(kind)}
+                >
+                  {icon}
+                  <span>{label}</span>
+                  {key && <kbd>{key}</kbd>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <ToolButton tool={tool} name="text" label="Text" keys="W" onTool={setTool}>
+          <TextIcon />
+        </ToolButton>
+        <ToolButton tool={tool} name="erase" label="Erase" keys="E" onTool={setTool}>
+          <EraserIcon />
+        </ToolButton>
       </div>
+
+      {board.showStyle && !draft && (
+        <StyleBar
+          style={board.style}
+          keys={board.keys}
+          onChange={board.changeStyle}
+          actions={board.actions}
+        />
+      )}
 
       <div className="zoom-area">
         {minimap && (
@@ -842,7 +898,7 @@ export default function Workspace({
         />
       )}
 
-      {nodes.length === 0 && strokes.length === 0 && (
+      {nodes.length === 0 && board.shapes.length === 0 && (
         <div className="canvas-empty">
           <div className="empty-state">
             <h2 className="empty-title">A blank canvas</h2>
@@ -871,7 +927,7 @@ export default function Workspace({
                 <kbd>Ctrl</kbd> + <kbd>Scroll</kbd> to zoom
               </span>
               <span>
-                <kbd>T</kbd> <kbd>N</kbd> <kbd>D</kbd> tools
+                <kbd>T</kbd> <kbd>N</kbd> <kbd>D</kbd> <kbd>R</kbd> tools
               </span>
             </div>
           </div>
@@ -897,29 +953,48 @@ function swallowNextClick() {
   )
 }
 
-const TOOLS = [
-  { name: 'draw', label: 'Draw', key: 'D', Icon: PenIcon },
-  { name: 'erase', label: 'Erase', key: 'E', Icon: EraserIcon }
-]
+// The shapes the dock's shapes button can draw, with their keys.
+const SHAPES = {
+  rect: { label: 'Rectangle', key: 'R', icon: <SquareIcon /> },
+  ellipse: { label: 'Ellipse', key: 'O', icon: <CircleIcon /> },
+  triangle: { label: 'Triangle', icon: <TriangleIcon /> },
+  diamond: { label: 'Diamond', icon: <DiamondIcon /> },
+  line: { label: 'Line', key: 'L', icon: <LineIcon /> },
+  arrow: { label: 'Arrow', key: 'A', icon: <ArrowIcon /> }
+}
 
-// The box around a stroke, in the same shape as a node's.
-function strokeBox({ points }) {
-  const xs = points.map(([x]) => x)
-  const ys = points.map(([, y]) => y)
-  const x = Math.min(...xs)
-  const y = Math.min(...ys)
-  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y }
+// A tool in the dock: pressed while it's on; clicking it again turns it off. With `onMenu`, a
+// small arrow beside it opens its menu.
+function ToolButton({ tool, name, label, keys, onTool, menu, onMenu, children }) {
+  const on = tool === name
+  return (
+    <span className={onMenu ? 'dock-split' : undefined}>
+      <button
+        className={on ? 'dock-button tool active' : 'dock-button tool'}
+        data-tip={keys ? `${label} · ${keys}` : label}
+        aria-label={label}
+        aria-pressed={on}
+        onClick={() => onTool((current) => (current === name ? null : name))}
+      >
+        {children}
+      </button>
+      {onMenu && (
+        <button
+          className="dock-caret"
+          aria-label="More shapes"
+          aria-haspopup="menu"
+          aria-expanded={menu}
+          onClick={onMenu}
+        >
+          <svg width="8" height="8" viewBox="0 0 8 8" aria-hidden="true">
+            <path d="M1.5 5.5L4 3l2.5 2.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
+          </svg>
+        </button>
+      )}
+    </span>
+  )
 }
 
 function highest(items, key) {
   return items.reduce((max, item) => Math.max(max, item[key]), 0)
-}
-
-// Points are saved to a tenth of a world unit: enough detail up close, and a shorter file.
-function roundPoint({ x, y }) {
-  return [round(x, 10), round(y, 10)]
-}
-
-function round(value, factor) {
-  return Math.round(value * factor) / factor
 }

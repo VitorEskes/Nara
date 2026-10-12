@@ -238,16 +238,29 @@ function load(id) {
 function read(id) {
   try {
     const json = readFileSync(workspacePath(id), 'utf8')
-    const { version, name, project, folder, camera, nodes, links, strokes = [] } = JSON.parse(json)
+    const {
+      version,
+      name,
+      project,
+      folder,
+      camera,
+      nodes,
+      links,
+      shapes,
+      strokes = []
+    } = JSON.parse(json)
     if (version !== VERSION) throw new Error(`unsupported version ${version}`)
-    if (![nodes, links, strokes].every(Array.isArray)) throw new Error('malformed file')
+    if (![nodes, links, shapes ?? strokes].every(Array.isArray)) throw new Error('malformed file')
     // Files saved before notes existed have no type: back then every node was a terminal.
     const typed = nodes.map((node) => ({ type: 'terminal', ...node }))
-    // Older files have no strokes at all, which the default above covers.
-    const drawn = strokes.filter((stroke) => typeof stroke.points === 'string').map(unpackStroke)
+    // Files from before the whiteboard have freehand strokes instead, which become its first
+    // shapes; older ones have neither.
+    const drawn = shapes
+      ? shapes.filter((shape) => shape?.type).map(unpackShape)
+      : strokes.filter((stroke) => typeof stroke.points === 'string').map(strokeToShape)
     return {
       json,
-      workspace: { name, project, folder, camera, nodes: typed, links, strokes: drawn }
+      workspace: { name, project, folder, camera, nodes: typed, links, shapes: drawn }
     }
   } catch (error) {
     console.error(`nara: could not read workspace ${id}: ${error.message}`)
@@ -272,7 +285,7 @@ function create({ project, folder }) {
     camera: { x: 0, y: 0, z: 1 },
     nodes: [],
     links: [],
-    strokes: []
+    shapes: []
   })
   save(id)
   return { id, ...workspace }
@@ -310,7 +323,7 @@ function save(id) {
   clearTimeout(timers.get(id))
   timers.delete(id)
 
-  const { name, project, folder, camera, nodes, links, strokes } = workspaces.get(id)
+  const { name, project, folder, camera, nodes, links, shapes = [] } = workspaces.get(id)
   const json = JSON.stringify(
     {
       version: VERSION,
@@ -323,7 +336,7 @@ function save(id) {
         node.type === 'terminal' ? { ...node, cwd: currentCwd(id, node.id) ?? node.cwd } : node
       ),
       links,
-      strokes: strokes.map(packStroke)
+      shapes: shapes.map(packShape)
     },
     null,
     2
@@ -338,16 +351,46 @@ function save(id) {
   }
 }
 
-// On disk a stroke's points are one "x,y x,y ..." string, the format of SVG's `points`: as
-// arrays, the indented JSON would spend four lines on every point.
-function packStroke(stroke) {
-  return { ...stroke, points: stroke.points.map((point) => point.join(',')).join(' ') }
+// On disk a freehand stroke's points are one "x,y x,y ..." string, the format of SVG's `points`:
+// as arrays, the indented JSON would spend four lines on every point.
+function packShape(shape) {
+  if (!Array.isArray(shape.points)) return shape
+  return { ...shape, points: shape.points.map((point) => point.join(',')).join(' ') }
 }
 
-function unpackStroke(stroke) {
+function unpackShape(shape) {
+  if (typeof shape.points !== 'string') return shape
+  return { ...shape, points: unpackPoints(shape.points) }
+}
+
+function unpackPoints(points) {
+  return points
+    .split(' ')
+    .filter(Boolean)
+    .map((point) => point.split(',').map(Number))
+}
+
+// A stroke from before the whiteboard (absolute points and a width) as a freehand shape: its box,
+// and its points relative to the box's corner.
+function strokeToShape(stroke) {
+  const points = unpackPoints(stroke.points)
+  const xs = points.map(([x]) => x)
+  const ys = points.map(([, y]) => y)
+  const x = Math.min(...xs)
+  const y = Math.min(...ys)
   return {
-    ...stroke,
-    points: stroke.points.split(' ').map((point) => point.split(',').map(Number))
+    id: stroke.id,
+    type: 'draw',
+    x,
+    y,
+    w: Math.max(1, Math.max(...xs) - x),
+    h: Math.max(1, Math.max(...ys) - y),
+    angle: 0,
+    style: { stroke: 'ink', width: stroke.width > 3.5 ? 'l' : 'm' },
+    points: points.map(([px, py]) => [
+      Math.round((px - x) * 10) / 10,
+      Math.round((py - y) * 10) / 10
+    ])
   }
 }
 

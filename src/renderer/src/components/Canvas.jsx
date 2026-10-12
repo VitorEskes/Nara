@@ -18,8 +18,9 @@ const MAJOR = 5
 //   with the hand tool. The wheel (two fingers on a touchpad) pans too, over nodes as well, except
 //   over the node that has the keyboard when it scrolls itself: a terminal clicked into, or a note
 //   being written with more text than fits. Ctrl+wheel (a pinch) zooms anywhere.
-// - With the draw or erase `tool` on, the nodes ignore the pointer and a left-button drag
-//   anywhere goes to onToolStart/Move/End, in world coordinates.
+// - With a drawing `tool` on (the whiteboard's, or the eraser), the nodes ignore the pointer and a
+//   left-button drag anywhere goes to onToolStart/Move/End, in world coordinates, with the event
+//   for its modifier keys.
 export default function Canvas({
   cam,
   setCam,
@@ -65,9 +66,9 @@ export default function Canvas({
   function onPointerDown(e) {
     if (e.target !== e.currentTarget || e.button !== 0) return
     e.currentTarget.setPointerCapture(e.pointerId)
-    if (tool) {
+    if (tool && tool !== 'hand') {
       drag.current = 'tool'
-      onToolStart(toWorld(local(e)))
+      onToolStart(toWorld(local(e)), e)
       return
     }
     if (e.shiftKey || e.ctrlKey || e.metaKey) {
@@ -86,7 +87,7 @@ export default function Canvas({
       // The browser hands over one pointermove per frame; the coalesced events are every sample
       // in between, which keeps quick strokes from turning into straight segments.
       for (const sample of e.nativeEvent.getCoalescedEvents?.() ?? [e]) {
-        onToolMove(toWorld(local(sample)))
+        onToolMove(toWorld(local(sample)), sample)
       }
     } else if (current) {
       const { start, additive } = current
