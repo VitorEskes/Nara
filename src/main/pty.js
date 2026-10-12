@@ -39,6 +39,8 @@ export function registerPty(win, extraEnv) {
     // An agent runs inside the user's interactive shell (-i loads .zshrc/.bashrc), so it's found
     // on the same PATH as when typed in a terminal. When the agent quits, the shell ends with it.
     const shell = process.env.SHELL || 'bash'
+    // A restored terminal asks for the folder it was in, which may have been deleted since.
+    const start = cwd && existsSync(cwd) ? cwd : process.env.HOME
     const launch = AGENTS[agent]
       ? agentLaunch({
           agent,
@@ -47,18 +49,17 @@ export function registerPty(win, extraEnv) {
           role,
           nodeId,
           worktree,
+          cwd: start,
           hooks: agent === 'claude' && HOOKS
         })
       : typeof command === 'string' && command.trim()
         ? startupLaunch(command, shell)
         : null
     const args = launch ? ['-ic', launch.command] : []
-    const start = cwd && existsSync(cwd) ? cwd : process.env.HOME
     const term = pty.spawn(shell, args, {
       name: 'xterm-256color',
       cols,
       rows,
-      // A restored terminal asks for the folder it was in, which may have been deleted since.
       cwd: start,
       // NARA_PTY is how `nara` tells the app which terminal the message came from.
       env: { ...ownEnv(), ...extraEnv, ...launch?.env, NARA_PTY: String(id) }

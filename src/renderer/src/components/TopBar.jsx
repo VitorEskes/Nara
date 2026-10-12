@@ -1,21 +1,22 @@
 import ProjectBadge from './ProjectBadge'
+import UsageMeter from './UsageMeter'
 import { BranchIcon, MicIcon, PanelRightIcon, SidebarIcon } from './icons'
 import { STATE_LABELS } from '../agentStatus'
-import { formatTokens } from '../telemetry'
 import { SHORTCUTS } from '../shortcuts'
 import { useBranch } from '../useBranch'
 
 // The bar across the top of a canvas: where you are (the project, the workspace, the branch), how
 // the agents in it are doing, what they've spent, and the inspector's switch. Translucent, so the
 // canvas runs on under it. `agents` are this workspace's statuses; clicking a state goes to the
-// agent that's been in it longest. `usage` is the workspace's total (telemetry.js), if any agent
-// has reported one.
+// agent that's been in it longest. `limits` are the plans' limits (main/usage.js) and `spend` what
+// this workspace's agents have spent (UsageMeter.jsx).
 export default function TopBar({
   workspace,
   project,
   folder,
   agents,
-  usage,
+  limits,
+  spend,
   sidebarHidden,
   onShowSidebar,
   inspector,
@@ -84,15 +85,7 @@ export default function TopBar({
             </span>
           )}
         </div>
-        {usage?.tokens > 0 && (
-          <span
-            className="topbar-usage"
-            title={`${usage.tokens.toLocaleString()} tokens across this workspace's agents`}
-          >
-            {formatTokens(usage.tokens)} tokens
-            {usage.cost > 0 && <span className="topbar-cost">${usage.cost.toFixed(2)}</span>}
-          </span>
-        )}
+        <UsageMeter limits={limits} spend={spend} onLocate={onLocate} />
         <button
           className="icon-button"
           title="Dictate to an agent (Ctrl+Alt+V)"

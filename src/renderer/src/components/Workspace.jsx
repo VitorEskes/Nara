@@ -73,6 +73,7 @@ export default function Workspace({
   project,
   statuses,
   telemetry,
+  limits,
   onPickFolder,
   roles,
   commands,
@@ -614,9 +615,16 @@ export default function Workspace({
   const dimmed = (node) => draft && node.id !== draft.from && !canLink(draft.from, node.id)
   const linkSource = draft && nodes.find((n) => n.id === draft.from)
   const hasTargets = draft && nodes.some((n) => canLink(draft.from, n.id))
-  const workspaceUsage = totalUsage(
-    nodes.filter((n) => n.type === 'terminal').map((n) => telemetry.get(n.id)?.usage)
-  )
+  const agentNodes = nodes.filter((n) => n.type === 'terminal' && AGENTS[n.agent])
+  const spend = {
+    ...totalUsage(agentNodes.map((n) => telemetry.get(n.id)?.usage)),
+    agents: agentNodes.map((n) => ({
+      id: n.id,
+      name: nodeLabel(n),
+      agent: n.agent,
+      usage: telemetry.get(n.id)?.usage
+    }))
+  }
 
   return (
     <div
@@ -714,7 +722,8 @@ export default function Workspace({
         project={project}
         folder={folder}
         agents={[...statuses.values()]}
-        usage={workspaceUsage}
+        limits={limits}
+        spend={spend}
         sidebarHidden={sidebarHidden}
         onShowSidebar={onShowSidebar}
         inspector={inspector}

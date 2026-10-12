@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from 'fs'
+import { existsSync, readFileSync, readdirSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
 import { AGENTS } from '../shared/agents'
@@ -23,7 +23,8 @@ export function agentLaunch({
   role: key,
   nodeId,
   hooks,
-  worktree
+  worktree,
+  cwd
 }) {
   const command = typeof typed === 'string' && typed.trim() ? typed.trim() : AGENTS[agent].command
   const role = findRole(key)
@@ -46,9 +47,16 @@ export function agentLaunch({
     if (access === 'read-only') args.push('--disallowedTools', EDIT_TOOLS.join(','))
     // The hooks tell Nara when the agent starts and ends a turn and when it asks for something
     // (main/status.js), which beats guessing from the terminal's output.
+    // The status line hands Nara the plan's limits (main/usage.js); the user's own status line,
+    // if they have one, still prints through it.
     if (hooks) {
-      env.NARA_SETTINGS = JSON.stringify({ hooks })
+      env.NARA_SETTINGS = JSON.stringify({
+        hooks,
+        statusLine: { type: 'command', command: 'nara statusline' }
+      })
       args.push('--settings', '"$NARA_SETTINGS"')
+      const own = userStatusLine(cwd)
+      if (own) env.NARA_USER_STATUSLINE = own
     }
   } else if (agent === 'codex') {
     // Codex takes extra instructions as a config value, in TOML. A JSON string is a valid TOML
@@ -77,6 +85,25 @@ export function startupLaunch(command, shell) {
     command: 'eval "$NARA_STARTUP"; exec "$NARA_SHELL"',
     env: { NARA_STARTUP: command, NARA_SHELL: shell }
   }
+}
+
+// The status line command the user set for Claude Code, if any: the project's settings win over
+// the user's, as in Claude Code.
+function userStatusLine(cwd) {
+  const files = [join(claudeHome(), 'settings.json')]
+  if (cwd) {
+    files.push(join(cwd, '.claude', 'settings.json'), join(cwd, '.claude', 'settings.local.json'))
+  }
+  let command = null
+  for (const file of files) {
+    try {
+      const line = JSON.parse(readFileSync(file, 'utf8')).statusLine
+      if (line?.type === 'command' && typeof line.command === 'string') command = line.command
+    } catch {
+      // No such file, or not JSON.
+    }
+  }
+  return command
 }
 
 // Claude Code saves a conversation as <config>/projects/<folder>/<session>.jsonl, and only once

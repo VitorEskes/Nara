@@ -3,6 +3,7 @@ import { closeSync, existsSync, openSync, readSync, readdirSync, statSync } from
 import { homedir } from 'os'
 import { basename, join, relative } from 'path'
 import { transcriptPath } from './agents'
+import { reportCodex } from './usage'
 
 // What each agent has spent and is doing, read from the files the agents keep of their own
 // sessions: Claude Code's transcript (<config>/projects/<folder>/<session>.jsonl, under the session
@@ -377,6 +378,9 @@ function codexLine(w, entry) {
   const payload = entry.payload ?? entry
   const at = Date.parse(entry.timestamp) || Date.now()
   if (entry.type === 'turn_context' && payload.model) w.model = payload.model
+  if (entry.type === 'event_msg' && payload.type === 'token_count' && payload.rate_limits) {
+    reportCodex(payload.rate_limits, at)
+  }
   if (entry.type === 'event_msg' && payload.type === 'token_count' && payload.info) {
     const total = payload.info.total_token_usage ?? {}
     const last = payload.info.last_token_usage ?? {}

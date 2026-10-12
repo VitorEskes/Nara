@@ -1,4 +1,5 @@
 import { connect } from 'net'
+import { spawnSync } from 'child_process'
 
 // The `nara` command that runs inside canvas terminals. It does nothing on its own: it sends
 // the request to the app over the socket in NARA_SOCK and prints the response. This file is run
@@ -21,6 +22,8 @@ A note is shared text on the canvas: anyone linked to it can read it, and so can
 // the agent just did. It never fails out loud, since an error would show up in the agent.
 if (process.argv[2] === 'hook') {
   hook(process.argv[3]).finally(() => process.exit(0))
+} else if (process.argv[2] === 'statusline') {
+  statusline().finally(() => process.exit(0))
 } else {
   main().catch((error) => {
     console.error(`nara: ${error.message}`)
@@ -41,6 +44,44 @@ async function hook(event) {
   }
   const timeout = new Promise((resolve) => setTimeout(resolve, 2000))
   await Promise.race([request({ command: 'hook', event, payload }).catch(() => {}), timeout])
+}
+
+// `nara statusline` is Claude Code's status line in Nara's agents (main/agents.js). It hands Nara
+// the plan's limits Claude Code passes it, then prints the user's own status line if they have
+// one (NARA_USER_STATUSLINE), or a short one of its own.
+async function statusline() {
+  let text = ''
+  for await (const chunk of process.stdin) text += chunk
+  let data = {}
+  try {
+    data = JSON.parse(text || '{}')
+  } catch {
+    // Printed as it is below.
+  }
+  if (process.env.NARA_SOCK && data.rate_limits) {
+    const timeout = new Promise((resolve) => setTimeout(resolve, 1000))
+    await Promise.race([
+      request({ command: 'statusline', payload: { rateLimits: data.rate_limits } }).catch(() => {}),
+      timeout
+    ])
+  }
+  const own = process.env.NARA_USER_STATUSLINE
+  if (own) {
+    const result = spawnSync('sh', ['-c', own], { input: text, encoding: 'utf8', timeout: 5000 })
+    process.stdout.write(result.stdout ?? '')
+    return
+  }
+  const parts = [data.model?.display_name]
+  const context = data.context_window?.used_percentage
+  if (Number.isFinite(context)) parts.push(`${Math.round(context)}% context`)
+  const limits = data.rate_limits ?? {}
+  if (Number.isFinite(limits.five_hour?.used_percentage)) {
+    parts.push(`${Math.round(limits.five_hour.used_percentage)}% 5h`)
+  }
+  if (Number.isFinite(limits.seven_day?.used_percentage)) {
+    parts.push(`${Math.round(limits.seven_day.used_percentage)}% week`)
+  }
+  process.stdout.write(`\x1b[2m${parts.filter(Boolean).join(' · ')}\x1b[0m`)
 }
 
 async function main() {

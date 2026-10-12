@@ -84,6 +84,11 @@ const api = {
     merge: (worktree) => ipcRenderer.invoke('git:merge', worktree),
     removeWorktree: (worktree) => ipcRenderer.invoke('git:remove-worktree', worktree)
   },
+  usage: {
+    // { claude?, codex? }: each { fiveHour, sevenDay, updated }, a window being { used, resetsAt }.
+    get: () => ipcRenderer.invoke('usage:get'),
+    onUpdate: (fn) => listen('usage:update', fn)
+  },
   telemetry: {
     // [{ workspaceId, nodeId, agent, model, title, usage, tasks, activity, lines }], each agent's
     // report (main/telemetry.js); an update can carry { workspaceId, nodeId, removed: true }.

@@ -5,6 +5,7 @@ import { basename, delimiter, dirname, join } from 'path'
 import nara from '../../resources/bin/nara?asset'
 import { findTerminal, terminals } from './pty'
 import { agentHook } from './status'
+import { reportClaude } from './usage'
 import { findRole } from './roles'
 import { updateNode, workspaces } from './workspaces'
 
@@ -58,6 +59,11 @@ function handle({ from, command, action, to, text, event, payload }, win) {
 
   if (command === 'hook') {
     agentHook(Number(from), event, payload ?? {})
+    return { ok: true }
+  }
+
+  if (command === 'statusline') {
+    reportClaude(payload?.rateLimits)
     return { ok: true }
   }
   const { workspaceId, nodeId } = sender

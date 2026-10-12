@@ -7011,3 +7011,217 @@ html.hud #root {
     padding: 0;
   }
 }
+
+/* The plans' usage in the top bar, and its details under it. */
+.usage {
+  position: relative;
+}
+
+.usage-meter {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text-2);
+  background: none;
+  cursor: pointer;
+}
+
+.usage-meter:hover,
+.usage-meter[aria-expanded='true'] {
+  border-color: var(--edge);
+  background: var(--hover-soft);
+}
+
+.usage-provider {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.usage-provider .icon {
+  color: var(--text-3);
+}
+
+.usage-bar {
+  position: relative;
+  width: 64px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--active-soft);
+}
+
+.usage-bar.wide {
+  width: 100%;
+}
+
+.usage-bar span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 3px;
+  background: var(--accent);
+  transition: width var(--slow) var(--ease-out);
+}
+
+.usage-bar[data-level='high'] span {
+  background: var(--state-waiting);
+}
+
+.usage-bar[data-level='full'] span {
+  background: var(--danger);
+}
+
+.usage-text {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.usage-panel {
+  /* Solid: inside the top bar, which blurs what's under it already, a blur of its own shows nothing. */
+  background: var(--stone);
+  backdrop-filter: none;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 320px;
+  padding: 14px;
+  border-radius: var(--radius-l);
+  animation: pop-in var(--fast) var(--ease-out);
+}
+
+.usage-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.usage-section + .usage-section {
+  padding-top: 14px;
+  border-top: 1px solid var(--edge);
+}
+
+.usage-section header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.usage-section h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.usage-section header span {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-4);
+}
+
+.usage-window {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.usage-window-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.usage-window-head strong {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.usage-reset {
+  font-size: 11px;
+  color: var(--text-4);
+}
+
+.usage-empty {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-3);
+}
+
+.usage-totals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.usage-totals div {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-m);
+}
+
+.usage-totals strong {
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-totals span {
+  font-size: 11px;
+  color: var(--text-4);
+}
+
+.usage-agents {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.usage-agents button {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto 52px 14px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 30px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  text-align: left;
+  color: var(--text-2);
+  background: none;
+  cursor: pointer;
+}
+
+.usage-agents button:hover {
+  background: var(--active-soft);
+}
+
+.usage-agent-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+
+.usage-agent-tokens,
+.usage-agent-cost {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: right;
+  color: var(--text-3);
+}

@@ -52,6 +52,8 @@ export default function App() {
   // What every agent has spent and is working on (main's telemetry.js): workspace id -> node id
   // -> its report.
   const [telemetry, setTelemetry] = useState(new Map())
+  // How much of their plans the agents have used (main's usage.js).
+  const [limits, setLimits] = useState({})
   // The node the pet sent the user to: the workspace it's in glides there once it's on screen.
   const [jump, setJump] = useState(null)
   // Whether the HUD's shortcut is bound: the desktop may refuse it.
@@ -97,12 +99,15 @@ export default function App() {
         return next
       })
     window.api.telemetry.list().then(mergeTelemetry)
+    window.api.usage.get().then(setLimits)
+    const offUsage = window.api.usage.onUpdate(setLimits)
     const offTelemetry = window.api.telemetry.onUpdate(mergeTelemetry)
     // The HUD sent the user to an agent.
     const offJump = window.api.agents.onJump((status) => latest.current.jumpTo(status))
     return () => {
       offStatus()
       offTelemetry()
+      offUsage()
       offJump()
     }
   }, [])
@@ -369,6 +374,7 @@ export default function App() {
               project={projects.find((p) => p.id === metas.get(id)?.project)}
               statuses={byWorkspace.get(id) ?? NO_AGENTS}
               telemetry={telemetry.get(id) ?? NO_AGENTS}
+              limits={limits}
               inspector={inspector}
               // With a boolean it opens or minimizes; without one it switches.
               onInspector={(force) =>

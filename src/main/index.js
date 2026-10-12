@@ -13,6 +13,7 @@ import { registerPty, terminalsExited } from './pty'
 import { registerRoles } from './roles'
 import { registerStatus } from './status'
 import { registerTelemetry } from './telemetry'
+import { registerUsage } from './usage'
 import { registerVoice } from './voice'
 import { loadTheme, registerTheme, windowBackground } from './theme'
 import { registerWorkspaces, workspaces } from './workspaces'
@@ -42,6 +43,8 @@ function createWindow() {
     }
   })
 
+  // Each module below cleans up when the window closes: more than Node's default of ten.
+  mainWindow.setMaxListeners(30)
   registerTheme(mainWindow)
   registerWorkspaces(mainWindow)
   registerFolders(mainWindow)
@@ -58,6 +61,7 @@ function createWindow() {
     return { title: node?.title, workspace: workspace?.name }
   })
   registerTelemetry(mainWindow)
+  registerUsage(mainWindow)
   registerPty(mainWindow, registerMessages(mainWindow))
 
   mainWindow.on('ready-to-show', () => {
