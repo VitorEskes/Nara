@@ -1042,32 +1042,316 @@ kbd {
   border-color: rgb(var(--shade) / 22%);
 }
 
-/* resize: none hides the textarea's own grip; the node has its resize corner. */
+/* A note's blocks (Note.jsx), scrolling when they run past the card. */
 .note-text {
   position: absolute;
   inset: 0;
   box-sizing: border-box;
-  width: 100%;
-  height: 100%;
-  padding: 12px 16px 20px;
+  overflow-y: auto;
+  padding: 10px 14px 24px 6px;
+  line-height: 1.55;
+  color: #1f1f23;
+  color-scheme: light;
+  cursor: text;
+}
+
+.note-text ::selection {
+  background: rgb(28 122 79 / 24%);
+}
+
+/* A dark paper: the card's marks turn light. */
+.node[data-type='note'][data-paper='dark'] {
+  --shade: 0 0 0;
+  --text: #ededf0;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 7%),
+    0 2px 4px rgb(0 0 0 / 30%),
+    0 16px 36px rgb(0 0 0 / 35%);
+}
+
+.node[data-type='note'][data-paper='dark'] .node-bar {
+  color: rgb(255 255 255 / 45%);
+  border-bottom-color: rgb(255 255 255 / 7%);
+}
+
+.node[data-type='note'][data-paper='dark'] .node-icon,
+.node[data-type='note'][data-paper='dark'] .node-close {
+  color: rgb(255 255 255 / 40%);
+}
+
+.node[data-type='note'][data-paper='dark'] .node-close:hover {
+  color: rgb(255 255 255 / 85%);
+  background: rgb(255 255 255 / 8%);
+}
+
+.node[data-type='note'][data-paper='dark'] .note-text {
+  color-scheme: dark;
+}
+
+.node[data-type='note'][data-paper='dark'] .note-text ::selection {
+  background: rgb(79 196 142 / 30%);
+}
+
+/* A block: the grip in the gutter, the marker, the text. Lists nest by --indent. */
+.md-block {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 1.55em;
+  padding: 1px 0 1px calc(14px + var(--indent) * 1.4em);
+}
+
+.md-block[data-dragged] {
+  opacity: 0.35;
+}
+
+.md-grip {
+  position: absolute;
+  top: 0.35em;
+  left: calc(var(--indent) * 1.4em);
+  width: 8px;
+  height: 0.9em;
+  border-radius: 2px;
+  background-image: radial-gradient(circle, currentColor 1px, transparent 1.3px);
+  background-size: 4px 4px;
+  opacity: 0;
+  cursor: grab;
+  transition: opacity var(--fast);
+}
+
+.md-block:hover > .md-grip {
+  opacity: 0.35;
+}
+
+.md-grip:hover {
+  opacity: 0.8 !important;
+}
+
+.md-drop {
+  height: 2px;
+  margin: 0 0 0 14px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+
+.md-text,
+.md-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 1.55em;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  line-height: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: inherit;
+}
+
+.md-input {
+  display: block;
   border: 0;
   outline: none;
   resize: none;
-  font-family: var(--font-ui);
-  font-size: 15px;
-  line-height: 1.55;
-  color: #232624;
+  overflow: hidden;
   background: transparent;
-  caret-color: var(--accent-fill);
-  color-scheme: light;
+  caret-color: var(--accent);
 }
 
-.note-text::placeholder {
-  color: rgb(var(--shade) / 38%);
+.md-input::placeholder,
+.md-empty {
+  color: currentColor;
+  opacity: 0.38;
 }
 
-.note-text::selection {
-  background: rgb(36 80 61 / 22%);
+.note-text[data-align='center'] :is(.md-text, .md-input) {
+  text-align: center;
+}
+
+.note-text[data-align='right'] :is(.md-text, .md-input) {
+  text-align: right;
+}
+
+.md-block[data-type='h1'] {
+  margin: 0.35em 0 0.1em;
+  font-size: 1.55em;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.md-block[data-type='h2'] {
+  margin: 0.3em 0 0.05em;
+  font-size: 1.28em;
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.md-block[data-type='h3'] {
+  margin: 0.2em 0 0;
+  font-size: 1.08em;
+  font-weight: 650;
+}
+
+.md-block:first-child[data-type^='h'] {
+  margin-top: 0;
+}
+
+.md-bullet {
+  width: 0.36em;
+  height: 0.36em;
+  flex-shrink: 0;
+  margin: 0.6em 0.2em 0 0.25em;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.7;
+}
+
+.md-block[style*='--indent: 1'] .md-bullet,
+.md-block[style*='--indent: 3'] .md-bullet {
+  background: none;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+
+.md-number {
+  min-width: 1.2em;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.65;
+}
+
+.md-check {
+  display: grid;
+  place-items: center;
+  width: 1.05em;
+  height: 1.05em;
+  flex-shrink: 0;
+  margin-top: 0.25em;
+  padding: 0;
+  box-sizing: border-box;
+  border: 1.5px solid currentColor;
+  border-radius: 0.3em;
+  color: inherit;
+  background: none;
+  opacity: 0.55;
+  cursor: pointer;
+  transition:
+    background-color var(--fast),
+    opacity var(--fast);
+}
+
+.md-check:hover {
+  opacity: 0.9;
+}
+
+.md-check[aria-checked='true'] {
+  border-color: var(--accent);
+  color: #fff;
+  background: var(--accent);
+  opacity: 1;
+  animation: pop-in var(--fast) var(--ease-spring);
+}
+
+.md-block[data-checked] .md-text {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+  opacity: 0.5;
+}
+
+.md-block[data-type='quote'] {
+  margin-left: 14px;
+  padding-left: 12px;
+  border-left: 3px solid color-mix(in srgb, currentColor 22%, transparent);
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.md-block[data-type='quote'] .md-grip {
+  left: -14px;
+}
+
+.md-block[data-type='code'] {
+  margin: 0.25em 0 0.25em 14px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  line-height: 1.5;
+  background: color-mix(in srgb, currentColor 7%, transparent);
+}
+
+.md-block[data-type='code'] .md-grip {
+  left: -14px;
+}
+
+.md-text code {
+  font-family: var(--font-mono);
+}
+
+.md-block:not([data-type='code']) .md-text code {
+  padding: 0.05em 0.3em;
+  border-radius: 4px;
+  font-size: 0.86em;
+  background: color-mix(in srgb, currentColor 9%, transparent);
+}
+
+.md-text a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+}
+
+.md-hr {
+  flex: 1;
+  height: 1px;
+  margin: 0.75em 0;
+  border: 0;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+/* The menu of block types that "/" opens, under its block. */
+.md-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 210px;
+  margin: 2px 0 6px 22px;
+  padding: 4px;
+  border: 1px solid var(--material-edge);
+  border-radius: var(--radius-m);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-style: normal;
+  color: var(--text);
+  background: var(--stone);
+  box-shadow: var(--shadow-float);
+  color-scheme: dark;
+  animation: pop-in var(--fast) var(--ease-out);
+}
+
+.md-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text-2);
+  background: none;
+  cursor: pointer;
+}
+
+.md-menu-item[aria-selected='true'],
+.md-menu-item:hover {
+  color: var(--text);
+  background: var(--active-soft);
+}
+
+.md-menu-empty {
+  padding: 6px 8px;
+  color: var(--text-3);
 }
 
 /* The node the side panel is editing, of any type: a green ring a few pixels outside it. An outline

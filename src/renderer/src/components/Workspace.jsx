@@ -644,6 +644,7 @@ export default function Workspace({
             role={Object.hasOwn(roles, node.role ?? '') ? roles[node.role] : undefined}
             look={node.type === 'terminal' ? terminalLook(node.style) : undefined}
             paper={node.type === 'note' ? PAPERS[resolveStyle(node.style).paper].color : undefined}
+            paperDark={node.type === 'note' && PAPERS[resolveStyle(node.style).paper].dark}
             linked={linked.has(node.id)}
             selected={selection.includes(node.id)}
             isLinkTarget={draft?.target === node.id}

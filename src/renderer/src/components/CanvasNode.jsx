@@ -12,6 +12,7 @@ const EDGES = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw']
 // A box in the world: position and size are in world coordinates, not screen coordinates.
 // `label` is the name on the bar; `agent` ({ key, label }) and `role` ({ label, tone }) go on it
 // too. `look` is a terminal's (terminalLook): its colors, tone and icon. `paper` is a note's color
+// (`paperDark` when it's a dark one)
 // and `linked` says whether any string is pinned to it. While a string is
 // being pulled, `dimmed` marks a node it can't be tied to; `highlighted` lights the node up while
 // its row in the side panel's connections is hovered.
@@ -28,6 +29,7 @@ export default function CanvasNode({
   role,
   look,
   paper,
+  paperDark,
   linked,
   selected,
   isLinkTarget,
@@ -75,6 +77,7 @@ export default function CanvasNode({
       data-id={id}
       data-type={type}
       data-scheme={theme?.light ? 'light' : undefined}
+      data-paper={paperDark ? 'dark' : undefined}
       data-tone={look?.tone ?? undefined}
       role="group"
       aria-label={label}
