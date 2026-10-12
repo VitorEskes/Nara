@@ -862,6 +862,24 @@ kbd {
   --tone: var(--tone-plum);
 }
 
+.node-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--state);
+  background: color-mix(in srgb, var(--state) 13%, transparent);
+}
+
+.node-bar .context-ring {
+  margin-left: 2px;
+}
+
 .node-close {
   margin-left: auto;
   color: var(--text-4);

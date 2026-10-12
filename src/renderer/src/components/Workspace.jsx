@@ -645,6 +645,8 @@ export default function Workspace({
             look={node.type === 'terminal' ? terminalLook(node.style) : undefined}
             paper={node.type === 'note' ? PAPERS[resolveStyle(node.style).paper].color : undefined}
             paperDark={node.type === 'note' && PAPERS[resolveStyle(node.style).paper].dark}
+            status={statuses.get(node.id)}
+            usage={telemetry.get(node.id)?.usage}
             linked={linked.has(node.id)}
             selected={selection.includes(node.id)}
             isLinkTarget={draft?.target === node.id}

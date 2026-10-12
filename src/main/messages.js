@@ -4,6 +4,7 @@ import { tmpdir } from 'os'
 import { basename, delimiter, dirname, join } from 'path'
 import nara from '../../resources/bin/nara?asset'
 import { findTerminal, terminals } from './pty'
+import { agentHook } from './status'
 import { findRole } from './roles'
 import { updateNode, workspaces } from './workspaces'
 
@@ -51,9 +52,14 @@ export function registerMessages(win) {
   }
 }
 
-function handle({ from, command, action, to, text }, win) {
+function handle({ from, command, action, to, text, event, payload }, win) {
   const sender = terminals.get(Number(from))
   if (!sender) throw new Error('this terminal no longer exists in Nara')
+
+  if (command === 'hook') {
+    agentHook(Number(from), event, payload ?? {})
+    return { ok: true }
+  }
   const { workspaceId, nodeId } = sender
 
   // Links have no direction: from→to works the same as to→from.

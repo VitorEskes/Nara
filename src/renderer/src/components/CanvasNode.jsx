@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { CloseIcon } from './icons'
 import NodeIcon from './NodeIcon'
+import ContextRing from './ContextRing'
+import { STATE_LABELS } from '../agentStatus'
+import { contextShare } from '../telemetry'
 import { TERMINAL_THEMES } from '../terminalThemes'
 
 const MIN_WIDTH = 240
@@ -12,7 +15,8 @@ const EDGES = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw']
 // A box in the world: position and size are in world coordinates, not screen coordinates.
 // `label` is the name on the bar; `agent` ({ key, label }) and `role` ({ label, tone }) go on it
 // too. `look` is a terminal's (terminalLook): its colors, tone and icon. `paper` is a note's color
-// (`paperDark` when it's a dark one)
+// (`paperDark` when it's a dark one). An agent's `status` (status.js) and `usage` (telemetry.js)
+// show as its state and how full its context is.
 // and `linked` says whether any string is pinned to it. While a string is
 // being pulled, `dimmed` marks a node it can't be tied to; `highlighted` lights the node up while
 // its row in the side panel's connections is hovered.
@@ -30,6 +34,8 @@ export default function CanvasNode({
   look,
   paper,
   paperDark,
+  status,
+  usage,
   linked,
   selected,
   isLinkTarget,
@@ -111,6 +117,13 @@ export default function CanvasNode({
             {role.label}
           </span>
         )}
+        {status && status.state !== 'idle' && (
+          <span className="node-state" data-state={status.state} title={STATE_LABELS[status.state]}>
+            <span className="state-dot" />
+            {STATE_LABELS[status.state]}
+          </span>
+        )}
+        {usage?.window > 0 && <ContextRing share={contextShare(usage)} size={16} />}
         <button
           className="icon-button small node-close"
           title="Close"

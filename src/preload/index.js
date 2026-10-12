@@ -54,6 +54,12 @@ const api = {
     // The HUD sent the user to an agent.
     onJump: (fn) => listen('agents:jump', fn)
   },
+  telemetry: {
+    // [{ workspaceId, nodeId, agent, model, title, usage, tasks, activity, lines }], each agent's
+    // report (main/telemetry.js); an update can carry { workspaceId, nodeId, removed: true }.
+    list: () => ipcRenderer.invoke('telemetry:list'),
+    onUpdate: (fn) => listen('telemetry:update', fn)
+  },
   hud: {
     enable: (on) => ipcRenderer.invoke('hud:enable', on),
     toggle: () => ipcRenderer.send('hud:toggle'),

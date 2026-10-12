@@ -49,7 +49,7 @@ export default function App() {
   const [statuses, setStatuses] = useState([])
   // What every agent has spent and is working on (main's telemetry.js): workspace id -> node id
   // -> its report.
-  const [telemetry] = useState(new Map())
+  const [telemetry, setTelemetry] = useState(new Map())
   // The node the pet sent the user to: the workspace it's in glides there once it's on screen.
   const [jump, setJump] = useState(null)
   // Whether the HUD's shortcut is bound: the desktop may refuse it.
@@ -76,10 +76,25 @@ export default function App() {
   useEffect(() => {
     window.api.agents.status().then(setStatuses)
     const offStatus = window.api.agents.onStatus(setStatuses)
+    // Each update carries only the agents that changed; the maps are copied so React sees them.
+    const mergeTelemetry = (reports) =>
+      setTelemetry((current) => {
+        const next = new Map(current)
+        for (const report of reports) {
+          const nodes = new Map(next.get(report.workspaceId))
+          if (report.removed) nodes.delete(report.nodeId)
+          else nodes.set(report.nodeId, report)
+          next.set(report.workspaceId, nodes)
+        }
+        return next
+      })
+    window.api.telemetry.list().then(mergeTelemetry)
+    const offTelemetry = window.api.telemetry.onUpdate(mergeTelemetry)
     // The HUD sent the user to an agent.
     const offJump = window.api.agents.onJump((status) => latest.current.jumpTo(status))
     return () => {
       offStatus()
+      offTelemetry()
       offJump()
     }
   }, [])

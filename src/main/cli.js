@@ -17,10 +17,31 @@ A message arrives in the target terminal as if someone had typed it and pressed 
 The reply, if any, arrives in this terminal the same way: no need to wait or check for it.
 A note is shared text on the canvas: anyone linked to it can read it, and so can the user.`
 
-main().catch((error) => {
-  console.error(`nara: ${error.message}`)
-  process.exit(1)
-})
+// `nara hook <event>` is run by Claude Code's hooks (main/pty.js), not by hand: it tells Nara what
+// the agent just did. It never fails out loud, since an error would show up in the agent.
+if (process.argv[2] === 'hook') {
+  hook(process.argv[3]).finally(() => process.exit(0))
+} else {
+  main().catch((error) => {
+    console.error(`nara: ${error.message}`)
+    process.exit(1)
+  })
+}
+
+async function hook(event) {
+  if (!process.env.NARA_SOCK || !event) return
+  let payload = {}
+  try {
+    let text = ''
+    for await (const chunk of process.stdin) text += chunk
+    const data = JSON.parse(text || '{}')
+    payload = { message: data.message, type: data.notification_type }
+  } catch {
+    // The event alone is enough.
+  }
+  const timeout = new Promise((resolve) => setTimeout(resolve, 2000))
+  await Promise.race([request({ command: 'hook', event, payload }).catch(() => {}), timeout])
+}
 
 async function main() {
   const [command, ...args] = process.argv.slice(2)

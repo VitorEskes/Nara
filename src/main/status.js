@@ -100,6 +100,27 @@ export function agentExited(id, code) {
   } else change(agent, 'failed')
 }
 
+// What Claude Code's hooks report (`nara hook`): it took a prompt, ended its turn, or asked for
+// something. Each settles the state right away instead of waiting for the output to tell.
+export function agentHook(id, event, { message, type } = {}) {
+  const agent = agents.get(id)
+  if (!agent) return
+  if (event === 'prompt') {
+    agent.bell = false
+    change(agent, 'working')
+  } else if (event === 'stop') {
+    agent.bell = false
+    agent.burst = 0
+    change(agent, 'review')
+  } else if (event === 'notify') {
+    // Claude Code also notifies when it has been idle a while; only a question needs the user.
+    const asks = type
+      ? type === 'permission_prompt'
+      : /permission|approv|needs your/i.test(message ?? '')
+    if (asks) change(agent, 'waiting')
+  }
+}
+
 export function untrackAgent(id) {
   if (agents.delete(id)) send()
 }

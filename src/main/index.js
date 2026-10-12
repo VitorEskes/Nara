@@ -10,6 +10,7 @@ import { registerMessages } from './messages'
 import { registerPty, terminalsExited } from './pty'
 import { registerRoles } from './roles'
 import { registerStatus } from './status'
+import { registerTelemetry } from './telemetry'
 import { loadTheme, registerTheme, windowBackground } from './theme'
 import { registerWorkspaces, workspaces } from './workspaces'
 
@@ -49,6 +50,7 @@ function createWindow() {
     const node = workspace?.nodes.find((n) => n.id === nodeId)
     return { title: node?.title, workspace: workspace?.name }
   })
+  registerTelemetry(mainWindow)
   registerPty(mainWindow, registerMessages(mainWindow))
 
   mainWindow.on('ready-to-show', () => {
