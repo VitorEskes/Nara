@@ -68,6 +68,12 @@ const api = {
     // A WAV (ArrayBuffer) -> { text } or { error }.
     transcribe: (wav) => ipcRenderer.invoke('voice:transcribe', wav)
   },
+  notes: {
+    // Asks for an image and keeps a copy: { url, name } or null.
+    pickImage: () => ipcRenderer.invoke('notes:pick-image'),
+    // Keeps a pasted image (its bytes and MIME type): { url } or null.
+    saveImage: (bytes, type) => ipcRenderer.invoke('notes:save-image', bytes, type)
+  },
   git: {
     // A worktree of the folder's repository on a new branch: { path, branch, base, root } or
     // { error }.

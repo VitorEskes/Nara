@@ -22,8 +22,10 @@ const PREF_DEFAULTS = { pet: BUILT_IN_PET, petSize: 'm', hud: true, voice: true,
 
 // Stands in for a workspace with no agents yet, so it keeps the same empty map between renders.
 const NO_AGENTS = new Map()
-// How much of the window's right side the inspector takes (main.css, .inspector), for the pet.
-const INSPECTOR_ROOM = 344
+// How much of the window's right side the inspector takes (main.css, .inspector), open and
+// minimized to its rail, for the pet.
+const INSPECTOR_ROOM = 380
+const RAIL_ROOM = 72
 
 export default function App() {
   // Every project as { id, name, folder }, and every saved workspace as { id, name, project,
@@ -368,7 +370,10 @@ export default function App() {
               statuses={byWorkspace.get(id) ?? NO_AGENTS}
               telemetry={telemetry.get(id) ?? NO_AGENTS}
               inspector={inspector}
-              onInspector={() => setInspector((open) => !open)}
+              // With a boolean it opens or minimizes; without one it switches.
+              onInspector={(force) =>
+                setInspector((open) => (typeof force === 'boolean' ? force : !open))
+              }
               sidebarHidden={sidebar === 'closed'}
               onShowSidebar={toggleSidebar}
               onPickFolder={() => pickFolder(id)}
@@ -402,7 +407,7 @@ export default function App() {
           statuses={statuses}
           onJump={jumpTo}
           // Out of the inspector's way while it's open on a canvas.
-          reserved={inspector && !overview && active ? INSPECTOR_ROOM : 0}
+          reserved={!overview && active ? (inspector ? INSPECTOR_ROOM : RAIL_ROOM) : 0}
         />
       )}
       {settings && (

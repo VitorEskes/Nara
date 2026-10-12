@@ -4,8 +4,9 @@
 //
 //   { id, type, text, indent, checked }
 //
-// where type is p, h1, h2, h3, ul, ol, todo, quote, code or hr; `indent` is how deep a list item
-// sits and `checked` whether a todo is done. A code block's text can span several lines.
+// where type is p, h1, h2, h3, ul, ol, todo, quote, code, hr or image; `indent` is how deep a list
+// item sits and `checked` whether a todo is done. A code block's text can span several lines; an
+// image's text is its caption, and `url` where it is.
 
 export const BLOCK_TYPES = {
   p: { label: 'Text', hint: 'Plain text' },
@@ -17,7 +18,8 @@ export const BLOCK_TYPES = {
   todo: { label: 'Checklist', hint: '[]' },
   quote: { label: 'Quote', hint: '>' },
   code: { label: 'Code', hint: '```' },
-  hr: { label: 'Divider', hint: '---' }
+  hr: { label: 'Divider', hint: '---' },
+  image: { label: 'Image', hint: '![]()' }
 }
 
 export const LISTS = new Set(['ul', 'ol', 'todo'])
@@ -51,6 +53,7 @@ function lineBlock(line) {
   const indent = Math.min(4, Math.floor(line.match(/^\s*/)[0].replace(/\t/g, '  ').length / 2))
   const rest = line.trim()
   let m
+  if ((m = rest.match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/))) return block('image', m[1], { url: m[2] })
   if ((m = rest.match(/^(#{1,3})\s+(.*)$/))) return block(`h${m[1].length}`, m[2])
   if (/^(-{3,}|\*{3,}|_{3,})$/.test(rest)) return block('hr')
   if ((m = rest.match(/^[-*+]\s+\[([ xX])\]\s?(.*)$/))) {
@@ -106,6 +109,8 @@ function blockLine(b, counters) {
       return `\`\`\`${b.lang ?? ''}\n${b.text}\n\`\`\``
     case 'hr':
       return '---'
+    case 'image':
+      return `![${b.text.replace(/[[\]]/g, '')}](${b.url})`
     default:
       return b.text
   }

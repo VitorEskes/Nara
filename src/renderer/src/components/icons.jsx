@@ -662,6 +662,97 @@ export function TokenIcon(props) {
   )
 }
 
+export function GaugeIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M2.5 11.5a5.5 5.5 0 1 1 11 0" />
+      <path d="M8 11.5l2.5-3.5" />
+    </Icon>
+  )
+}
+
+export function SlidersIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M2.5 4.5h6M11.5 4.5h2M2.5 11.5h2M7.5 11.5h6" />
+      <circle cx="10" cy="4.5" r="1.5" />
+      <circle cx="6" cy="11.5" r="1.5" />
+    </Icon>
+  )
+}
+
+export function LayoutIcon(props) {
+  return (
+    <Icon {...props}>
+      <rect x="2.25" y="2.75" width="11.5" height="10.5" rx="1.75" />
+      <path d="M2.25 6.25h11.5M6.5 6.25v7" />
+    </Icon>
+  )
+}
+
+export function ImageIcon(props) {
+  return (
+    <Icon {...props}>
+      <rect x="2.25" y="2.75" width="11.5" height="10.5" rx="1.75" />
+      <circle cx="6" cy="6.5" r="1.25" />
+      <path d="M13.5 10.5l-3-3-6.5 5.75" />
+    </Icon>
+  )
+}
+
+export function QuoteIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M3 4.5v7M6.5 5h7M6.5 8h7M6.5 11h4.5" />
+    </Icon>
+  )
+}
+
+export function ListIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="3.5" cy="4.5" r=".75" fill="currentColor" />
+      <circle cx="3.5" cy="8" r=".75" fill="currentColor" />
+      <circle cx="3.5" cy="11.5" r=".75" fill="currentColor" />
+      <path d="M6.5 4.5h7M6.5 8h7M6.5 11.5h7" />
+    </Icon>
+  )
+}
+
+export function NumberListIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M2.75 3.5h1v3M2.5 9.5h1.5l-1.5 2.5h1.75M6.5 4.5h7M6.5 8h7M6.5 11.5h7" />
+    </Icon>
+  )
+}
+
+export function CodeBlockIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M5.5 5L2.5 8l3 3M10.5 5l3 3-3 3" />
+    </Icon>
+  )
+}
+
+export function DividerIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M2.5 8h11M4.5 4.5h7M4.5 11.5h7" strokeOpacity=".45" />
+      <path d="M2.5 8h11" />
+    </Icon>
+  )
+}
+
+export function MarkdownIcon(props) {
+  return (
+    <Icon {...props}>
+      <rect x="1.75" y="3.25" width="12.5" height="9.5" rx="1.5" />
+      <path d="M4.25 10.25v-4.5l1.75 2 1.75-2v4.5M10.75 5.75v4.5M9.25 8.75l1.5 1.5 1.5-1.5" />
+    </Icon>
+  )
+}
+
 // The mark: the Nara deer, a nod to the clan that tends the deer of the Nara forest. Decorative
 // next to the name, so it has no alt text of its own.
 export function BrandMark() {

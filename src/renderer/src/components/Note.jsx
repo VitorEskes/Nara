@@ -20,8 +20,10 @@ import {
 //
 // `text` is the Markdown, saved with the workspace and shared with the agents linked to the note;
 // onChange gets it whenever an edit changes it. `style` holds the font, size, ink, paper and
-// alignment picked in the inspector.
-export default function Note({ text, style, onChange }) {
+// alignment picked in the inspector. With `view` 'source' the note shows its Markdown as it is.
+// `command` is an edit sent from the inspector ({ seq, type, url?, alt? }): a block to add where
+// the caret is, applied once per seq.
+export default function Note({ text, style, view, command, onChange }) {
   const { font, size, ink, paper, align } = resolveStyle(style)
   const [blocks, setBlocks] = useState(() => parse(text))
   // The text the blocks stand for. When `text` changes from elsewhere (an agent wrote the note),
@@ -34,8 +36,14 @@ export default function Note({ text, style, onChange }) {
   // The block being written ({ id, caret }), or null.
   const [focus, setFocus] = useState(() => (text ? null : { id: blocks[0].id, caret: 0 }))
   const focusRef = useRef(focus)
+  // The block written in last, where the inspector's blocks go once the note has lost the caret.
+  const lastFocused = useRef(null)
+  // The blocks as they are now, for edits that land after an await (a pasted image).
+  const blocksRef = useRef(blocks)
   useEffect(() => {
     focusRef.current = focus
+    if (focus) lastFocused.current = focus.id
+    blocksRef.current = blocks
   })
   // The menu of block types opened by "/": { id, query, index }.
   const [menu, setMenu] = useState(null)
@@ -54,6 +62,53 @@ export default function Note({ text, style, onChange }) {
   function updateBlock(id, change) {
     commit(blocks.map((b) => (b.id === id ? { ...b, ...change } : b)))
   }
+
+  // Adds a block of `type` after the one with the caret (or the last one written in, or at the
+  // end); an empty line takes the type instead. An image comes with its { url, alt }.
+  function insertBlock(type, extra = {}) {
+    const current = blocksRef.current
+    const id = focusRef.current?.id ?? lastFocused.current
+    let index = current.findIndex((b) => b.id === id)
+    if (index < 0) index = current.length - 1
+    const here = current[index]
+    const empty = !here.text && here.type !== 'image' && here.type !== 'hr'
+    const next = [...current]
+    if (type === 'image' || type === 'hr') {
+      const made =
+        type === 'image' ? block('image', extra.alt ?? '', { url: extra.url }) : block('hr')
+      next.splice(empty ? index : index + 1, empty ? 1 : 0, made)
+      // Writing goes on under it.
+      let after = next[next.indexOf(made) + 1]
+      if (!after || after.text || after.type !== 'p') {
+        after = block()
+        next.splice(next.indexOf(made) + 1, 0, after)
+      }
+      return commit(next, { id: after.id, caret: 0 })
+    }
+    if (empty) {
+      next[index] = {
+        ...here,
+        type,
+        checked: false,
+        indent: LISTS.has(type) && LISTS.has(here.type) ? here.indent : 0
+      }
+      return commit(next, { id: here.id, caret: 0 })
+    }
+    const fresh = block(type, '', {
+      indent: LISTS.has(type) && LISTS.has(here.type) ? here.indent : 0,
+      ...(type === 'todo' && { checked: false })
+    })
+    next.splice(index + 1, 0, fresh)
+    commit(next, { id: fresh.id, caret: 0 })
+  }
+
+  // The inspector's edit, once.
+  const applied = useRef(command?.seq)
+  useEffect(() => {
+    if (!command || command.seq === applied.current) return
+    applied.current = command.seq
+    insertBlock(command.type, command)
+  })
 
   // What a keystroke in a block's text does, beyond typing.
   function onKeyDown(e, index) {
@@ -127,6 +182,15 @@ export default function Note({ text, style, onChange }) {
       return
     }
 
+    // An image goes with Backspace once its caption is empty.
+    if (b.type === 'image' && e.key === 'Backspace' && caret === 0 && collapsed && !b.text) {
+      e.preventDefault()
+      const next = blocks.filter((other) => other.id !== b.id)
+      const neighbor = next[Math.max(0, index - 1)]
+      if (!next.length) next.push(block())
+      return commit(next, neighbor ? { id: neighbor.id, caret: neighbor.text.length } : null)
+    }
+
     if (e.key === 'Backspace' && caret === 0 && collapsed) {
       if (b.type !== 'p') {
         e.preventDefault()
@@ -196,7 +260,7 @@ export default function Note({ text, style, onChange }) {
 
   function onInput(index, value, caret) {
     const b = blocks[index]
-    if (b.type === 'p' || (b.type !== 'code' && !b.text)) {
+    if (b.type !== 'image' && (b.type === 'p' || (b.type !== 'code' && !b.text))) {
       const turned = shortcut(value)
       if (turned && (b.type === 'p' || turned.type !== b.type)) {
         setMenu(null)
@@ -218,7 +282,7 @@ export default function Note({ text, style, onChange }) {
         )
       }
     }
-    if (value.startsWith('/') && !value.includes(' ') && b.type !== 'code') {
+    if (value.startsWith('/') && !value.includes(' ') && b.type !== 'code' && b.type !== 'image') {
       setMenu({ id: b.id, query: value.slice(1), index: 0 })
     } else if (menu) setMenu(null)
     updateBlock(b.id, { text: b.type === 'code' ? value : value.replace(/\n/g, ' ') })
@@ -227,6 +291,16 @@ export default function Note({ text, style, onChange }) {
 
   // Pasting several lines outside code makes a block of each.
   function onPaste(e, index) {
+    // A pasted image is kept in Nara's data folder and added as a block of its own.
+    const image = [...e.clipboardData.files].find((file) => file.type.startsWith('image/'))
+    if (image) {
+      e.preventDefault()
+      image
+        .arrayBuffer()
+        .then((bytes) => window.api.notes.saveImage(bytes, image.type))
+        .then((saved) => saved && insertBlock('image', { url: saved.url, alt: '' }))
+      return
+    }
     const b = blocks[index]
     const pasted = e.clipboardData.getData('text/plain')
     if (b.type === 'code' || !pasted.includes('\n')) return
@@ -254,6 +328,13 @@ export default function Note({ text, style, onChange }) {
   function turnInto(index, type) {
     const b = blocks[index]
     setMenu(null)
+    if (type === 'image') {
+      updateBlock(b.id, { text: '' })
+      window.api.notes
+        .pickImage()
+        .then((picked) => picked && insertBlock('image', { url: picked.url, alt: picked.name }))
+      return
+    }
     if (type === 'hr') {
       const fresh = block()
       const next = [...blocks]
@@ -314,6 +395,24 @@ export default function Note({ text, style, onChange }) {
     handle.addEventListener('pointermove', onMove)
     handle.addEventListener('pointerup', onUp)
     handle.addEventListener('pointercancel', onUp)
+  }
+
+  // The Markdown itself, to read or edit as text.
+  if (view === 'source') {
+    return (
+      <textarea
+        className="note-text note-source"
+        value={text}
+        spellCheck={false}
+        placeholder="Markdown"
+        style={{ color: inkColor(ink, paper) }}
+        onChange={(e) => {
+          setSource(e.target.value)
+          setBlocks(parse(e.target.value))
+          onChange(e.target.value)
+        }}
+      />
+    )
   }
 
   return (
@@ -463,7 +562,36 @@ function Block({
         aria-hidden="true"
       />
       {marker}
-      {b.type === 'hr' ? (
+      {b.type === 'image' ? (
+        <figure className="md-figure">
+          <img
+            src={b.url}
+            alt={b.text}
+            draggable={false}
+            onPointerDown={(e) => {
+              if (e.button !== 0) return
+              e.preventDefault()
+              onFocus(b.text.length)
+            }}
+          />
+          {editing ? (
+            <textarea
+              ref={input}
+              className="md-input md-caption"
+              value={b.text}
+              rows={1}
+              spellCheck={false}
+              placeholder="Caption · Backspace removes the image"
+              onChange={(e) => onInput(e.target.value, e.target.selectionStart)}
+              onKeyDown={onKeyDown}
+              onBlur={onBlur}
+              onSelect={(e) => onFocus(e.currentTarget.selectionStart)}
+            />
+          ) : (
+            b.text && <figcaption className="md-caption">{b.text}</figcaption>
+          )}
+        </figure>
+      ) : b.type === 'hr' ? (
         <hr className="md-hr" />
       ) : editing ? (
         <textarea

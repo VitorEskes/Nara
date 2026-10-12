@@ -113,11 +113,14 @@ export default function Workspace({
   const [minimap, setMinimap] = useState(() => localStorage.getItem('minimap') === 'open')
   // The new terminal dialog, while open: { number } is the id the terminal will get.
   const [launcher, setLauncher] = useState(null)
-  // The inspector's tab, kept while the selection moves from node to node.
-  const [panelTab, setPanelTab] = useState('overview')
+  // The inspector's section, kept while the selection moves from node to node; 'workspace' shows
+  // the workspace instead of the node.
+  const [panelTab, setPanelTab] = useState('status')
   // How many times each node's agent was restarted from the inspector: a new count remounts its
   // terminal, which starts the agent again and resumes its conversation.
   const [restarts, setRestarts] = useState({})
+  // The last edit the inspector sent each note ({ seq, type, ... }), applied by the note once.
+  const [noteCommands, setNoteCommands] = useState({})
   // The node whose row the pointer is on in the panel's connections, lit up on the canvas.
   const [hoveredPeer, setHoveredPeer] = useState(null)
   // Counters pick up after the saved ids and layers.
@@ -197,6 +200,9 @@ export default function Workspace({
   // moves them all.
   function pointerDownOnNode(node, e) {
     raise(node.id)
+    // A click on a node opens the inspector on it.
+    if (!inspector) onInspector(true)
+    if (panelTab === 'workspace') setPanelTab('status')
     if (!(e.shiftKey || e.ctrlKey || e.metaKey)) board.setSelected([])
     if (e.shiftKey || e.ctrlKey || e.metaKey) {
       setSelection((current) =>
@@ -617,7 +623,7 @@ export default function Workspace({
       className={draft ? 'workspace linking' : 'workspace'}
       ref={container}
       hidden={!active}
-      data-inspector={inspector || undefined}
+      data-inspector={inspector ? 'open' : 'minimized'}
       onPointerDownCapture={pointerDownAnywhere}
     >
       <Canvas
@@ -676,6 +682,8 @@ export default function Workspace({
               <Note
                 text={node.text}
                 style={node.style}
+                view={node.view}
+                command={noteCommands[node.id]}
                 onChange={(text) => updateNode(node.id, { text })}
               />
             ) : (
@@ -722,34 +730,39 @@ export default function Workspace({
         }
       />
 
-      {inspector && (
-        <Inspector
-          node={selectedNode || null}
-          nodes={nodes}
-          links={links}
-          roles={roles}
-          folder={folder}
-          workspace={meta}
-          statuses={statuses}
-          telemetry={telemetry}
-          onSaveRole={onSaveRole}
-          tab={panelTab}
-          onTab={setPanelTab}
-          onChange={(changes) => updateNode(selectedNode.id, changes)}
-          onRestart={() =>
-            setRestarts((current) => ({
-              ...current,
-              [selectedNode.id]: (current[selectedNode.id] ?? 0) + 1
-            }))
-          }
-          canConnect={selectedNode && nodes.some((n) => canLink(selectedNode.id, n.id))}
-          onConnectStart={(e) => startLink(selectedNode.id, e)}
-          onPeerHover={setHoveredPeer}
-          onDisconnect={removeLink}
-          onLocate={locate}
-          onClose={onInspector}
-        />
-      )}
+      <Inspector
+        node={selectedNode || null}
+        nodes={nodes}
+        links={links}
+        roles={roles}
+        folder={folder}
+        workspace={meta}
+        statuses={statuses}
+        telemetry={telemetry}
+        section={panelTab}
+        onSection={setPanelTab}
+        open={inspector}
+        onToggle={onInspector}
+        onSaveRole={onSaveRole}
+        onChange={(changes) => updateNode(selectedNode.id, changes)}
+        onNoteCommand={(id, command) =>
+          setNoteCommands((current) => ({
+            ...current,
+            [id]: { ...command, seq: (current[id]?.seq ?? 0) + 1 }
+          }))
+        }
+        onRestart={() =>
+          setRestarts((current) => ({
+            ...current,
+            [selectedNode.id]: (current[selectedNode.id] ?? 0) + 1
+          }))
+        }
+        canConnect={selectedNode && nodes.some((n) => canLink(selectedNode.id, n.id))}
+        onConnectStart={(e) => startLink(selectedNode.id, e)}
+        onPeerHover={setHoveredPeer}
+        onDisconnect={removeLink}
+        onLocate={locate}
+      />
 
       {draft && (
         <div className="floating link-hint" role="status">

@@ -1,58 +1,64 @@
 import { useEffect, useState } from 'react'
 import RoleEditor, { PromptPreview, RoleBadges } from './RoleEditor'
 import TerminalLook from './TerminalLook'
-import { Group, Options } from './fields'
+import NoteFormat from './NoteFormat'
+import { Group } from './fields'
 import {
+  ActivityIcon,
   BranchIcon,
   CheckIcon,
-  CloseIcon,
+  ChevronIcon,
+  DiffIcon,
   FolderIcon,
+  GaugeIcon,
+  LayoutIcon,
   LinkIcon,
+  ListChecksIcon,
   LocateIcon,
   PlusIcon,
   RestartIcon,
-  UnlinkIcon
+  SlidersIcon,
+  TextIcon,
+  UnlinkIcon,
+  UsersIcon
 } from './icons'
 import NodeIcon from './NodeIcon'
 import ContextRing from './ContextRing'
-import {
-  ALIGNS,
-  FONTS,
-  INKS,
-  PAPERS,
-  SIZES,
-  inkColor,
-  resolveStyle,
-  terminalLook
-} from '../nodeStyle'
+import { terminalLook } from '../nodeStyle'
 import { defaultTitle, nodeLabel } from '../nodeLabel'
 import { STATE_LABELS, ago } from '../agentStatus'
 import { contextShare, formatCost, formatTokens } from '../telemetry'
 import { useBranch } from '../useBranch'
 import { AGENTS } from '../../../shared/agents'
 
-// The tabs each kind of node has. An agent's are the most: what it's doing and has spent, its
-// task list, what it did, its role and its look.
-function tabsFor(node) {
-  if (node.type === 'note') return ['overview', 'format']
-  if (AGENTS[node.agent]) return ['overview', 'tasks', 'activity', 'changes', 'role']
-  return ['overview', 'changes']
+// Every section a node can show, each about one thing, with the icon it has on the rail.
+const SECTIONS = {
+  status: { label: 'Status', Icon: GaugeIcon },
+  tasks: { label: 'Tasks', Icon: ListChecksIcon },
+  activity: { label: 'Activity', Icon: ActivityIcon },
+  changes: { label: 'Changes', Icon: DiffIcon },
+  role: { label: 'Role', Icon: UsersIcon },
+  format: { label: 'Format', Icon: TextIcon },
+  links: { label: 'Connections', Icon: LinkIcon },
+  settings: { label: 'Settings', Icon: SlidersIcon }
 }
 
-const TAB_LABELS = {
-  overview: 'Overview',
-  tasks: 'Tasks',
-  activity: 'Activity',
-  role: 'Role',
-  changes: 'Changes',
-  format: 'Format'
+// The sections each kind of node has, in the rail's order.
+function sectionsFor(node) {
+  if (node.type === 'note') return ['format', 'links', 'settings']
+  if (AGENTS[node.agent]) {
+    return ['status', 'tasks', 'activity', 'changes', 'role', 'links', 'settings']
+  }
+  return ['changes', 'links', 'settings']
 }
 
-// The inspector on the right of the canvas: everything about the selected node, in tabs, or, with
-// nothing selected, the workspace at a glance. `nodes` and `links` are the whole canvas, for the
-// connections; `roles` every role by key. `statuses` and `telemetry` are what main reports about
-// the agents, by node id. onChange gets the node's fields that changed; onRestart starts its
-// agent again.
+// The inspector on the right of the canvas. A rail of icons runs down its edge: the workspace at
+// the top, then the selected node's sections. The pane beside it shows the one picked; minimized,
+// only the rail stays. `section` is the one picked, or 'workspace'; onSection changes it.
+// `nodes` and `links` are the whole canvas, for the connections; `roles` every role by key.
+// `statuses` and `telemetry` are what main reports about the agents, by node id. onChange gets the
+// node's fields that changed; onRestart starts its agent again. onNoteCommand sends a note an
+// edit from the Format section.
 export default function Inspector({
   node,
   nodes,
@@ -62,156 +68,186 @@ export default function Inspector({
   workspace,
   statuses,
   telemetry,
+  section,
+  onSection,
+  open,
+  onToggle,
   onSaveRole,
-  tab,
-  onTab,
   onChange,
   onRestart,
+  onNoteCommand,
   canConnect,
   onConnectStart,
   onDisconnect,
   onLocate,
-  onPeerHover,
-  onClose
+  onPeerHover
 }) {
-  if (!node) {
-    return (
-      <aside className="floating inspector" aria-label="Workspace">
-        <header className="inspector-head">
-          <div className="inspector-heading">
-            <span className="inspector-kicker">Workspace</span>
-            <h2 className="inspector-title">{workspace?.name ?? 'Workspace'}</h2>
-          </div>
-          <CloseButton onClose={onClose} />
-        </header>
-        <div className="inspector-body" key="workspace">
-          <WorkspaceSummary
-            nodes={nodes}
-            folder={folder}
-            statuses={statuses}
-            telemetry={telemetry}
-            roles={roles}
-            onLocate={onLocate}
-          />
-        </div>
-      </aside>
-    )
+  const sections = node ? sectionsFor(node) : []
+  const current =
+    !node || section === 'workspace'
+      ? 'workspace'
+      : sections.includes(section)
+        ? section
+        : sections[0]
+  const status = node && statuses.get(node.id)
+  const info = node && telemetry.get(node.id)
+  const connections = node ? links.filter((l) => l.from === node.id || l.to === node.id).length : 0
+  // Small counts on the rail, where they say something at a glance.
+  const badges = {
+    tasks: info?.tasks?.length
+      ? `${info.tasks.filter((t) => t.status === 'completed').length}/${info.tasks.length}`
+      : null,
+    links: connections || null
   }
 
-  const tabs = tabsFor(node)
-  const current = tabs.includes(tab) ? tab : tabs[0]
-  const index = tabs.indexOf(current)
-  const label = nodeLabel(node)
-  const agent = AGENTS[node.agent]
-  const status = statuses.get(node.id)
-  const info = telemetry.get(node.id)
-
-  // Left and right move between the tabs, as in any tab list.
-  function onTabKeyDown(e) {
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
-    const next = tabs[(index + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]
-    onTab(next)
-    document.getElementById(`inspector-tab-${next}`)?.focus()
+  function pick(key) {
+    onSection(key)
+    if (!open) onToggle(true)
   }
 
   return (
-    <aside className="floating inspector" aria-label={`${label} settings`}>
-      <header className="inspector-head">
-        <span className="inspector-icon" data-state={status?.state}>
-          <NodeIcon type={node.type} agent={node.agent} icon={node.style?.icon} size={16} />
-        </span>
-        <div className="inspector-heading">
-          <span className="inspector-kicker">
-            {node.type === 'note' ? 'Note' : (agent?.label ?? 'Terminal')} · #{node.id}
-          </span>
-          <h2 className="inspector-title">{label}</h2>
-        </div>
-        <CloseButton onClose={onClose} />
-      </header>
-
-      <div
-        className="inspector-tabs"
-        role="tablist"
-        aria-label="Sections"
-        style={{ '--index': index, '--count': tabs.length }}
-        onKeyDown={onTabKeyDown}
-      >
-        {tabs.map((key) => (
-          <button
-            key={key}
-            id={`inspector-tab-${key}`}
-            role="tab"
-            aria-selected={current === key}
-            aria-controls="inspector-body"
-            tabIndex={current === key ? 0 : -1}
-            onClick={() => onTab(key)}
-          >
-            {TAB_LABELS[key]}
-            {key === 'tasks' && info?.tasks?.length > 0 && (
-              <span className="tab-count">
-                {info.tasks.filter((t) => t.status === 'completed').length}/{info.tasks.length}
-              </span>
+    <aside
+      className={open ? 'floating inspector' : 'floating inspector minimized'}
+      aria-label="Inspector"
+    >
+      {open && (
+        <div className="inspector-pane">
+          <header className="inspector-head">
+            {current === 'workspace' ? (
+              <div className="inspector-heading">
+                <span className="inspector-kicker">Workspace</span>
+                <h2 className="inspector-title">{workspace?.name ?? 'Workspace'}</h2>
+              </div>
+            ) : (
+              <div className="inspector-heading">
+                <span className="inspector-kicker">
+                  {nodeLabel(node)}
+                  {status && status.state !== 'idle' && (
+                    <span className="inspector-state" data-state={status.state}>
+                      <span className="state-dot" />
+                      {STATE_LABELS[status.state]}
+                    </span>
+                  )}
+                </span>
+                <h2 className="inspector-title">{SECTIONS[current].label}</h2>
+              </div>
             )}
-          </button>
-        ))}
-      </div>
+            <button
+              className="icon-button small inspector-fold"
+              title="Minimize (I)"
+              aria-label="Minimize the inspector"
+              onClick={() => onToggle(false)}
+            >
+              <ChevronIcon size={14} />
+            </button>
+          </header>
 
-      {/* The key replays the fade when the tab or the node changes. */}
-      <div
-        key={`${node.id}:${current}`}
-        id="inspector-body"
-        className="inspector-body"
-        role="tabpanel"
-        aria-labelledby={`inspector-tab-${current}`}
-      >
-        {current === 'overview' && (
-          <Overview
-            node={node}
-            nodes={nodes}
-            links={links}
-            status={status}
-            info={info}
-            onChange={onChange}
-            canConnect={canConnect}
-            onConnectStart={onConnectStart}
-            onDisconnect={onDisconnect}
-            onLocate={onLocate}
-            onPeerHover={onPeerHover}
-          />
+          {/* The key replays the fade when the section or the node changes. */}
+          <div key={`${node?.id}:${current}`} className="inspector-body">
+            {current === 'workspace' && (
+              <WorkspaceSummary
+                nodes={nodes}
+                folder={folder}
+                statuses={statuses}
+                telemetry={telemetry}
+                roles={roles}
+                onLocate={onLocate}
+              />
+            )}
+            {current === 'status' && <Status status={status} info={info} />}
+            {current === 'tasks' && <Tasks info={info} />}
+            {current === 'activity' && <Activity info={info} />}
+            {current === 'changes' && <Changes key={node.id} node={node} onChange={onChange} />}
+            {current === 'role' && (
+              <Role
+                key={node.id}
+                node={node}
+                roles={roles}
+                onSaveRole={onSaveRole}
+                onChange={onChange}
+                onRestart={onRestart}
+              />
+            )}
+            {current === 'format' && (
+              <NoteFormat
+                node={node}
+                onChange={onChange}
+                onCommand={(command) => onNoteCommand(node.id, command)}
+              />
+            )}
+            {current === 'links' && (
+              <Connections
+                node={node}
+                nodes={nodes}
+                links={links}
+                canConnect={canConnect}
+                onConnectStart={onConnectStart}
+                onDisconnect={onDisconnect}
+                onLocate={onLocate}
+                onPeerHover={onPeerHover}
+              />
+            )}
+            {current === 'settings' && <Settings node={node} onChange={onChange} />}
+          </div>
+        </div>
+      )}
+
+      <nav className="inspector-rail" aria-label="Sections">
+        <RailButton
+          label="Workspace"
+          active={open && current === 'workspace'}
+          onClick={() => pick('workspace')}
+        >
+          <LayoutIcon />
+        </RailButton>
+        {node && (
+          <>
+            <span className="rail-node" data-state={status?.state} title={nodeLabel(node)}>
+              <NodeIcon type={node.type} agent={node.agent} icon={node.style?.icon} size={14} />
+            </span>
+            {sections.map((key) => {
+              const { label, Icon } = SECTIONS[key]
+              return (
+                <RailButton
+                  key={key}
+                  label={label}
+                  badge={badges[key]}
+                  active={open && current === key}
+                  onClick={() => pick(key)}
+                >
+                  <Icon />
+                </RailButton>
+              )
+            })}
+          </>
         )}
-        {current === 'tasks' && <Tasks info={info} />}
-        {current === 'activity' && <Activity info={info} />}
-        {current === 'role' && (
-          <Role
-            key={node.id}
-            node={node}
-            roles={roles}
-            onSaveRole={onSaveRole}
-            onChange={onChange}
-            onRestart={onRestart}
-          />
+        {!open && (
+          <button
+            className="rail-button rail-expand"
+            title="Expand (I)"
+            aria-label="Expand the inspector"
+            onClick={() => onToggle(true)}
+          >
+            <ChevronIcon size={14} />
+          </button>
         )}
-        {current === 'changes' && <Changes key={node.id} node={node} onChange={onChange} />}
-        {current === 'format' && (
-          <NoteStyle
-            style={node.style}
-            onChange={(change) => onChange({ style: { ...node.style, ...change } })}
-          />
-        )}
-      </div>
+      </nav>
     </aside>
   )
 }
 
-function CloseButton({ onClose }) {
+function RailButton({ label, badge, active, onClick, children }) {
   return (
     <button
-      className="icon-button small"
-      title="Hide the inspector (I)"
-      aria-label="Hide the inspector"
-      onClick={onClose}
+      className="rail-button"
+      data-tip={label}
+      data-tip-side="left"
+      aria-label={label}
+      aria-current={active || undefined}
+      onClick={onClick}
     >
-      <CloseIcon size={14} />
+      {children}
+      {badge && <span className="rail-badge">{badge}</span>}
     </button>
   )
 }
@@ -324,40 +360,33 @@ function Stat({ label, value, detail }) {
   )
 }
 
-// The node's name, what it runs and where, what its agent is doing and has spent, and its
-// connections.
-function Overview({
-  node,
-  nodes,
-  links,
-  status,
-  info,
-  onChange,
-  canConnect,
-  onConnectStart,
-  onDisconnect,
-  onLocate,
-  onPeerHover
-}) {
-  const agent = AGENTS[node.agent]
-  const branch = useBranch(node.type === 'terminal' ? node.cwd : null)
+// What the agent is doing and has spent: its state, what it's on, how full its context is and
+// the tokens it has gone through.
+function Status({ status, info }) {
   const usage = info?.usage
   const share = contextShare(usage)
   const active = info?.tasks?.find((t) => t.status === 'in_progress')
-
+  const state = status?.state ?? 'idle'
   return (
     <>
-      {agent && (
-        <div className="agent-card" data-state={status?.state ?? 'idle'}>
-          <div className="agent-card-head">
-            <span className="state-dot" />
-            <span className="agent-card-state">{STATE_LABELS[status?.state ?? 'idle']}</span>
-            {status && <span className="agent-card-ago">{ago(status.since)}</span>}
-            {info?.model && <span className="agent-card-model">{modelName(info.model)}</span>}
-          </div>
-          {(active || info?.title) && (
-            <p className="agent-card-doing">{active ? active.active || active.text : info.title}</p>
-          )}
+      <div className="agent-card" data-state={state}>
+        <div className="agent-card-head">
+          <span className="state-dot" />
+          <span className="agent-card-state">{STATE_LABELS[state]}</span>
+          {status && <span className="agent-card-ago">{ago(status.since)}</span>}
+          {info?.model && <span className="agent-card-model">{modelName(info.model)}</span>}
+        </div>
+        {(active || info?.title) && (
+          <p className="agent-card-doing">{active ? active.active || active.text : info.title}</p>
+        )}
+      </div>
+
+      {!info ? (
+        <p className="inspector-empty">
+          What it spends shows up here once the agent starts working.
+        </p>
+      ) : (
+        <>
           {usage?.window > 0 && (
             <div className="meter" data-level={share > 0.85 ? 'full' : share > 0.6 ? 'high' : 'ok'}>
               <div className="meter-head">
@@ -372,48 +401,52 @@ function Overview({
               </div>
             </div>
           )}
-          {usage?.tokens > 0 && (
-            <dl className="usage-grid">
-              <div>
-                <dt>Input</dt>
-                <dd>{formatTokens(usage.input + usage.cacheRead + usage.cacheWrite)}</dd>
-              </div>
-              <div>
-                <dt>Output</dt>
-                <dd>{formatTokens(usage.output)}</dd>
-              </div>
-              <div>
-                <dt>Cached</dt>
-                <dd>{formatTokens(usage.cacheRead)}</dd>
-              </div>
-              <div>
-                <dt>Cost</dt>
-                <dd title="At API prices; a subscription doesn't bill this">
-                  {formatCost(usage.cost)}
-                </dd>
-              </div>
-            </dl>
-          )}
-          {!info && (
-            <p className="agent-card-note">
-              Tokens, tasks and activity show up here once the agent starts working.
-            </p>
-          )}
-        </div>
+          <div className="stat-grid">
+            <Stat label="Tokens" value={formatTokens(usage?.tokens ?? 0)} detail="this session" />
+            <Stat label="Cost" value={formatCost(usage?.cost ?? 0)} detail="at API prices" />
+          </div>
+          <dl className="usage-list">
+            <div>
+              <dt>Input</dt>
+              <dd>{formatTokens(usage?.input ?? 0)}</dd>
+            </div>
+            <div>
+              <dt>Read from cache</dt>
+              <dd>{formatTokens(usage?.cacheRead ?? 0)}</dd>
+            </div>
+            <div>
+              <dt>Written to cache</dt>
+              <dd>{formatTokens(usage?.cacheWrite ?? 0)}</dd>
+            </div>
+            <div>
+              <dt>Output</dt>
+              <dd>{formatTokens(usage?.output ?? 0)}</dd>
+            </div>
+          </dl>
+        </>
       )}
+    </>
+  )
+}
 
+// The node's name, where it runs and how it looks.
+function Settings({ node, onChange }) {
+  const folder = node.type === 'terminal' ? node.cwd : null
+  const branch = useBranch(folder)
+  return (
+    <>
       <label className="field">
         <span className="field-label">Name</span>
         <NameInput node={node} onRename={(title) => onChange({ title })} />
       </label>
 
-      {node.type === 'terminal' && node.cwd && (
+      {folder && (
         <div className="field">
           <span className="field-label">Folder</span>
           <div className="inspector-row">
             <FolderIcon size={14} />
-            <span className="inspector-row-text" title={node.cwd}>
-              <bdi>{node.cwd}</bdi>
+            <span className="inspector-row-text" title={folder}>
+              <bdi>{folder}</bdi>
             </span>
             {branch && (
               <span className="inspector-branch">
@@ -424,17 +457,6 @@ function Overview({
           </div>
         </div>
       )}
-
-      <Connections
-        node={node}
-        nodes={nodes}
-        links={links}
-        canConnect={canConnect}
-        onConnectStart={onConnectStart}
-        onDisconnect={onDisconnect}
-        onLocate={onLocate}
-        onPeerHover={onPeerHover}
-      />
 
       {node.type === 'terminal' && (
         <Group label="Appearance">
@@ -827,91 +849,6 @@ function Connections({
   )
 }
 
-// A note's font, size, colors and alignment. onChange gets only the key that changed.
-function NoteStyle({ style, onChange }) {
-  const current = resolveStyle(style)
-  return (
-    <>
-      <Group label="Font">
-        <div className="panel-options">
-          {Object.entries(FONTS).map(([key, { label, family }]) => (
-            <button
-              key={key}
-              title={label}
-              aria-label={label}
-              aria-pressed={current.font === key}
-              style={{ fontFamily: family }}
-              onClick={() => onChange({ font: key })}
-            >
-              Aa
-            </button>
-          ))}
-        </div>
-      </Group>
-
-      <Group label="Size">
-        <Options options={SIZES} value={current.size} onPick={(size) => onChange({ size })} />
-      </Group>
-
-      <Group label="Paper">
-        <div className="panel-swatches">
-          {Object.entries(PAPERS).map(([key, { label, color }]) => (
-            <button
-              key={key}
-              className="swatch"
-              data-dark={PAPERS[key].dark || undefined}
-              title={label}
-              aria-label={label}
-              aria-pressed={current.paper === key}
-              style={{ background: color }}
-              onClick={() => onChange({ paper: key })}
-            >
-              {current.paper === key && <CheckIcon size={14} />}
-            </button>
-          ))}
-        </div>
-      </Group>
-
-      <Group label="Text">
-        <div className="panel-swatches">
-          {Object.entries(INKS).map(([key, { label }]) => (
-            <button
-              key={key}
-              className="swatch"
-              title={label}
-              aria-label={label}
-              aria-pressed={current.ink === key}
-              style={{
-                color: inkColor(key, current.paper),
-                background: PAPERS[current.paper].color
-              }}
-              onClick={() => onChange({ ink: key })}
-            >
-              A
-            </button>
-          ))}
-        </div>
-      </Group>
-
-      <Group label="Align">
-        <div className="panel-options">
-          {Object.entries(ALIGNS).map(([key, { label }]) => (
-            <button
-              key={key}
-              title={label}
-              aria-label={label}
-              aria-pressed={current.align === key}
-              onClick={() => onChange({ align: key })}
-            >
-              <AlignIcon align={key} />
-            </button>
-          ))}
-        </div>
-      </Group>
-    </>
-  )
-}
-
 // Renames on Enter or when the field loses focus; Escape puts the name back. An empty name goes
 // back to the default one ("Terminal 3").
 function NameInput({ node, onRename }) {
@@ -943,20 +880,5 @@ function NameInput({ node, onRename }) {
         }
       }}
     />
-  )
-}
-
-// Three lines of text, lined up the way the button aligns them.
-function AlignIcon({ align }) {
-  const lines = [14, 8, 11].map((width, i) => {
-    const x = align === 'left' ? 2 : align === 'right' ? 16 - 2 - width : (16 - width) / 2
-    return <path key={i} d={`M${x} ${4 + i * 4} h${width}`} />
-  })
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-      <g stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-        {lines}
-      </g>
-    </svg>
   )
 }

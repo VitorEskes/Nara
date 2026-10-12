@@ -6,6 +6,7 @@ import { setUpDataFolder } from './dataFolder'
 import { registerFolders } from './folders'
 import { registerGit } from './git'
 import { registerHud } from './hud'
+import { registerImageScheme, registerImages } from './images'
 import { registerPets } from './pets'
 import { registerMessages } from './messages'
 import { registerPty, terminalsExited } from './pty'
@@ -17,6 +18,7 @@ import { loadTheme, registerTheme, windowBackground } from './theme'
 import { registerWorkspaces, workspaces } from './workspaces'
 
 setUpDataFolder()
+registerImageScheme()
 
 // Under Wayland, global shortcuts (the HUD's) go through the desktop portal, which Chromium only
 // uses when asked. It has to be asked before the app is ready.
@@ -44,6 +46,7 @@ function createWindow() {
   registerWorkspaces(mainWindow)
   registerFolders(mainWindow)
   registerGit(mainWindow)
+  registerImages(mainWindow)
   registerRoles(mainWindow)
   registerPets(mainWindow)
   registerHud(mainWindow)
