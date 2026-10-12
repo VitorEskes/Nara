@@ -720,56 +720,7 @@ export default function Workspace({
               : null
           )
         }
-      >
-        <div className="zoom" role="toolbar" aria-label="Zoom">
-          <button
-            className="icon-button"
-            data-tip-side="bottom"
-            data-tip="Zoom out · −"
-            aria-label="Zoom out"
-            onClick={() => zoomTo(cam.z / ZOOM_STEP)}
-          >
-            <MinusIcon />
-          </button>
-          <button
-            className="zoom-level"
-            data-tip-side="bottom"
-            data-tip="Reset to 100% · 0"
-            onClick={() => zoomTo(1)}
-          >
-            {Math.round(cam.z * 100)}%
-          </button>
-          <button
-            className="icon-button"
-            data-tip-side="bottom"
-            data-tip="Zoom in · +"
-            aria-label="Zoom in"
-            onClick={() => zoomTo(cam.z * ZOOM_STEP)}
-          >
-            <PlusIcon />
-          </button>
-          <span className="dock-divider" />
-          <button
-            className="icon-button"
-            data-tip-side="bottom"
-            data-tip="Fit everything · 1"
-            aria-label="Fit everything on screen"
-            onClick={zoomToFit}
-          >
-            <FitIcon />
-          </button>
-          <button
-            className={minimap ? 'icon-button active' : 'icon-button'}
-            data-tip-side="bottom"
-            data-tip="Minimap · M"
-            aria-label="Minimap"
-            aria-pressed={minimap}
-            onClick={() => setMinimap((open) => !open)}
-          >
-            <MapIcon />
-          </button>
-        </div>
-      </TopBar>
+      />
 
       {inspector && (
         <Inspector
@@ -887,7 +838,8 @@ export default function Workspace({
         </ToolButton>
       </div>
 
-      {board.showStyle && !draft && (
+      {/* The shapes menu and the style bar share the room above the dock: one at a time. */}
+      {board.showStyle && !draft && !shapeMenu && (
         <StyleBar
           style={board.style}
           keys={board.keys}
@@ -912,6 +864,45 @@ export default function Workspace({
             }
           />
         )}
+        <div className="floating zoom" role="toolbar" aria-label="Zoom">
+          <button
+            className="icon-button"
+            data-tip="Zoom out · −"
+            aria-label="Zoom out"
+            onClick={() => zoomTo(cam.z / ZOOM_STEP)}
+          >
+            <MinusIcon />
+          </button>
+          <button className="zoom-level" data-tip="Reset to 100% · 0" onClick={() => zoomTo(1)}>
+            {Math.round(cam.z * 100)}%
+          </button>
+          <button
+            className="icon-button"
+            data-tip="Zoom in · +"
+            aria-label="Zoom in"
+            onClick={() => zoomTo(cam.z * ZOOM_STEP)}
+          >
+            <PlusIcon />
+          </button>
+          <span className="dock-divider" />
+          <button
+            className="icon-button"
+            data-tip="Fit everything · 1"
+            aria-label="Fit everything on screen"
+            onClick={zoomToFit}
+          >
+            <FitIcon />
+          </button>
+          <button
+            className={minimap ? 'icon-button active' : 'icon-button'}
+            data-tip="Minimap · M"
+            aria-label="Minimap"
+            aria-pressed={minimap}
+            onClick={() => setMinimap((open) => !open)}
+          >
+            <MapIcon />
+          </button>
+        </div>
       </div>
 
       {launcher && (
@@ -947,10 +938,10 @@ export default function Workspace({
             </div>
             <div className="empty-hints">
               <span>
-                <kbd>Drag</kbd> or <kbd>Scroll</kbd> to pan
+                <kbd>Scroll</kbd> or <kbd>Space</kbd> + <kbd>Drag</kbd> to pan
               </span>
               <span>
-                <kbd>Shift</kbd> + <kbd>Drag</kbd> to select
+                <kbd>Drag</kbd> to select
               </span>
               <span>
                 <kbd>Ctrl</kbd> + <kbd>Scroll</kbd> to zoom

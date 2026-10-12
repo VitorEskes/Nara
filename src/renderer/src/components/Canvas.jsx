@@ -9,10 +9,9 @@ const MAJOR = 5
 // `children` live in the world, `overlay` too but drawn above them (and never taking the pointer).
 //
 // The pointer, as on a desktop:
-// - A left-button drag on empty canvas pans the camera, as with the hand. With Shift or Ctrl held
-//   it draws a selection box instead; onSelectBox gets the box in world coordinates as it
-//   changes, and whether it adds to the selection (always, since a plain click on the canvas has
-//   already cleared it).
+// - A left-button drag on empty canvas draws a selection box; onSelectBox gets the box in world
+//   coordinates as it changes, and whether it adds to the selection (with Shift or Ctrl held; a
+//   plain press on the canvas has already cleared it).
 // - The camera also pans from anywhere, over nodes too: dragging with the right button, with the
 //   middle one (except over a terminal's text, where it pastes), with Space held (`grab`), or
 //   with the hand tool. The wheel (two fingers on a touchpad) pans too, over nodes as well, except
@@ -66,17 +65,15 @@ export default function Canvas({
   function onPointerDown(e) {
     if (e.target !== e.currentTarget || e.button !== 0) return
     e.currentTarget.setPointerCapture(e.pointerId)
+    // No text selection and no focus change from this press: a text just made by the tool keeps
+    // the keyboard.
+    e.preventDefault()
     if (tool && tool !== 'hand') {
       drag.current = 'tool'
       onToolStart(toWorld(local(e)), e)
       return
     }
-    if (e.shiftKey || e.ctrlKey || e.metaKey) {
-      drag.current = { start: local(e), additive: true }
-      return
-    }
-    drag.current = 'pan'
-    e.currentTarget.classList.add('panning')
+    drag.current = { start: local(e), additive: e.shiftKey || e.ctrlKey || e.metaKey }
   }
 
   function onPointerMove(e) {

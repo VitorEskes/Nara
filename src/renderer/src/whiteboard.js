@@ -246,6 +246,8 @@ export function useWhiteboard({ saved, camRef, tool, setTool, group, clearNodes 
   function onShapeDown(shape, e) {
     if (e.button !== 0 || tool) return
     e.stopPropagation()
+    // No text selection while dragging, and the focus stays where it is.
+    e.preventDefault()
     let ids = selected
     if (e.shiftKey || e.ctrlKey || e.metaKey) {
       ids = selected.includes(shape.id)
@@ -277,6 +279,7 @@ export function useWhiteboard({ saved, camRef, tool, setTool, group, clearNodes 
   function onHandleDown(shape, handle, e) {
     if (e.button !== 0) return
     e.stopPropagation()
+    e.preventDefault()
     startDrag(e, { kind: 'handle', handle, origin: shape })
   }
 

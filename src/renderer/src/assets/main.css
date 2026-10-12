@@ -516,6 +516,8 @@ kbd {
    far out, where they would turn into noise. */
 .viewport {
   position: relative;
+  /* Dragging on the canvas never selects the page's text; notes and terminals have their own. */
+  user-select: none;
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -565,13 +567,6 @@ kbd {
   pointer-events: none;
 }
 
-.viewport[data-tool='draw'] {
-  cursor: crosshair;
-}
-
-.viewport[data-tool='erase'] {
-  cursor: cell;
-}
 
 .viewport.panning,
 .viewport.panning * {
@@ -1062,6 +1057,7 @@ kbd {
 
 /* A note's blocks (Note.jsx), scrolling when they run past the card. */
 .note-text {
+  user-select: text;
   position: absolute;
   inset: 0;
   box-sizing: border-box;
@@ -2722,13 +2718,8 @@ kbd {
 }
 
 .workspace .zoom-area {
-  right: auto;
-  left: 16px;
-  align-items: flex-start;
-}
-
-.workspace .minimap {
-  transform-origin: bottom left;
+  right: calc(16px + var(--inspector-room));
+  transition: right var(--slow) var(--ease-out);
 }
 
 .workspace .link-hint {
@@ -6020,7 +6011,7 @@ html.hud #root {
   fill: none;
   stroke: transparent;
   pointer-events: stroke;
-  cursor: move;
+  cursor: pointer;
 }
 
 .shape-hit.fill {
@@ -6084,31 +6075,65 @@ html.hud #root {
   fill: var(--stone);
   stroke: var(--accent);
   pointer-events: all;
+}
+
+/* The invisible target around each handle, bigger than the square it draws. */
+.shape-handle-hit {
+  fill: transparent;
+  pointer-events: all;
+}
+
+.shape-frame [data-handle] {
   cursor: grab;
 }
 
-.shape-handle[data-handle='n'],
-.shape-handle[data-handle='s'] {
+.shape-frame [data-handle='n'],
+.shape-frame [data-handle='s'] {
   cursor: ns-resize;
 }
 
-.shape-handle[data-handle='e'],
-.shape-handle[data-handle='w'] {
+.shape-frame [data-handle='e'],
+.shape-frame [data-handle='w'] {
   cursor: ew-resize;
 }
 
-.shape-handle[data-handle='nw'],
-.shape-handle[data-handle='se'] {
+.shape-frame [data-handle='nw'],
+.shape-frame [data-handle='se'] {
   cursor: nwse-resize;
 }
 
-.shape-handle[data-handle='ne'],
-.shape-handle[data-handle='sw'] {
+.shape-frame [data-handle='ne'],
+.shape-frame [data-handle='sw'] {
   cursor: nesw-resize;
 }
 
-.viewport[data-tool]:not([data-tool='hand']):not([data-tool='erase']) {
-  cursor: crosshair;
+.shape-frame .rotate,
+.shape-frame .rotate + .shape-handle {
+  cursor: grab;
+}
+
+.shape-frame .end,
+.shape-frame .end + .shape-handle {
+  cursor: move;
+}
+
+/* The drawing tools keep the plain arrow; the pen and the eraser show their size. */
+.viewport[data-tool]:not([data-tool='hand']) {
+  cursor: default;
+}
+
+.viewport[data-tool='draw'] {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Ccircle cx='6' cy='6' r='3' fill='%234fc48e' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E")
+      6 6,
+    default;
+}
+
+.viewport[data-tool='erase'] {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='8' fill='rgba(255,255,255,0.15)' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E")
+      10 10,
+    default;
 }
 
 .viewport[data-tool='text'] {

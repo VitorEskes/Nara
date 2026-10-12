@@ -139,11 +139,16 @@ function Label({ shape, style, editing, onText, onTextDone }) {
     fontSize: TEXT_SIZES[style.size].px * (shape.type === 'text' ? 1 : 0.75)
   }
 
+  // Next frame, once the press that started the edit is over and can't take the focus back.
   useEffect(() => {
     if (!editing) return
-    const el = input.current
-    el.focus()
-    el.setSelectionRange(el.value.length, el.value.length)
+    const frame = requestAnimationFrame(() => {
+      const el = input.current
+      if (!el) return
+      el.focus()
+      el.setSelectionRange(el.value.length, el.value.length)
+    })
+    return () => cancelAnimationFrame(frame)
   }, [editing])
 
   const free = shape.type === 'text'
@@ -197,16 +202,17 @@ function Frame({ shape, zoom, onHandleDown }) {
     return (
       <g className="shape-frame">
         {ends.map(([name, x, y]) => (
-          <circle
-            key={name}
-            className="shape-handle"
-            data-handle={name}
-            cx={x}
-            cy={y}
-            r={size / 1.6}
-            strokeWidth={stroke}
-            onPointerDown={(e) => onHandleDown(shape, name, e)}
-          />
+          <g key={name} onPointerDown={(e) => onHandleDown(shape, name, e)}>
+            <circle className="shape-handle-hit end" cx={x} cy={y} r={size * 1.3} />
+            <circle
+              className="shape-handle"
+              data-handle={name}
+              cx={x}
+              cy={y}
+              r={size / 1.6}
+              strokeWidth={stroke}
+            />
+          </g>
         ))}
       </g>
     )
@@ -242,28 +248,39 @@ function Frame({ shape, zoom, onHandleDown }) {
         y2={knob}
         strokeWidth={stroke}
       />
-      <circle
-        className="shape-handle rotate"
-        data-handle="rotate"
-        cx={x + w / 2}
-        cy={knob}
-        r={size / 1.7}
-        strokeWidth={stroke}
-        onPointerDown={(e) => onHandleDown(shape, 'rotate', e)}
-      />
-      {handles.map(([edge, hx, hy]) => (
-        <rect
-          key={edge}
-          className="shape-handle"
-          data-handle={edge}
-          x={hx - size / 2}
-          y={hy - size / 2}
-          width={size}
-          height={size}
-          rx={2 / zoom}
+      <g onPointerDown={(e) => onHandleDown(shape, 'rotate', e)}>
+        <circle className="shape-handle-hit rotate" cx={x + w / 2} cy={knob} r={size * 1.3} />
+        <circle
+          className="shape-handle rotate"
+          data-handle="rotate"
+          cx={x + w / 2}
+          cy={knob}
+          r={size / 1.7}
           strokeWidth={stroke}
-          onPointerDown={(e) => onHandleDown(shape, edge, e)}
         />
+      </g>
+      {handles.map(([edge, hx, hy]) => (
+        <g key={edge} data-handle={edge} onPointerDown={(e) => onHandleDown(shape, edge, e)}>
+          {/* A bigger, invisible target around the visible square. */}
+          <rect
+            className="shape-handle-hit"
+            data-handle={edge}
+            x={hx - size * 1.2}
+            y={hy - size * 1.2}
+            width={size * 2.4}
+            height={size * 2.4}
+          />
+          <rect
+            className="shape-handle"
+            data-handle={edge}
+            x={hx - size / 2}
+            y={hy - size / 2}
+            width={size}
+            height={size}
+            rx={2 / zoom}
+            strokeWidth={stroke}
+          />
+        </g>
       ))}
     </g>
   )

@@ -696,9 +696,9 @@ function Keyboard() {
     ['Edit text', 'Enter or double-click']
   ]
   const pointer = [
-    ['Pan', 'Drag'],
-    ['Select several', 'Shift + Drag'],
-    ['Pan from anywhere', 'Right drag'],
+    ['Select several', 'Drag on the canvas'],
+    ['Add to the selection', 'Shift + Drag'],
+    ['Pan', 'Scroll, Space + Drag or Right drag'],
     ['Zoom', 'Ctrl + Scroll']
   ]
 

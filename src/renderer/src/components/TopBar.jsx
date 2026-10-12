@@ -9,7 +9,7 @@ import { useBranch } from '../useBranch'
 // the agents in it are doing, what they've spent, and the inspector's switch. Translucent, so the
 // canvas runs on under it. `agents` are this workspace's statuses; clicking a state goes to the
 // agent that's been in it longest. `usage` is the workspace's total (telemetry.js), if any agent
-// has reported one. `children` go before the inspector's switch: the zoom.
+// has reported one.
 export default function TopBar({
   workspace,
   project,
@@ -21,8 +21,7 @@ export default function TopBar({
   inspector,
   onInspector,
   onLocate,
-  onVoice,
-  children
+  onVoice
 }) {
   const branch = useBranch(folder)
   const counts = {}
@@ -94,7 +93,6 @@ export default function TopBar({
             {usage.cost > 0 && <span className="topbar-cost">${usage.cost.toFixed(2)}</span>}
           </span>
         )}
-        {children}
         <button
           className="icon-button"
           title="Dictate to an agent (Ctrl+Alt+V)"
