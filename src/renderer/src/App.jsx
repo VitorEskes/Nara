@@ -18,7 +18,7 @@ const NARROW = 760
 // none) and its size, whether the HUD's global shortcut is on, and the command each agent starts
 // with instead of its own.
 const PREFS = 'prefs'
-const PREF_DEFAULTS = { pet: BUILT_IN_PET, petSize: 'm', hud: true, commands: {} }
+const PREF_DEFAULTS = { pet: BUILT_IN_PET, petSize: 'm', hud: true, voice: true, commands: {} }
 
 // Stands in for a workspace with no agents yet, so it keeps the same empty map between renders.
 const NO_AGENTS = new Map()
@@ -72,6 +72,12 @@ export default function App() {
   useEffect(() => {
     window.api.hud.enable(prefs.hud).then(setHudBound)
   }, [prefs.hud])
+
+  // Whether the voice bar's shortcut is bound.
+  const [voiceBound, setVoiceBound] = useState(null)
+  useEffect(() => {
+    window.api.voice.enable(prefs.voice).then(setVoiceBound)
+  }, [prefs.voice])
 
   useEffect(() => {
     window.api.agents.status().then(setStatuses)
@@ -405,6 +411,7 @@ export default function App() {
           onTheme={changeTheme}
           prefs={prefs}
           hudBound={hudBound}
+          voiceBound={voiceBound}
           onPrefs={(change) => setPrefs((current) => ({ ...current, ...change }))}
           roles={roles}
           onSaveRole={saveRole}

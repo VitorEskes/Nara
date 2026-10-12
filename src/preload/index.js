@@ -54,6 +54,20 @@ const api = {
     // The HUD sent the user to an agent.
     onJump: (fn) => listen('agents:jump', fn)
   },
+  voice: {
+    // Binds the bar's global shortcut, or lets it go; returns whether it's bound.
+    enable: (on) => ipcRenderer.invoke('voice:enable', on),
+    // Opens the bar, ready to send to `target` ({ workspaceId, nodeId }) if given.
+    open: (target) => ipcRenderer.send('voice:open', target ?? null),
+    hide: () => ipcRenderer.send('voice:hide'),
+    onOpened: (fn) => listen('voice:opened', fn),
+    // The opening that came before the page was ready: { target } or null.
+    take: () => ipcRenderer.invoke('voice:take'),
+    settings: () => ipcRenderer.invoke('voice:settings'),
+    save: (patch) => ipcRenderer.invoke('voice:save', patch),
+    // A WAV (ArrayBuffer) -> { text } or { error }.
+    transcribe: (wav) => ipcRenderer.invoke('voice:transcribe', wav)
+  },
   telemetry: {
     // [{ workspaceId, nodeId, agent, model, title, usage, tasks, activity, lines }], each agent's
     // report (main/telemetry.js); an update can carry { workspaceId, nodeId, removed: true }.

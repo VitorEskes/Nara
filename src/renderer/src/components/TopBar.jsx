@@ -1,5 +1,5 @@
 import ProjectBadge from './ProjectBadge'
-import { BranchIcon, PanelRightIcon, SidebarIcon } from './icons'
+import { BranchIcon, MicIcon, PanelRightIcon, SidebarIcon } from './icons'
 import { STATE_LABELS } from '../agentStatus'
 import { formatTokens } from '../telemetry'
 import { SHORTCUTS } from '../shortcuts'
@@ -21,6 +21,7 @@ export default function TopBar({
   inspector,
   onInspector,
   onLocate,
+  onVoice,
   children
 }) {
   const branch = useBranch(folder)
@@ -94,6 +95,14 @@ export default function TopBar({
           </span>
         )}
         {children}
+        <button
+          className="icon-button"
+          title="Dictate to an agent (Ctrl+Alt+V)"
+          aria-label="Dictate to an agent"
+          onClick={onVoice}
+        >
+          <MicIcon />
+        </button>
         <button
           className={inspector ? 'icon-button active' : 'icon-button'}
           title="Inspector (I)"

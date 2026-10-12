@@ -13,6 +13,7 @@ import {
   FolderIcon,
   InfoIcon,
   KeyboardIcon,
+  MicIcon,
   MonitorIcon,
   MoonIcon,
   PaletteIcon,
@@ -47,6 +48,12 @@ const SECTIONS = [
       label: 'Roles',
       Icon: UsersIcon,
       keywords: 'role instructions orchestrator worker reviewer prompt team'
+    },
+    {
+      key: 'voice',
+      label: 'Voice',
+      Icon: MicIcon,
+      keywords: 'dictation microphone speech transcribe whisper openai groq shortcut'
     },
     {
       key: 'pets',
@@ -84,6 +91,7 @@ export default function Settings({
   onTheme,
   prefs,
   hudBound,
+  voiceBound,
   onPrefs,
   roles,
   onSaveRole,
@@ -184,6 +192,7 @@ export default function Settings({
           {shown === 'roles' && (
             <Roles roles={roles} onSaveRole={onSaveRole} onRemoveRole={onRemoveRole} />
           )}
+          {shown === 'voice' && <Voice prefs={prefs} bound={voiceBound} onPrefs={onPrefs} />}
           {shown === 'pets' && <Pets prefs={prefs} hudBound={hudBound} onPrefs={onPrefs} />}
           {shown === 'keyboard' && <Keyboard />}
           {shown === 'about' && <About info={info} />}
@@ -334,6 +343,144 @@ function Roles({ roles, onSaveRole, onRemoveRole }) {
         )
       )}
     </div>
+  )
+}
+
+// Where the voice bar sends what it hears to become text.
+const ENGINES = [
+  { key: 'api', label: 'Transcription API' },
+  { key: 'local', label: 'whisper.cpp on this computer' }
+]
+const PRESETS = [
+  { label: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'whisper-1' },
+  { label: 'Groq', baseUrl: 'https://api.groq.com/openai/v1', model: 'whisper-large-v3-turbo' }
+]
+
+// The voice bar: its shortcut, the engine that turns speech into text, and the language.
+function Voice({ prefs, bound, onPrefs }) {
+  const [settings, setSettings] = useState(null)
+  const [key, setKey] = useState('')
+
+  useEffect(() => {
+    window.api.voice.settings().then(setSettings)
+  }, [])
+
+  async function save(patch) {
+    setSettings(await window.api.voice.save(patch))
+  }
+
+  if (!settings) return null
+  const engine = ENGINES.findIndex((e) => e.key === settings.provider)
+  const field = (name, label, placeholder, mono = true) => (
+    <label className="field">
+      <span className="field-label">{label}</span>
+      <input
+        key={`${name}:${settings[name]}`}
+        className={mono ? 'text-input mono' : 'text-input'}
+        defaultValue={settings[name]}
+        placeholder={placeholder}
+        spellCheck={false}
+        onBlur={(e) => e.target.value !== settings[name] && save({ [name]: e.target.value })}
+      />
+    </label>
+  )
+
+  return (
+    <>
+      <div className="settings-card">
+        <h3>Voice bar</h3>
+        <p>
+          Speak to an agent from anywhere: the bar listens, turns what you said into text you can
+          fix, and sends it to the agent you pick. Enter stops, Enter again sends.
+        </p>
+      </div>
+
+      <div className="settings-toggles">
+        <Switch
+          checked={prefs.voice}
+          label="Shortcut"
+          detail={
+            prefs.voice && bound === false
+              ? 'Your desktop didn’t give Nara the shortcut'
+              : 'Opens the bar over every app'
+          }
+          onChange={(voice) => onPrefs({ voice })}
+        >
+          <kbd>Ctrl Alt V</kbd>
+        </Switch>
+      </div>
+
+      <Group label="Engine">
+        <div
+          className="segmented"
+          role="group"
+          aria-label="Engine"
+          style={{ '--index': engine, '--count': ENGINES.length }}
+        >
+          {ENGINES.map(({ key: name, label }) => (
+            <button
+              key={name}
+              aria-pressed={settings.provider === name}
+              onClick={() => save({ provider: name })}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </Group>
+
+      {settings.provider === 'api' ? (
+        <div className="settings-form">
+          <div className="settings-presets">
+            {PRESETS.map((preset) => (
+              <button
+                key={preset.label}
+                className="idea"
+                aria-pressed={settings.baseUrl === preset.baseUrl}
+                onClick={() => save({ baseUrl: preset.baseUrl, model: preset.model })}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+          {field('baseUrl', 'Address', 'https://api.openai.com/v1')}
+          {field('model', 'Model', 'whisper-1')}
+          <label className="field">
+            <span className="field-label">API key</span>
+            <input
+              className="text-input mono"
+              type="password"
+              value={key}
+              placeholder={settings.hasKey ? 'Saved · type to replace it' : 'sk-…'}
+              spellCheck={false}
+              onChange={(e) => setKey(e.target.value)}
+              onBlur={() => {
+                if (!key) return
+                save({ key })
+                setKey('')
+              }}
+            />
+            <span className="field-hint">
+              Kept in Nara’s data folder, encrypted with your system’s keyring when it has one. The
+              audio goes to this address only when you dictate.
+            </span>
+          </label>
+        </div>
+      ) : (
+        <div className="settings-form">
+          {field('whisperBin', 'Program', 'whisper-cli')}
+          {field('whisperModel', 'Model file', '~/models/ggml-base.bin')}
+          <span className="field-hint">
+            whisper.cpp runs here, so the audio never leaves this computer. Download a model (ggml)
+            from its repository and point to it.
+          </span>
+        </div>
+      )}
+
+      <div className="settings-form">
+        {field('language', 'Language', 'Detect it (or pt, en, es…)', false)}
+      </div>
+    </>
   )
 }
 

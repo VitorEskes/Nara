@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import CommandCenter from './CommandCenter'
 import { PetFigure } from './Pet'
-import { BrandMark, CloseIcon } from './icons'
+import { BrandMark, CloseIcon, MicIcon } from './icons'
 import { URGENCY, byUrgency } from '../agentStatus'
 
 // The floating HUD (main/hud.js): the pet and its command center in a small window over every
@@ -34,6 +34,19 @@ export default function Hud() {
           {pet ? <PetFigure pet={pet} mood={focus?.state ?? 'idle'} width={52} /> : <BrandMark />}
         </span>
         <h1>Agents</h1>
+        <button
+          className="icon-button"
+          aria-label="Dictate"
+          title="Dictate to an agent (Ctrl+Alt+V)"
+          onClick={() => {
+            window.api.hud.hide()
+            window.api.voice.open(
+              focus ? { workspaceId: focus.workspaceId, nodeId: focus.nodeId } : null
+            )
+          }}
+        >
+          <MicIcon />
+        </button>
         <button
           className="icon-button"
           aria-label="Close"

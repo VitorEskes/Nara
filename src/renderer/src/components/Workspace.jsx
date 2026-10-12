@@ -694,6 +694,14 @@ export default function Workspace({
         inspector={inspector}
         onInspector={onInspector}
         onLocate={locate}
+        // Dictation goes to the selected agent, if one is.
+        onVoice={() =>
+          window.api.voice.open(
+            selectedNode && AGENTS[selectedNode.agent]
+              ? { workspaceId, nodeId: selectedNode.id }
+              : null
+          )
+        }
       >
         <div className="zoom" role="toolbar" aria-label="Zoom">
           <button
