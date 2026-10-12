@@ -69,6 +69,8 @@ export default function Launcher({
   const [info, setInfo] = useState(null)
   const [roleByAgent, setRoleByAgent] = useState(memory.roles ?? {})
   const [look, setLook] = useState(() => terminalLook(memory.look))
+  // Whether an agent opens in a git worktree of its own, on a new branch.
+  const [isolate, setIsolate] = useState(Boolean(memory.isolate))
   // The role being written or edited, or null.
   const [draft, setDraft] = useState(null)
   const [closing, setClosing] = useState(false)
@@ -136,6 +138,7 @@ export default function Launcher({
       JSON.stringify({
         program,
         roles: roleByAgent,
+        isolate,
         look: { theme: look.theme, tone: look.tone, size: look.size, cursor: look.cursor }
       })
     )
@@ -146,7 +149,8 @@ export default function Launcher({
       ...(typed && typed !== builtInCommand(program) && { command: typed }),
       title: title && title !== fallbackName ? title : defaultTitle('terminal', number),
       cwd,
-      style
+      style,
+      ...(agent && isolate && info?.branch && { isolate: true })
     })
     close()
   }
@@ -338,6 +342,24 @@ export default function Launcher({
                     <span className="field-hint warning">
                       Not found: it opens in your home folder
                     </span>
+                  )}
+                  {agent && info?.branch && (
+                    <label className="isolate-row">
+                      <input
+                        type="checkbox"
+                        role="switch"
+                        className="switch"
+                        checked={isolate}
+                        onChange={(e) => setIsolate(e.target.checked)}
+                      />
+                      <span>
+                        <strong>Its own worktree</strong>
+                        <small>
+                          A new branch off {info.branch}, in a checkout of its own: agents side by
+                          side never edit the same files. Review and merge it from the inspector.
+                        </small>
+                      </span>
+                    </label>
                   )}
                   {folder && cwd !== folder && (
                     <button type="button" className="link-button" onClick={() => setCwd(folder)}>

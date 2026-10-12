@@ -24,6 +24,7 @@ export default function Terminal({
   role,
   command,
   cwd,
+  worktree,
   look,
   onExit
 }) {
@@ -90,6 +91,8 @@ export default function Terminal({
       role,
       command,
       cwd,
+      // Only what the prompt needs, and as text, so it can be a dependency below.
+      worktree: worktree ? JSON.parse(worktree) : undefined,
       cols: term.cols,
       rows: term.rows
     }
@@ -127,7 +130,7 @@ export default function Terminal({
       if (id) window.api.pty.kill(id)
       term.dispose()
     }
-  }, [workspaceId, nodeId, agent, session, role, command, cwd])
+  }, [workspaceId, nodeId, agent, session, role, command, cwd, worktree])
 
   // The colors and the cursor change in place. A new size changes how many rows and columns fit
   // in the same box, so the PTY hears about it.

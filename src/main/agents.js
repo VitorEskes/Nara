@@ -16,12 +16,20 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 // Free text (the prompt, the first message, the hooks) goes through the environment and the shell
 // expands each as a single argument, so it never has to be quoted into the command line. The
 // rest comes from fixed lists (shared/prompt.js) and goes in as it is.
-export function agentLaunch({ agent, command: typed, session, role: key, nodeId, hooks }) {
+export function agentLaunch({
+  agent,
+  command: typed,
+  session,
+  role: key,
+  nodeId,
+  hooks,
+  worktree
+}) {
   const command = typeof typed === 'string' && typed.trim() ? typed.trim() : AGENTS[agent].command
   const role = findRole(key)
   const { model, mode, access, kickoff } = roleProfile(role)
   const args = []
-  const env = { NARA_PROMPT: agentPrompt(nodeId, role) }
+  const env = { NARA_PROMPT: agentPrompt(nodeId, role, worktree) }
   let resuming = false
 
   if (agent === 'claude') {

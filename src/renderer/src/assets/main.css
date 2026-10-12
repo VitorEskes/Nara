@@ -6515,3 +6515,211 @@ html.hud #root {
   align-items: center;
   gap: 4px;
 }
+
+/* The launcher's switch for a worktree of the agent's own. */
+.isolate-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-m);
+  cursor: pointer;
+}
+
+.isolate-row .switch {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.isolate-row span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.isolate-row strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.isolate-row small {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-3);
+}
+
+/* The inspector's Changes: the worktree, then the files, each opening to its diff. */
+.worktree-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--edge));
+  border-radius: var(--radius-l);
+  background: var(--accent-softer);
+}
+
+.worktree-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--accent-text);
+}
+
+.worktree-branch {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.worktree-base {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.worktree-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.git-notice {
+  margin: 0;
+  font-size: 12px;
+  color: var(--accent-text);
+}
+
+.git-notice.error {
+  color: var(--danger);
+}
+
+.change-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.change {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 30px;
+  padding: 0 8px 0 6px;
+  border: 0;
+  border-radius: var(--radius-s);
+  text-align: left;
+  color: var(--text-2);
+  background: none;
+  cursor: pointer;
+}
+
+.change:hover,
+.change[aria-expanded='true'] {
+  color: var(--text);
+  background: var(--active-soft);
+}
+
+.change-mark {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--state-working);
+  background: color-mix(in srgb, var(--state-working) 14%, transparent);
+}
+
+.change[data-status='added'] .change-mark {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.change[data-status='deleted'] .change-mark,
+.change[data-status='conflict'] .change-mark {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.change-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.change-dir {
+  color: var(--text-4);
+}
+
+.change .added,
+.change .removed {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.change .added {
+  color: var(--accent-text);
+}
+
+.change .removed {
+  color: var(--danger);
+}
+
+.diff {
+  display: flex;
+  flex-direction: column;
+  max-height: 360px;
+  margin: 4px 0 8px;
+  overflow: auto;
+  padding: 6px 0;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-m);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-2);
+  background: var(--canvas);
+}
+
+.diff span {
+  padding: 0 10px;
+  white-space: pre;
+}
+
+.diff .add {
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.diff .del {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.diff .hunk {
+  margin-top: 4px;
+  color: var(--text-4);
+}
+
+.diff.loading {
+  padding: 10px;
+  font-family: var(--font-ui);
+  color: var(--text-4);
+}

@@ -302,12 +302,25 @@ export default function Workspace({
   // other agents and `nara send` still call it "terminal N", whatever its title. The session id
   // lets the node resume its conversation after a restart; agents that can't resume ignore it.
   // An agent needs a folder, so a workspace without one asks for it first.
-  async function launch({ agent, cwd, ...fields }) {
-    const dir = cwd ?? (agent ? await onPickFolder() : undefined)
+  // With `isolate`, the agent gets a git worktree of its own first, on a new branch, and opens
+  // there.
+  async function launch({ agent, cwd, isolate, ...fields }) {
+    let dir = cwd ?? (agent ? await onPickFolder() : undefined)
     if (agent && !dir) return
+    let worktree
+    if (isolate) {
+      const made = await window.api.git.worktree(dir, fields.title)
+      if (made.error) {
+        alert(`Couldn't make a worktree: ${made.error}`)
+        return
+      }
+      worktree = made
+      dir = made.path
+    }
     createNodeAtCenter('terminal', {
       ...fields,
       ...(dir && { cwd: dir }),
+      ...(worktree && { worktree }),
       ...(agent && { agent, session: crypto.randomUUID() })
     })
   }
@@ -675,6 +688,11 @@ export default function Workspace({
                 role={node.role}
                 command={node.command}
                 cwd={node.cwd}
+                worktree={
+                  node.worktree
+                    ? JSON.stringify({ branch: node.worktree.branch, base: node.worktree.base })
+                    : undefined
+                }
                 look={terminalLook(node.style)}
                 onExit={() => closeNode(node.id)}
               />

@@ -68,6 +68,16 @@ const api = {
     // A WAV (ArrayBuffer) -> { text } or { error }.
     transcribe: (wav) => ipcRenderer.invoke('voice:transcribe', wav)
   },
+  git: {
+    // A worktree of the folder's repository on a new branch: { path, branch, base, root } or
+    // { error }.
+    worktree: (folder, name) => ipcRenderer.invoke('git:worktree', folder, name),
+    // { branch, files: [{ path, status, added, removed }] } or null outside a repository.
+    changes: (folder) => ipcRenderer.invoke('git:changes', folder),
+    diff: (folder, file, untracked) => ipcRenderer.invoke('git:diff', folder, file, untracked),
+    merge: (worktree) => ipcRenderer.invoke('git:merge', worktree),
+    removeWorktree: (worktree) => ipcRenderer.invoke('git:remove-worktree', worktree)
+  },
   telemetry: {
     // [{ workspaceId, nodeId, agent, model, title, usage, tasks, activity, lines }], each agent's
     // report (main/telemetry.js); an update can carry { workspaceId, nodeId, removed: true }.

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import RoleEditor, { PromptPreview, RoleBadges } from './RoleEditor'
 import TerminalLook from './TerminalLook'
 import { Group, Options } from './fields'
@@ -35,8 +35,8 @@ import { AGENTS } from '../../../shared/agents'
 // task list, what it did, its role and its look.
 function tabsFor(node) {
   if (node.type === 'note') return ['overview', 'format']
-  if (AGENTS[node.agent]) return ['overview', 'tasks', 'activity', 'role', 'look']
-  return ['overview', 'look']
+  if (AGENTS[node.agent]) return ['overview', 'tasks', 'activity', 'changes', 'role']
+  return ['overview', 'changes']
 }
 
 const TAB_LABELS = {
@@ -44,7 +44,7 @@ const TAB_LABELS = {
   tasks: 'Tasks',
   activity: 'Activity',
   role: 'Role',
-  look: 'Look',
+  changes: 'Changes',
   format: 'Format'
 }
 
@@ -191,13 +191,7 @@ export default function Inspector({
             onRestart={onRestart}
           />
         )}
-        {current === 'look' && (
-          <TerminalLook
-            look={terminalLook(node.style)}
-            agent={node.agent}
-            onChange={(change) => onChange({ style: { ...node.style, ...change } })}
-          />
-        )}
+        {current === 'changes' && <Changes key={node.id} node={node} onChange={onChange} />}
         {current === 'format' && (
           <NoteStyle
             style={node.style}
@@ -441,7 +435,177 @@ function Overview({
         onLocate={onLocate}
         onPeerHover={onPeerHover}
       />
+
+      {node.type === 'terminal' && (
+        <Group label="Appearance">
+          <TerminalLook
+            look={terminalLook(node.style)}
+            agent={node.agent}
+            onChange={(change) => onChange({ style: { ...node.style, ...change } })}
+          />
+        </Group>
+      )}
     </>
+  )
+}
+
+// How often the changes are read again while the tab is open.
+const CHANGES_EVERY = 4000
+const STATUS_MARKS = { modified: 'M', added: 'A', deleted: 'D', renamed: 'R', conflict: '!' }
+
+// What changed in the terminal's folder since the last commit, file by file, each opening to its
+// diff. A terminal in a worktree of its own can merge its branch back, or remove the worktree.
+function Changes({ node, onChange }) {
+  const folder = node.worktree?.path ?? node.cwd
+  const [changes, setChanges] = useState(undefined)
+  const [open, setOpen] = useState(null)
+  const [diff, setDiff] = useState(null)
+  const [notice, setNotice] = useState(null)
+  const [tick, setTick] = useState(0)
+
+  useEffect(() => {
+    let current = true
+    const read = () => window.api.git.changes(folder).then((next) => current && setChanges(next))
+    read()
+    const timer = setInterval(read, CHANGES_EVERY)
+    return () => {
+      current = false
+      clearInterval(timer)
+    }
+  }, [folder, tick])
+
+  useEffect(() => {
+    if (!open) return
+    let current = true
+    const file = changes?.files.find((f) => f.path === open)
+    window.api.git
+      .diff(folder, open, file?.status === 'added' && file.added == null)
+      .then((text) => current && setDiff(text))
+    return () => {
+      current = false
+    }
+    // The diff is read again when the file's counts change, not on every poll.
+  }, [folder, open, changes?.files.find((f) => f.path === open)?.added]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function merge() {
+    const result = await window.api.git.merge(node.worktree)
+    if (result.canceled) return
+    setNotice(result.ok ? { ok: `Merged into ${node.worktree.base}` } : { error: result.error })
+  }
+
+  async function remove() {
+    const result = await window.api.git.removeWorktree(node.worktree)
+    if (result.canceled) return
+    if (result.error) return setNotice({ error: result.error })
+    onChange({ worktree: undefined, cwd: node.worktree.root })
+    setNotice({ ok: 'Worktree removed; the branch is still there' })
+    setTick((t) => t + 1)
+  }
+
+  if (changes === undefined) return null
+  if (changes === null) {
+    return <p className="inspector-empty">This folder isn’t in a git repository.</p>
+  }
+  const added = changes.files.reduce((sum, f) => sum + (f.added ?? 0), 0)
+  const removed = changes.files.reduce((sum, f) => sum + (f.removed ?? 0), 0)
+
+  return (
+    <>
+      {node.worktree && (
+        <div className="worktree-card">
+          <div className="worktree-head">
+            <BranchIcon size={13} />
+            <span className="worktree-branch">{node.worktree.branch}</span>
+            <span className="worktree-base">from {node.worktree.base}</span>
+          </div>
+          <div className="worktree-actions">
+            <button className="button small" onClick={merge}>
+              Merge into {node.worktree.base}
+            </button>
+            <button className="button subtle danger" onClick={remove}>
+              Remove worktree
+            </button>
+          </div>
+        </div>
+      )}
+      {notice && (
+        <p className={notice.error ? 'git-notice error' : 'git-notice'}>
+          {notice.error ?? notice.ok}
+        </p>
+      )}
+
+      {changes.files.length === 0 ? (
+        <p className="inspector-empty">
+          Nothing changed on {changes.branch} since the last commit.
+        </p>
+      ) : (
+        <>
+          <div className="lines-changed">
+            <span>
+              {changes.files.length} {changes.files.length === 1 ? 'file' : 'files'} on{' '}
+              {changes.branch}
+            </span>
+            <span className="added">+{added}</span>
+            <span className="removed">−{removed}</span>
+          </div>
+          <ul className="change-list">
+            {changes.files.map((file) => {
+              const slash = file.path.lastIndexOf('/')
+              return (
+                <li key={file.path}>
+                  <button
+                    className="change"
+                    data-status={file.status}
+                    aria-expanded={open === file.path}
+                    onClick={() => {
+                      setDiff(null)
+                      setOpen((current) => (current === file.path ? null : file.path))
+                    }}
+                  >
+                    <span className="change-mark">{STATUS_MARKS[file.status]}</span>
+                    <span className="change-path" title={file.path}>
+                      <span className="change-dir">{file.path.slice(0, slash + 1)}</span>
+                      {file.path.slice(slash + 1)}
+                    </span>
+                    {file.added != null && <span className="added">+{file.added}</span>}
+                    {file.removed != null && <span className="removed">−{file.removed}</span>}
+                  </button>
+                  {open === file.path && <Diff text={diff} />}
+                </li>
+              )
+            })}
+          </ul>
+        </>
+      )}
+    </>
+  )
+}
+
+// A unified diff, its lines colored by what they do; the file headers are left out.
+function Diff({ text }) {
+  if (text == null) return <div className="diff loading">Reading…</div>
+  const lines = text
+    .split('\n')
+    .filter((line) => !/^(diff |index |--- |\+\+\+ |new file|deleted file)/.test(line))
+  return (
+    <pre className="diff">
+      {lines.map((line, i) => (
+        <span
+          key={i}
+          className={
+            line.startsWith('@@')
+              ? 'hunk'
+              : line.startsWith('+')
+                ? 'add'
+                : line.startsWith('-')
+                  ? 'del'
+                  : undefined
+          }
+        >
+          {line || ' '}
+        </span>
+      ))}
+    </pre>
   )
 }
 

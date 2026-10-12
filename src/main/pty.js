@@ -33,14 +33,22 @@ const exiting = new Set()
 // `extraEnv` holds the variables every terminal gets (the ones the `nara` command uses).
 export function registerPty(win, extraEnv) {
   ipcMain.handle('pty:create', (_ev, options = {}) => {
-    const { workspaceId, nodeId, agent, session, role, command } = options
+    const { workspaceId, nodeId, agent, session, role, command, worktree } = options
     const { cols = 80, rows = 24, cwd } = options
     const id = nextId++
     // An agent runs inside the user's interactive shell (-i loads .zshrc/.bashrc), so it's found
     // on the same PATH as when typed in a terminal. When the agent quits, the shell ends with it.
     const shell = process.env.SHELL || 'bash'
     const launch = AGENTS[agent]
-      ? agentLaunch({ agent, command, session, role, nodeId, hooks: agent === 'claude' && HOOKS })
+      ? agentLaunch({
+          agent,
+          command,
+          session,
+          role,
+          nodeId,
+          worktree,
+          hooks: agent === 'claude' && HOOKS
+        })
       : typeof command === 'string' && command.trim()
         ? startupLaunch(command, shell)
         : null

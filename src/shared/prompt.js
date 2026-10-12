@@ -98,10 +98,18 @@ How it works:
 - Text with several lines or with quotes is safer through stdin: nara send 2 <<'EOF' ... EOF`
 }
 
-// Everything the agent is told: its role first, then how Nara works.
-export function agentPrompt(nodeId, role) {
-  const own = rolePrompt(role)
-  return own ? `${own}\n\n${naraPrompt(nodeId)}` : naraPrompt(nodeId)
+// Everything the agent is told: its role first, then how Nara works, then, for an agent in a
+// worktree of its own ({ branch, base }), where its work goes.
+export function agentPrompt(nodeId, role, worktree) {
+  const parts = [rolePrompt(role), naraPrompt(nodeId), worktreePrompt(worktree)]
+  return parts.filter(Boolean).join('\n\n')
+}
+
+function worktreePrompt(worktree) {
+  if (!worktree?.branch) return ''
+  return `# Your worktree
+
+You work in a git worktree of your own, on the branch ${worktree.branch}, made from ${worktree.base}. Other agents may be working on ${worktree.base} or on branches of their own at the same time, so stay on this branch. Commit your work here as you finish each piece, with clear messages: the user reviews this branch in Nara and merges it into ${worktree.base} from there, and only commits get merged.`
 }
 
 // The settings the role turns into, in words, for the role's card and the inspector:

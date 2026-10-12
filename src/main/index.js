@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { setUpDataFolder } from './dataFolder'
 import { registerFolders } from './folders'
+import { registerGit } from './git'
 import { registerHud } from './hud'
 import { registerPets } from './pets'
 import { registerMessages } from './messages'
@@ -42,6 +43,7 @@ function createWindow() {
   registerTheme(mainWindow)
   registerWorkspaces(mainWindow)
   registerFolders(mainWindow)
+  registerGit(mainWindow)
   registerRoles(mainWindow)
   registerPets(mainWindow)
   registerHud(mainWindow)
