@@ -2418,23 +2418,6 @@ kbd {
   background: var(--edge-strong);
 }
 
-/* On a narrow canvas the dock keeps only its icons; the labels move to the tooltips. */
-@container workspace (max-width: 760px) {
-  .dock-label,
-  .dock-button .chevron {
-    display: none;
-  }
-
-  .dock-button {
-    padding: 0;
-  }
-}
-
-@container workspace (min-width: 761px) {
-  .dock-button:has(.dock-label)::after {
-    display: none;
-  }
-}
 
 .role-dot {
   width: 8px;
@@ -9438,21 +9421,10 @@ html.hud #root {
   caret-color: var(--accent);
 }
 
-/* With the inspector open the canvas is narrower: the zoom moves up out of the dock's way, and the
-   dock keeps only its icons. */
+/* With the inspector open the canvas is narrower: the zoom moves up out of the dock's way. */
 @container workspace (max-width: 1240px) {
   .workspace[data-inspector='open'] .zoom-area {
     bottom: 80px;
-  }
-}
-
-@container workspace (max-width: 1000px) {
-  .workspace[data-inspector='open'] .dock-label {
-    display: none;
-  }
-
-  .workspace[data-inspector='open'] .dock-button {
-    padding: 0;
   }
 }
 

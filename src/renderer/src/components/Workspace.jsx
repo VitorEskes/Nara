@@ -820,18 +820,22 @@ export default function Workspace({
         </button>
         <span className="dock-divider" />
         <button
-          className="dock-button"
+          className="dock-button tool"
           data-tip="Terminal or agent · T"
+          aria-label="Terminal or agent"
           aria-haspopup="dialog"
           aria-expanded={Boolean(launcher)}
           onClick={openLauncher}
         >
           <TerminalIcon />
-          <span className="dock-label">Terminal</span>
         </button>
-        <button className="dock-button" data-tip="Note · N" onClick={newNote}>
+        <button
+          className="dock-button tool"
+          data-tip="Note · N"
+          aria-label="Note"
+          onClick={newNote}
+        >
           <NoteIcon />
-          <span className="dock-label">Note</span>
         </button>
         <ToolButton tool={tool} name="link" label="Connect" keys="C" onTool={setTool}>
           <LinkIcon />
