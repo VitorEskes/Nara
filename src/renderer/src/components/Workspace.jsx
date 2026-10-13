@@ -201,8 +201,6 @@ export default function Workspace({
   // moves them all.
   function pointerDownOnNode(node, e) {
     raise(node.id)
-    // A click on a node opens the inspector on it.
-    if (!inspector) onInspector(true)
     if (panelTab === 'workspace') setPanelTab('status')
     if (!(e.shiftKey || e.ctrlKey || e.metaKey)) board.setSelected([])
     if (e.shiftKey || e.ctrlKey || e.metaKey) {
@@ -408,7 +406,6 @@ export default function Workspace({
       line: () => pickShape('line'),
       arrow: () => pickShape('arrow'),
       terminal: openLauncher,
-      inspector: onInspector,
       note: newNote,
       zoomIn: () => zoomTo(camRef.current.z * ZOOM_STEP),
       zoomOut: () => zoomTo(camRef.current.z / ZOOM_STEP),
@@ -751,7 +748,6 @@ export default function Workspace({
           telemetry={telemetry}
           section={panelTab}
           onSection={setPanelTab}
-          onClose={() => onInspector(false)}
           onSaveRole={onSaveRole}
           onChange={(changes) => updateNode(selectedNode.id, changes)}
           onNoteCommand={(id, command) =>

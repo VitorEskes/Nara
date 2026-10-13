@@ -39,7 +39,6 @@ export const CANVAS_KEYS = {
   t: 'terminal',
   n: 'note',
   m: 'minimap',
-  i: 'inspector',
   '=': 'zoomIn',
   '+': 'zoomIn',
   '-': 'zoomOut',

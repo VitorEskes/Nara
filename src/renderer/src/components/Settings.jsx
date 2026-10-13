@@ -664,7 +664,6 @@ function Keyboard() {
     text: 'Text',
     erase: 'Erase',
     minimap: 'Minimap',
-    inspector: 'Inspector',
     zoomFit: 'Fit everything',
     zoomReset: 'Zoom to 100%'
   }

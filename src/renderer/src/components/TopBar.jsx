@@ -96,7 +96,7 @@ export default function TopBar({
         </button>
         <button
           className={inspector ? 'icon-button active' : 'icon-button'}
-          title="Inspector (I)"
+          title="Inspector"
           aria-label="Inspector"
           aria-pressed={inspector}
           onClick={onInspector}

@@ -7,7 +7,6 @@ import {
   ActivityIcon,
   BranchIcon,
   CheckIcon,
-  ChevronIcon,
   DiffIcon,
   FolderIcon,
   GaugeIcon,
@@ -53,9 +52,9 @@ function sectionsFor(node) {
 }
 
 // The inspector on the right of the canvas. A rail of icons runs down its edge: the workspace at
-// the top, then the selected node's sections. The pane beside it shows the one picked, and the
-// arrow in its header closes the whole inspector (onClose). `section` is the one picked, or
-// 'workspace'; onSection changes it.
+// the top, then the selected node's sections. The pane beside it shows the one picked. It opens
+// and closes only from its button in the top bar. `section` is the one picked, or 'workspace';
+// onSection changes it.
 // `nodes` and `links` are the whole canvas, for the connections; `roles` every role by key.
 // `statuses` and `telemetry` are what main reports about the agents, by node id. onChange gets the
 // node's fields that changed; onRestart starts its agent again. onNoteCommand sends a note an
@@ -71,7 +70,6 @@ export default function Inspector({
   telemetry,
   section,
   onSection,
-  onClose,
   onSaveRole,
   onChange,
   onRestart,
@@ -123,14 +121,6 @@ export default function Inspector({
               <h2 className="inspector-title">{SECTIONS[current].label}</h2>
             </div>
           )}
-          <button
-            className="icon-button small inspector-fold"
-            title="Close (I)"
-            aria-label="Close the inspector"
-            onClick={onClose}
-          >
-            <ChevronIcon size={14} />
-          </button>
         </header>
 
         {/* The key replays the fade when the section or the node changes. */}

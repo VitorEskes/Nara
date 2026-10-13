@@ -2833,10 +2833,6 @@ kbd {
   background: var(--state);
 }
 
-.inspector-fold .icon {
-  transform: rotate(-90deg);
-}
-
 /* Tooltips to the left of the rail. */
 [data-tip-side='left']::after {
   top: 50%;
