@@ -2279,7 +2279,8 @@ kbd {
 
 .canvas-empty {
   position: absolute;
-  inset: 0 0 90px;
+  /* Centered in the room the inspector leaves, under the top bar and above the dock. */
+  inset: var(--topbar-height) var(--inspector-room) 90px 0;
   display: grid;
   place-items: center;
   pointer-events: none;

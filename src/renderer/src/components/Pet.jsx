@@ -23,6 +23,9 @@ const FRAME_DEFAULT = 130
 const SLOP = 4
 const POSITION = 'pet-position'
 
+// How far the pet rises when the inspector pushes it aside, to clear the zoom beside it.
+const SHIFT_LIFT = 64
+
 // The pet in the corner of the window, over everything but the dialogs: it shows, in its bubble
 // and its animation, what the agents in every open workspace are doing (`statuses`, from main's
 // status.js). Clicking it opens the command center, where each agent can be answered or visited
@@ -103,10 +106,11 @@ export default function Pet({ pet, size, statuses, onJump, reserved = 0 }) {
       ref={root}
       className="pet"
       data-mood={mood}
-      // Kept clear of `reserved` pixels on the right (the inspector) when it sits in them.
+      // Kept clear of `reserved` pixels on the right (the inspector) when it sits in them, and
+      // lifted over the zoom, which moves there too.
       style={{
         right: position.right < reserved ? position.right + reserved : position.right,
-        bottom: position.bottom,
+        bottom: position.right < reserved ? position.bottom + SHIFT_LIFT : position.bottom,
         width
       }}
     >

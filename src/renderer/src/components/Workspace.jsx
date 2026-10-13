@@ -966,8 +966,8 @@ export default function Workspace({
           <div className="empty-state">
             <h2 className="empty-title">A blank canvas</h2>
             <p className="empty-text">
-              Open terminals and agents here, then drag the dot on one&apos;s bar onto another to
-              link them: linked agents can message each other and share notes.
+              Open terminals and agents here, then link them with Connect in the dock: linked agents
+              can message each other and share notes.
             </p>
             <div className="empty-actions">
               <button className="button primary" onClick={openLauncher}>
@@ -990,7 +990,7 @@ export default function Workspace({
                 <kbd>Ctrl</kbd> + <kbd>Scroll</kbd> to zoom
               </span>
               <span>
-                <kbd>T</kbd> <kbd>N</kbd> <kbd>D</kbd> <kbd>R</kbd> tools
+                <kbd>T</kbd> <kbd>N</kbd> <kbd>C</kbd> <kbd>D</kbd> <kbd>R</kbd> tools
               </span>
             </div>
           </div>
