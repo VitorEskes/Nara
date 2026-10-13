@@ -200,6 +200,12 @@ export default function Workspace({
   // or takes it out; a node that's already part of a selection keeps the group, so dragging it
   // moves them all.
   function pointerDownOnNode(node, e) {
+    // With the connect tool, a press on a node pulls a string out of it instead.
+    if (tool === 'link') {
+      if (e.button !== 0) return
+      startLink(node.id, e)
+      return
+    }
     raise(node.id)
     if (panelTab === 'workspace') setPanelTab('status')
     if (!(e.shiftKey || e.ctrlKey || e.metaKey)) board.setSelected([])
@@ -400,6 +406,7 @@ export default function Workspace({
       minimap: () => setMinimap((open) => !open),
       draw: () => setTool('draw'),
       erase: () => setTool('erase'),
+      link: () => setTool((current) => (current === 'link' ? null : 'link')),
       text: () => setTool('text'),
       rect: () => pickShape('rect'),
       ellipse: () => pickShape('ellipse'),
@@ -770,6 +777,14 @@ export default function Workspace({
         />
       )}
 
+      {tool === 'link' && !draft && (
+        <div className="floating link-hint" role="status">
+          <LinkIcon size={14} />
+          Drag from a node to another, or click one and then the other
+          <kbd>Esc</kbd>
+        </div>
+      )}
+
       {draft && (
         <div className="floating link-hint" role="status">
           <LinkIcon size={14} />
@@ -816,6 +831,9 @@ export default function Workspace({
           <NoteIcon />
           <span className="dock-label">Note</span>
         </button>
+        <ToolButton tool={tool} name="link" label="Connect" keys="C" onTool={setTool}>
+          <LinkIcon />
+        </ToolButton>
         <span className="dock-divider" />
         <ToolButton tool={tool} name="draw" label="Draw" keys="D" onTool={setTool}>
           <PenIcon />

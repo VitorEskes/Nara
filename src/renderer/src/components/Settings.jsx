@@ -663,6 +663,7 @@ function Keyboard() {
     arrow: 'Arrow',
     text: 'Text',
     erase: 'Erase',
+    link: 'Connect',
     minimap: 'Minimap',
     zoomFit: 'Fit everything',
     zoomReset: 'Zoom to 100%'

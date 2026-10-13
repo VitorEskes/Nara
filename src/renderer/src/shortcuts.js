@@ -36,6 +36,7 @@ export const CANVAS_KEYS = {
   o: 'ellipse',
   l: 'line',
   a: 'arrow',
+  c: 'link',
   t: 'terminal',
   n: 'note',
   m: 'minimap',

@@ -545,10 +545,22 @@ kbd {
 
 /* With a tool on, or Space held, nothing in the world takes the pointer (not even link hitboxes
    or xterm's own elements), so every drag lands on the viewport. */
-.viewport[data-tool] .world,
-.viewport[data-tool] .world *,
+.viewport[data-tool]:not([data-tool='link']) .world,
+.viewport[data-tool]:not([data-tool='link']) .world *,
 .viewport[data-grab] .world,
 .viewport[data-grab] .world * {
+  pointer-events: none;
+}
+
+/* The connect tool: the nodes take the pointer, to be tied together, and nothing else does. */
+.viewport[data-tool='link'] .node,
+.viewport[data-tool='link'] .node * {
+  cursor: pointer !important;
+}
+
+.viewport[data-tool='link'] .node-body,
+.viewport[data-tool='link'] .links,
+.viewport[data-tool='link'] .shapes * {
   pointer-events: none;
 }
 
