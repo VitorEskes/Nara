@@ -260,12 +260,14 @@ export default function Workspace({
     setSelection([...new Set([...boxBase.current, ...inside])])
   }
 
-  // A click anywhere but a node or the panels clears the selection. Capture, because the canvas
-  // and the nodes stop some pointer events on their way up.
+  // A click on empty canvas clears the selection; one on the bars and panels around it (the top
+  // bar, the inspector, the dock) leaves it, so they can work on what's selected. Capture,
+  // because the canvas and the nodes stop some pointer events on their way up.
   function pointerDownAnywhere(e) {
     // Panning (other buttons, Space, the hand) leaves the selection alone.
     if (e.button !== 0 || grab || tool === 'hand') return
-    if (e.target.closest('.node, .floating, .launcher, .shape, .shape-frame')) return
+    if (!e.target.closest('.viewport')) return
+    if (e.target.closest('.node, .shape, .shape-frame')) return
     if (!(e.shiftKey || e.ctrlKey || e.metaKey)) {
       setSelection([])
       board.setSelected([])
