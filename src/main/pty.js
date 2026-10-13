@@ -185,11 +185,13 @@ export function terminalsExited() {
 }
 
 function kill(id) {
+  // The agent's state and report go with its node, even when its process has already ended (an
+  // agent that failed to start stays on screen, stopped, until its node is closed).
+  untrackAgent(id)
+  unwatchAgent(id)
   const terminal = terminals.get(id)
   if (!terminal) return
   terminals.delete(id)
-  untrackAgent(id)
-  unwatchAgent(id)
   const { term } = terminal
 
   // SIGHUP, as when a terminal window closes: a shell saves its history and exits. A program

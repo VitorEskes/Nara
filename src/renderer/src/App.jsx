@@ -332,8 +332,6 @@ export default function App() {
     <div className="app" data-sidebar={sidebar}>
       <Sidebar
         hidden={sidebar === 'closed'}
-        theme={theme}
-        onTheme={changeTheme}
         onHide={toggleSidebar}
         projects={projects}
         workspaces={workspaces}

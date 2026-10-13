@@ -209,6 +209,9 @@ export default function Launcher({
         if (pressedBackdrop.current && e.target === dialog.current) close()
       }}
       onAnimationEnd={(e) => e.animationName === 'launcher-out' && onClose()}
+      // The browser can close the dialog by itself (a second Escape it won't let be held back):
+      // then there's no closing animation to wait for.
+      onClose={onClose}
     >
       <form className="launcher-sheet" onSubmit={create}>
         <header className="launcher-head">

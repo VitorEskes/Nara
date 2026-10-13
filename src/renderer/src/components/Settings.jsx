@@ -134,6 +134,9 @@ export default function Settings({
         if (pressedBackdrop.current && e.target === dialog.current) setClosing(true)
       }}
       onAnimationEnd={(e) => e.animationName === 'launcher-out' && onClose()}
+      // The browser can close the dialog by itself (a second Escape it won't let be held back):
+      // then there's no closing animation to wait for.
+      onClose={onClose}
     >
       <nav className="settings-nav" aria-label="Sections">
         <label className="settings-search">
@@ -407,7 +410,7 @@ function Voice({ prefs, bound, onPrefs }) {
           }
           onChange={(voice) => onPrefs({ voice })}
         >
-          <kbd>Ctrl Alt V</kbd>
+          <kbd>⌃⌥V</kbd>
         </Switch>
       </div>
 
@@ -581,7 +584,7 @@ function Pets({ prefs, hudBound, onPrefs }) {
             }
             onChange={(hud) => onPrefs({ hud })}
           >
-            <kbd>Ctrl Alt Space</kbd>
+            <kbd>⌃⌥Space</kbd>
           </Switch>
         </div>
       </Group>
@@ -648,8 +651,8 @@ function Keyboard() {
     ['Settings', SHORTCUTS.settings]
   ]
   const anywhere = [
-    ['Floating HUD', 'Ctrl+Alt+Space'],
-    ['Voice bar', 'Ctrl+Alt+V']
+    ['Floating HUD', '⌃⌥Space'],
+    ['Voice bar', '⌃⌥V']
   ]
   const canvas = {
     select: 'Pointer',
@@ -673,10 +676,10 @@ function Keyboard() {
     Object.keys(CANVAS_KEYS).find((key) => CANVAS_KEYS[key] === action)
   ])
   const board = [
-    ['Undo, redo', 'Ctrl+Z, Ctrl+Shift+Z'],
-    ['Duplicate', 'Ctrl+D'],
-    ['Copy, paste', 'Ctrl+C, Ctrl+V'],
-    ['Bring forward, send back', '], ['],
+    ['Undo, redo', '⌃Z  ⌃⇧Z'],
+    ['Duplicate', '⌃D'],
+    ['Copy, paste', '⌃C  ⌃V'],
+    ['Bring to front, send to back', ']  ['],
     ['Square, straight line', 'Shift + Drag'],
     ['Edit text', 'Enter or double-click']
   ]

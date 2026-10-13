@@ -9,12 +9,9 @@ import {
   FolderPlusIcon,
   GearIcon,
   GridIcon,
-  MonitorIcon,
-  MoonIcon,
   NewIcon,
   PlusIcon,
   SidebarIcon,
-  SunIcon,
   TrashIcon
 } from './icons'
 import { ago, groupByProject } from '../workspaceList'
@@ -25,7 +22,7 @@ import { SHORTCUTS, keysLabel } from '../shortcuts'
 // an open one stays mounted, with its terminals running, until it's closed here. Only a closed
 // workspace can be deleted, and only a project with none open. `active` is the workspace on
 // screen, if any: with the overview showing there is none. While `hidden`, the sidebar slides
-// shut and nothing in it can take focus. At the bottom, the switch between the themes.
+// shut and nothing in it can take focus. At the bottom, the way to the settings.
 export default function Sidebar({
   projects,
   workspaces,
@@ -33,8 +30,6 @@ export default function Sidebar({
   overview,
   hidden,
   onHide,
-  theme,
-  onTheme,
   onOverview,
   onSelect,
   onOpenProject,
@@ -107,12 +102,6 @@ export default function Sidebar({
             shortcut={SHORTCUTS.newProject}
             onClick={onCreateProject}
           />
-          <NavItem
-            icon={<GearIcon />}
-            label="Settings"
-            shortcut={SHORTCUTS.settings}
-            onClick={onSettings}
-          />
         </nav>
         <div className="sidebar-list">
           {groups.length > 0 && <h2 className="sidebar-heading">Projects</h2>}
@@ -177,37 +166,15 @@ export default function Sidebar({
           )}
         </div>
         <div className="sidebar-footer">
-          <ThemeSwitch theme={theme} onChange={onTheme} />
+          <NavItem
+            icon={<GearIcon />}
+            label="Settings"
+            shortcut={SHORTCUTS.settings}
+            onClick={onSettings}
+          />
         </div>
       </div>
     </aside>
-  )
-}
-
-const THEMES = [
-  { key: 'light', label: 'Light', Icon: SunIcon },
-  { key: 'dark', label: 'Dark', Icon: MoonIcon },
-  { key: 'system', label: 'System', Icon: MonitorIcon }
-]
-
-// Three options in a row, with a highlight that slides to the chosen one.
-function ThemeSwitch({ theme, onChange }) {
-  const index = THEMES.findIndex((t) => t.key === theme)
-  return (
-    <div
-      className="segmented"
-      role="group"
-      aria-label="Theme"
-      title={`Theme (${SHORTCUTS.theme.keys} switches light and dark)`}
-      style={{ '--index': index, '--count': THEMES.length }}
-    >
-      {THEMES.map(({ key, label, Icon }) => (
-        <button key={key} aria-pressed={theme === key} onClick={() => onChange(key)}>
-          <Icon size={14} />
-          {label}
-        </button>
-      ))}
-    </div>
   )
 }
 
