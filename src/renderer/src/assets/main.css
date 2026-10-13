@@ -6557,6 +6557,2459 @@ html.hud #root {
   gap: 14px;
 }
 
+.text-input.mono {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.field-hint {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.field-hint.warning {
+  color: var(--danger);
+}
+
+.link-button {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--accent-text);
+  background: none;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* The programs in one track, an icon over each name; a chip slides under the chosen one, which
+   turns green. */
+.program-switch {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--count), minmax(0, 1fr));
+  padding: 4px;
+  border-radius: var(--radius-l);
+  background: var(--active-soft);
+}
+
+.program-switch::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / var(--count));
+  border-radius: 9px;
+  background: var(--chip);
+  box-shadow:
+    var(--highlight),
+    0 1px 3px rgb(var(--shade) / 14%),
+    inset 0 0 0 1px var(--accent-soft);
+  transform: translateX(calc(var(--index) * 100%));
+  transition: transform var(--base) var(--ease-out);
+}
+
+.program-switch button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 76px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-3);
+  background: none;
+  cursor: pointer;
+  transition: color var(--fast);
+}
+
+.program-switch button:hover {
+  color: var(--text);
+}
+
+.program-switch button[aria-checked='true'] {
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.program-switch button .icon {
+  transition: transform var(--base) var(--ease-spring);
+}
+
+.program-switch button[aria-checked='true'] .icon {
+  transform: scale(1.12);
+}
+
+.program-switch button:focus-visible {
+  outline-offset: -2px;
+}
+
+.field-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* Where the terminal opens: the whole row picks another folder. The path keeps its end in
+   view. */
+.folder-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-m);
+  font: inherit;
+  text-align: left;
+  color: var(--text);
+  background: var(--bg);
+  cursor: pointer;
+  transition: border-color var(--fast);
+}
+
+.folder-row:hover {
+  border-color: var(--edge-focus);
+}
+
+.folder-row > .icon {
+  flex-shrink: 0;
+  color: var(--accent-text);
+}
+
+.folder-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.folder-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 35%;
+  height: 22px;
+  flex-shrink: 0;
+  padding: 0 8px;
+  overflow: hidden;
+  border-radius: 11px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  white-space: nowrap;
+  color: var(--accent-text);
+  background: var(--accent-softer);
+}
+
+.folder-branch .icon {
+  flex-shrink: 0;
+}
+
+.folder-change {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.folder-row:hover .folder-change {
+  color: var(--text);
+}
+
+/* The Role tab: the roles in a list on the left, and on the right what the chosen one tells the
+   agent, or the role being written. */
+/* The Role tab keeps one height whatever the role shows; its two sides scroll. */
+.launcher-body.role .launcher-content {
+  height: 440px;
+  padding: 0;
+}
+
+.role-pane {
+  display: grid;
+  grid-template-columns: 172px minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}
+
+.role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 10px;
+  border-right: 1px solid var(--edge);
+}
+
+.role-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 34px;
+  flex-shrink: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-m);
+  font-size: 13px;
+  text-align: left;
+  color: var(--text-2);
+  background: none;
+  cursor: pointer;
+  transition:
+    color var(--fast),
+    background-color var(--fast);
+}
+
+.role-item:hover {
+  color: var(--text);
+  background: var(--hover-soft);
+}
+
+.role-item[aria-selected='true'],
+.role-item[aria-pressed='true'] {
+  font-weight: 500;
+  color: var(--text);
+  background: color-mix(in srgb, var(--tone, var(--accent)) 12%, transparent);
+}
+
+.role-item .role-dot {
+  margin-top: 0;
+}
+
+.role-item .role-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role-item > .icon {
+  flex-shrink: 0;
+  color: var(--tone, var(--accent-text));
+}
+
+.role-item.new {
+  margin-top: 6px;
+  color: var(--text-3);
+}
+
+.role-item.new:hover,
+.role-item.new[aria-pressed='true'] {
+  color: var(--accent-text);
+  background: var(--accent-softer);
+}
+
+.role-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 22px 22px;
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+.role-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.role-detail-head .role-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 0;
+}
+
+.role-detail-head h3 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-ui);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.role-summary {
+  margin: -6px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-3);
+}
+
+/* The instructions, read-only, on a sheet edged in the role's tone. */
+.role-instructions-view {
+  padding: 4px 14px 4px 16px;
+  border-left: 2px solid var(--tone, var(--edge-strong));
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+
+.role-instructions-view p {
+  margin: 8px 0;
+}
+
+.role-instructions-view ul {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0;
+  padding-left: 16px;
+}
+
+.role-instructions-view li::marker {
+  color: var(--tone, var(--text-4));
+}
+
+.role-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* In the dialog the editor takes the right side; in the side panel it's a card under the roles,
+   edged in the role's tone. */
+.role-pane > .role-editor {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 22px 22px;
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+.inspector .role-editor {
+  margin-top: 4px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--tone) 45%, var(--edge-strong));
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--tone) 5%, var(--bg));
+  animation: pop-in var(--base) var(--ease-out);
+}
+
+.inspector .role-editor .tone-dot[aria-pressed='true'] {
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 3.5px var(--tone);
+}
+
+.role-editor .text-input {
+  flex-shrink: 0;
+}
+
+.inspector .role-editor .text-input {
+  font-size: 12.5px;
+}
+
+.role-editor .role-instructions {
+  flex: 1;
+  height: auto;
+  min-height: 140px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  resize: none;
+}
+
+.inspector .role-editor .role-instructions {
+  min-height: 112px;
+  padding: 8px 10px;
+  font-size: 12px;
+  resize: vertical;
+}
+
+.role-ideas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.idea {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--edge-strong);
+  border-radius: 13px;
+  font-size: 12px;
+  color: var(--text-2);
+  background: var(--stone);
+  cursor: pointer;
+  transition: border-color var(--fast);
+}
+
+.idea:hover {
+  border-color: var(--tone);
+}
+
+.idea .role-dot {
+  margin-top: 0;
+}
+
+.role-editor-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.role-editor-name {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* The settings that hold the agent to its role: rows of options, each with a line about the
+   chosen one. */
+.role-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-m);
+  background: var(--hover-soft);
+}
+
+.role-setting {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.role-setting-label {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.role-setting-label small {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-4);
+}
+
+.role-setting .panel-options button {
+  height: 26px;
+  font-size: 12px;
+}
+
+.role-setting-detail {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.role-editor .role-kickoff {
+  height: 56px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+/* The settings a role holds the agent to, as badges under its name. */
+.role-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.role-badge {
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--tone, var(--text-2));
+  background: color-mix(in srgb, var(--tone, var(--text-3)) 13%, transparent);
+}
+
+.role-kickoff-view {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-m);
+  background: var(--hover-soft);
+}
+
+.role-kickoff-view span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.role-kickoff-view p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+/* The whole prompt, folded away until asked for. */
+.prompt-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prompt-preview-toggle {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  padding: 2px 4px 2px 0;
+  border: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+  background: none;
+  cursor: pointer;
+}
+
+.prompt-preview-toggle:hover {
+  color: var(--text);
+}
+
+.prompt-preview-toggle .icon {
+  transform: rotate(-90deg);
+  transition: transform var(--base) var(--ease-out);
+}
+
+.prompt-preview[data-open] .prompt-preview-toggle .icon {
+  transform: none;
+}
+
+.prompt-preview-text {
+  max-height: 260px;
+  margin: 0;
+  overflow: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-m);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  color: var(--text-2);
+  background: var(--bg);
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+.button.small {
+  height: 28px;
+  gap: 5px;
+  padding: 0 10px;
+  font-size: 12.5px;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
+}
+
+.button.subtle.danger.confirm {
+  color: var(--danger);
+  background: var(--danger-soft);
+  animation: pop-in var(--fast) var(--ease-out);
+}
+
+.command-input {
+  position: relative;
+  display: flex;
+}
+
+.command-prompt {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--accent-text);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.command-input .text-input {
+  flex: 1;
+  min-width: 0;
+  padding-left: 28px;
+}
+
+.launcher-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 22px;
+  border-top: 1px solid var(--edge);
+}
+
+.launcher-foot .button {
+  height: 36px;
+  padding: 0 16px;
+}
+
+/* The node as it will look: its bar and a few lines in its colors, size and cursor. */
+.preview-node {
+  flex-shrink: 0;
+  border: 1px solid var(--edge-strong);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--terminal);
+  box-shadow: var(--shadow-node);
+  transition:
+    background-color var(--base),
+    border-color var(--base);
+}
+
+.preview-node .node-bar,
+.preview-node .node-port {
+  cursor: default;
+}
+
+.preview-screen {
+  height: 108px;
+  box-sizing: border-box;
+  padding: 10px 12px 10px 14px;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  line-height: 1.5;
+  transition: font-size var(--base) var(--ease-out);
+}
+
+.preview-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre;
+}
+
+.preview-cursor {
+  display: inline-block;
+  width: 0.6em;
+  height: 1.2em;
+  vertical-align: text-bottom;
+  animation: blink 1.1s steps(1) infinite;
+}
+
+.preview-cursor[data-cursor='bar'] {
+  width: 2px;
+  background: var(--cursor);
+}
+
+.preview-cursor[data-cursor='block'] {
+  background: var(--cursor);
+}
+
+.preview-cursor[data-cursor='underline'] {
+  box-shadow: inset 0 -2px 0 var(--cursor);
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* A terminal's look (TerminalLook.jsx), in the dialog and in the side panel. */
+
+.themes {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.theme-option {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+/* A terminal in miniature: a prompt in green, a line of text, a line in blue. */
+.theme-swatch {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 7px;
+  border-radius: var(--radius-s);
+  box-shadow: inset 0 0 0 1px var(--edge-strong);
+  transition:
+    box-shadow var(--fast),
+    transform var(--fast) var(--ease-spring);
+}
+
+.theme-swatch i {
+  height: 3px;
+  border-radius: 2px;
+}
+
+.theme-swatch i:nth-child(1) {
+  width: 55%;
+  background: var(--a);
+}
+
+.theme-swatch i:nth-child(2) {
+  width: 85%;
+  background: var(--fg);
+  opacity: 0.55;
+}
+
+.theme-swatch i:nth-child(3) {
+  width: 35%;
+  background: var(--b);
+}
+
+.theme-option:hover .theme-swatch {
+  transform: translateY(-1px);
+}
+
+.theme-option[aria-pressed='true'] .theme-swatch {
+  box-shadow:
+    0 0 0 2px var(--stone),
+    0 0 0 4px var(--accent);
+}
+
+.theme-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  text-align: center;
+  color: var(--text-3);
+}
+
+.theme-option[aria-pressed='true'] .theme-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* The side panel is too narrow for the names; the tooltips have them. */
+.inspector .theme-name {
+  display: none;
+}
+
+.tones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tone-dot {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--text-4);
+  background: var(--tone);
+  box-shadow: inset 0 0 0 1px rgb(var(--shade) / 15%);
+  cursor: pointer;
+  transition:
+    box-shadow var(--fast),
+    transform var(--fast) var(--ease-spring);
+}
+
+/* Eight tones fit on one line in the side panel. */
+.inspector .tones {
+  gap: 6px;
+}
+
+.inspector .tone-dot {
+  width: 22px;
+  height: 22px;
+}
+
+.tones.small .tone-dot {
+  width: 18px;
+  height: 18px;
+}
+
+.tone-dot:hover {
+  transform: scale(1.12);
+}
+
+.tone-dot[aria-pressed='true'] {
+  box-shadow:
+    0 0 0 2px var(--stone),
+    0 0 0 4px var(--tone);
+}
+
+.role-editor .tone-dot[aria-pressed='true'] {
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 3.5px var(--tone);
+}
+
+.tone-dot.none {
+  --tone: var(--text-3);
+  background: none;
+  box-shadow: inset 0 0 0 1.5px var(--edge-focus);
+}
+
+.tone-dot.none[aria-pressed='true'] {
+  color: var(--text-2);
+}
+
+.glyphs {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-m);
+  background: var(--active-soft);
+}
+
+.glyphs button {
+  display: grid;
+  place-items: center;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  color: var(--text-3);
+  background: none;
+  cursor: pointer;
+  transition:
+    color var(--fast),
+    background-color var(--fast);
+}
+
+.glyphs button:hover {
+  color: var(--text);
+}
+
+.glyphs button[aria-pressed='true'] {
+  color: var(--accent-text);
+  background: var(--chip);
+  box-shadow:
+    var(--highlight),
+    0 1px 3px rgb(var(--shade) / 14%);
+}
+
+.look-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* Each cursor drawn as it looks, after a letter. */
+.cursor-sample {
+  position: relative;
+  width: 8px;
+  height: 14px;
+}
+
+.cursor-sample[data-cursor='bar'] {
+  width: 2px;
+  background: currentColor;
+}
+
+.cursor-sample[data-cursor='block'] {
+  background: currentColor;
+  opacity: 0.85;
+}
+
+.cursor-sample[data-cursor='underline'] {
+  box-shadow: inset 0 -2px 0 currentColor;
+}
+
+/* The settings (Settings.jsx): a dialog with the sections down the left, on the sidebar's color,
+   and the chosen one on the right. It opens and closes like the new terminal dialog. */
+
+.settings {
+  display: none;
+  width: min(880px, calc(100vw - 48px));
+  height: min(620px, calc(100vh - 48px));
+  max-width: none;
+  max-height: none;
+  box-sizing: border-box;
+  padding: 0;
+  border: 1px solid var(--edge-strong);
+  border-radius: 16px;
+  overflow: hidden;
+  color: var(--text);
+  background: var(--stone);
+  box-shadow:
+    var(--highlight),
+    0 2px 6px rgb(var(--shade) / 10%),
+    0 32px 80px rgb(var(--shade) / 30%);
+  animation: launcher-in var(--slow) var(--ease-out);
+}
+
+.settings[open] {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+}
+
+.settings:focus {
+  outline: none;
+}
+
+.settings::backdrop {
+  background: rgb(var(--shade) / 30%);
+  backdrop-filter: blur(3px);
+  animation: fade-in var(--slow) var(--ease-out);
+}
+
+.settings.closing {
+  pointer-events: none;
+  animation: launcher-out var(--base) var(--ease-in) forwards;
+}
+
+.settings.closing::backdrop {
+  animation: fade-out var(--base) var(--ease-in) forwards;
+}
+
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 10px;
+  border-right: 1px solid var(--edge);
+  background: var(--bar);
+}
+
+.settings-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-m);
+  color: var(--text-4);
+  background: var(--bg);
+  transition:
+    border-color var(--fast),
+    box-shadow var(--fast);
+}
+
+.settings-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.settings-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: none;
+}
+
+.settings-search input::placeholder {
+  color: var(--text-4);
+}
+
+.settings-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px 12px;
+  border-bottom: 1px solid var(--edge);
+}
+
+.settings-brand span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.settings-brand strong {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.settings-brand small {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  padding: 6px 0;
+  list-style: none;
+}
+
+.settings-group + .settings-group {
+  border-top: 1px solid var(--edge);
+}
+
+.settings-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-m);
+  font-size: 13px;
+  text-align: left;
+  color: var(--text-2);
+  background: none;
+  cursor: pointer;
+  transition:
+    color var(--fast),
+    background-color var(--fast);
+}
+
+.settings-link .icon {
+  color: var(--text-3);
+}
+
+.settings-link:hover {
+  color: var(--text);
+  background: var(--hover-soft);
+}
+
+.settings-link[aria-current='page'] {
+  font-weight: 500;
+  color: var(--text);
+  background: var(--active-soft);
+}
+
+.settings-link[aria-current='page'] .icon {
+  color: var(--accent-text);
+}
+
+.settings-none {
+  margin: 8px 10px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 14px 12px 28px;
+}
+
+.settings-head h2 {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 28px 28px;
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+.settings-theme {
+  max-width: 360px;
+}
+
+.settings-lead,
+.settings-note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-3);
+}
+
+.settings-note code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-2);
+  background: var(--active-soft);
+}
+
+/* A framed block: a title, a line about it, and its settings. */
+.settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-l);
+  background: var(--bg);
+}
+
+.settings-card h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.settings-card p {
+  margin: -10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-3);
+}
+
+/* A row: an icon, a name and its control. */
+.settings-row {
+  display: grid;
+  grid-template-columns: 34px 120px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-row-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  color: var(--accent-text);
+  background: var(--accent-softer);
+}
+
+.settings-row-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.settings-row-label small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+.settings .text-input {
+  height: 36px;
+}
+
+/* The roles fill the page, as in the new terminal dialog. */
+.settings-body:has(.settings-roles) {
+  padding: 0;
+}
+
+.settings-roles {
+  border-top: 1px solid var(--edge);
+}
+
+.role-mine {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-4);
+}
+
+/* Pets: what the pet is, the library to pick one from, the size and the folders. */
+.pet-intro-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.pet-intro-head span {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent-text);
+}
+
+.pet-library {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
+  gap: 10px;
+}
+
+.pet-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 8px 12px;
+  border: 1.5px solid var(--edge);
+  border-radius: var(--radius-l);
+  color: var(--text);
+  background: var(--bg);
+  cursor: pointer;
+  transition:
+    border-color var(--fast),
+    background-color var(--fast),
+    transform var(--fast) var(--ease-out);
+}
+
+.pet-card:hover {
+  border-color: var(--edge-focus);
+}
+
+.pet-card:active {
+  transform: scale(0.97);
+}
+
+.pet-card[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-softer);
+}
+
+.pet-card-art {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 68px;
+  margin-bottom: 6px;
+  color: var(--text-3);
+}
+
+.pet-card-art .shika {
+  width: 58px;
+}
+
+.pet-card-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pet-card-source {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.pet-card-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: var(--cream);
+  background: var(--accent-fill);
+  animation: pop-in var(--fast) var(--ease-out);
+}
+
+.settings-size {
+  max-width: 200px;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* The shortcuts, label on the left and keys on the right. */
+.shortcut-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-m);
+  background: var(--bg);
+}
+
+.shortcut-list div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  padding: 0 12px;
+}
+
+.shortcut-list div + div {
+  border-top: 1px solid var(--edge);
+}
+
+.shortcut-list dt {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.shortcut-list dd {
+  margin: 0;
+}
+
+.shortcut-list kbd {
+  padding: 2px 7px;
+  border: 1px solid var(--edge-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-2);
+  background: var(--stone);
+}
+
+.settings-about {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-top: 28px;
+  text-align: center;
+}
+
+.settings-about .brand-mark {
+  width: 72px;
+  height: 72px;
+  margin-bottom: 8px;
+  border-radius: 18px;
+}
+
+.settings-about h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.settings-about p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.settings-version {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-4);
+}
+
+.about-data {
+  width: 100%;
+  max-width: 460px;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  margin-top: 28px;
+  padding: 10px 12px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-l);
+  text-align: left;
+  background: var(--bg);
+}
+
+/* The pet (Pet.jsx), in the corner of the window over everything but the dialogs, with its
+   bubble above it. */
+
+.pet {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.pet-body {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+  filter: drop-shadow(0 6px 8px rgb(var(--shade) / 18%));
+}
+
+.pet-body:active {
+  cursor: grabbing;
+}
+
+.pet-body:focus-visible {
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
+.pet-sprite {
+  display: block;
+  background-repeat: no-repeat;
+}
+
+.pet .shika {
+  display: block;
+  width: 100%;
+}
+
+.pet-bubble {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 280px;
+  padding: 7px 12px;
+  border: 1px solid var(--edge-strong);
+  border-radius: 14px;
+  font-size: 12.5px;
+  white-space: nowrap;
+  color: var(--text);
+  background: var(--stone);
+  box-shadow: var(--shadow-float);
+  pointer-events: auto;
+  animation: bubble-in var(--base) var(--ease-spring);
+}
+
+/* The bubble opens toward the middle of the window, its tail over the pet. */
+.pet-bubble[data-side='left'] {
+  right: 10%;
+}
+
+.pet-bubble[data-side='right'] {
+  left: 10%;
+}
+
+.pet-bubble::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--text-4);
+}
+
+.pet-bubble[data-state='working']::before {
+  background: var(--state-working);
+  animation: breathe 1.2s ease-in-out infinite;
+}
+
+.pet-bubble[data-state='waiting']::before {
+  background: var(--state-waiting);
+}
+
+.pet-bubble[data-state='review']::before {
+  background: var(--accent);
+}
+
+.pet-bubble[data-state='failed']::before {
+  background: var(--danger);
+}
+
+.pet-bubble[data-state='waiting'] {
+  border-color: color-mix(in srgb, var(--state-waiting) 50%, var(--edge-strong));
+}
+
+.pet-bubble-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.pet-bubble-where {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.pet-bubble-more {
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-2);
+  background: var(--active-soft);
+}
+
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.92);
+  }
+}
+
+/* Shika's moods: it breathes and blinks when idle, bobs while an agent works, tilts its head
+   when one waits on the user, hops when one is done, droops when one failed, and hops once when
+   clicked. */
+.shika {
+  overflow: visible;
+}
+
+.shika-shadow {
+  fill: rgb(var(--shade) / 14%);
+}
+
+.shika-body,
+.shika-head,
+.shika-antlers,
+.shika-eyes {
+  transform-box: fill-box;
+}
+
+.shika-body {
+  transform-origin: 50% 100%;
+  animation: shika-breathe 3.2s ease-in-out infinite;
+}
+
+.shika-head {
+  transform-origin: 50% 90%;
+}
+
+.shika-antlers {
+  transform-origin: 50% 100%;
+}
+
+.shika-eyes {
+  transform-origin: 50% 50%;
+  animation: shika-blink 4.6s infinite;
+}
+
+.shika-drop {
+  fill: #8aa7d6;
+  opacity: 0;
+}
+
+.shika[data-mood='working'] {
+  animation: shika-bob 0.5s ease-in-out infinite alternate;
+}
+
+.shika[data-mood='working'] .shika-antlers {
+  animation: shika-wiggle 0.5s ease-in-out infinite alternate;
+}
+
+.shika[data-mood='waiting'] .shika-head {
+  animation: shika-tilt 1.6s ease-in-out infinite alternate;
+}
+
+.shika[data-mood='review'] {
+  animation: shika-hop 1.6s var(--ease-out) infinite;
+}
+
+.shika[data-mood='jump'] {
+  animation: shika-hop 0.7s var(--ease-out);
+}
+
+.shika[data-mood='failed'] .shika-head {
+  transform: rotate(8deg) translateY(2px);
+}
+
+.shika[data-mood='failed'] .shika-drop {
+  opacity: 1;
+  animation: shika-drip 1.8s ease-in infinite;
+}
+
+.shika[data-mood='failed'] .shika-body {
+  animation-duration: 5s;
+}
+
+.shika[data-dragging] {
+  animation: shika-bob 0.25s ease-in-out infinite alternate;
+}
+
+@keyframes shika-breathe {
+  50% {
+    transform: scaleY(1.035);
+  }
+}
+
+@keyframes shika-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes shika-bob {
+  to {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes shika-wiggle {
+  from {
+    transform: rotate(-4deg);
+  }
+
+  to {
+    transform: rotate(4deg);
+  }
+}
+
+@keyframes shika-tilt {
+  from {
+    transform: rotate(-9deg);
+  }
+
+  to {
+    transform: rotate(9deg);
+  }
+}
+
+@keyframes shika-hop {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+
+  10% {
+    transform: translateY(0) scale(1.06, 0.94);
+  }
+
+  30% {
+    transform: translateY(-12px) scale(0.96, 1.05);
+  }
+
+  50% {
+    transform: translateY(0) scale(1.04, 0.96);
+  }
+}
+
+@keyframes shika-drip {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+}
+
+/* The command center (CommandCenter.jsx): a summary, then the agents by workspace, the most
+   urgent first. The pet opens it in a panel; the HUD is made of it. */
+
+.pet-panel {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  width: 360px;
+  max-height: min(460px, 70vh);
+  overflow-y: auto;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-l);
+  background: var(--stone);
+  box-shadow: var(--shadow-lift);
+  pointer-events: auto;
+  animation: bubble-in var(--base) var(--ease-out);
+}
+
+.pet-panel[data-side='left'] {
+  right: 0;
+}
+
+.pet-panel[data-side='right'] {
+  left: 0;
+}
+
+.command-center {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+}
+
+.command-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 2px 6px;
+}
+
+.command-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 11px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-2);
+  background: var(--active-soft);
+}
+
+.command-chip[data-state]::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--state, var(--text-4));
+}
+
+[data-state='waiting'] {
+  --state: var(--state-waiting);
+}
+
+[data-state='failed'] {
+  --state: var(--state-failed);
+}
+
+[data-state='review'] {
+  --state: var(--state-review);
+}
+
+[data-state='working'] {
+  --state: var(--state-working);
+}
+
+[data-state='idle'] {
+  --state: var(--state-idle);
+}
+
+.command-empty {
+  margin: 6px 2px 4px;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
+.command-group h3 {
+  margin: 8px 4px 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.command-group ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.command-row {
+  border-radius: var(--radius-m);
+  transition: background-color var(--fast);
+}
+
+.command-row:hover,
+.command-row:focus-within {
+  background: var(--hover-soft);
+}
+
+.command-row[data-state='waiting'] {
+  background: color-mix(in srgb, var(--tone-umber) 9%, transparent);
+}
+
+.command-row-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 4px 0 8px;
+}
+
+.command-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  color: var(--text-2);
+  background: var(--active-soft);
+}
+
+/* The state, as a dot on the agent's icon. */
+.command-icon::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--stone);
+  border-radius: 50%;
+  background: var(--state, var(--text-4));
+}
+
+.command-row[data-state='working'] .command-icon::after {
+  animation: breathe 1.2s ease-in-out infinite;
+}
+
+.command-name {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  background: none;
+  cursor: pointer;
+}
+
+.command-name:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.command-state {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.command-row[data-state='waiting'] .command-state {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.command-ago {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-4);
+}
+
+.command-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.command-answer {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--edge-strong);
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--stone);
+  cursor: pointer;
+  transition:
+    background-color var(--fast),
+    border-color var(--fast),
+    transform var(--fast) var(--ease-out);
+}
+
+.command-answer:hover {
+  border-color: var(--edge-focus);
+  background: var(--raised);
+}
+
+.command-answer:active {
+  transform: scale(0.95);
+}
+
+.command-answer.yes {
+  border-color: transparent;
+  color: var(--cream);
+  background: var(--accent-fill);
+}
+
+.command-answer.yes:hover {
+  background: var(--accent-hover);
+}
+
+.command-reply {
+  display: flex;
+  gap: 6px;
+  padding: 2px 6px 8px 42px;
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+.command-reply .text-input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  font-size: 12.5px;
+}
+
+/* The floating HUD (Hud.jsx): a card on a transparent window, dragged by its header. */
+
+html.hud,
+html.hud body,
+html.hud #root {
+  background: transparent;
+}
+
+.hud-card {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: calc(100vh - 16px);
+  margin: 8px;
+  overflow: hidden;
+  border: 1px solid var(--edge-strong);
+  border-radius: 16px;
+  background: var(--stone);
+  box-shadow: 0 6px 18px rgb(var(--shade) / 22%);
+  animation: pop-in var(--base) var(--ease-out);
+}
+
+.hud-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 8px 14px;
+  border-bottom: 1px solid var(--edge);
+  background: var(--bar);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.hud-head button {
+  -webkit-app-region: no-drag;
+}
+
+.hud-pet {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 56px;
+}
+
+.hud-pet .shika {
+  width: 52px;
+}
+
+.hud-head h1 {
+  flex: 1;
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.hud-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* On/off settings (fields.jsx's Switch). */
+
+.settings-toggles {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-m);
+  background: var(--bg);
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.switch-row + .switch-row {
+  border-top: 1px solid var(--edge);
+}
+
+.switch-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.switch-label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.switch-detail {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.switch-row kbd {
+  padding: 2px 7px;
+  border: 1px solid var(--edge-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+  background: var(--stone);
+}
+
+.switch {
+  appearance: none;
+  position: relative;
+  width: 34px;
+  height: 20px;
+  flex-shrink: 0;
+  margin: 0;
+  border-radius: 10px;
+  background: var(--edge-strong);
+  cursor: pointer;
+  transition: background-color var(--base);
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--chip);
+  box-shadow: 0 1px 2px rgb(var(--shade) / 25%);
+  transition: transform var(--base) var(--ease-spring);
+}
+
+.switch:checked {
+  background: var(--accent-fill);
+}
+
+.switch:checked::after {
+  transform: translateX(14px);
+}
+
+.pet-card.add {
+  border-style: dashed;
+  border-color: var(--edge-focus);
+  color: var(--text-3);
+  background: none;
+}
+
+.pet-card.add:hover {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.pet-card.add .pet-card-name {
+  color: inherit;
+}
+
+/* The whiteboard (Shapes.jsx): shapes over the nodes, taking the pointer only where drawn. */
+.shapes {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+}
+
+.shape-stroke {
+  fill: none;
+  stroke: var(--ink);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.shape-ink-fill {
+  fill: var(--ink);
+}
+
+.shape-hit {
+  fill: none;
+  stroke: transparent;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.shape-hit.fill {
+  fill: transparent;
+  pointer-events: all;
+}
+
+.shape.preview {
+  opacity: 0.85;
+}
+
+.shape-label-box {
+  overflow: visible;
+  pointer-events: none;
+}
+
+.shape-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 4px;
+  line-height: 1.3;
+  text-align: center;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}
+
+.shape-label.free {
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.shape-label-input {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.3;
+  text-align: inherit;
+  color: var(--ink);
+  background: transparent;
+  pointer-events: all;
+  caret-color: var(--accent);
+}
+
+.shape-frame-box {
+  fill: none;
+  stroke: var(--accent);
+  pointer-events: none;
+}
+
+.shape-handle {
+  fill: var(--stone);
+  stroke: var(--accent);
+  pointer-events: all;
+}
+
+/* The invisible target around each handle, bigger than the square it draws. */
+.shape-handle-hit {
+  fill: transparent;
+  pointer-events: all;
+}
+
+.shape-frame [data-handle] {
+  cursor: grab;
+}
+
+.shape-frame [data-handle='n'],
+.shape-frame [data-handle='s'] {
+  cursor: ns-resize;
+}
+
+.shape-frame [data-handle='e'],
+.shape-frame [data-handle='w'] {
+  cursor: ew-resize;
+}
+
+.shape-frame [data-handle='nw'],
+.shape-frame [data-handle='se'] {
+  cursor: nwse-resize;
+}
+
+.shape-frame [data-handle='ne'],
+.shape-frame [data-handle='sw'] {
+  cursor: nesw-resize;
+}
+
+.shape-frame .rotate,
+.shape-frame .rotate + .shape-handle {
+  cursor: grab;
+}
+
+.shape-frame .end,
+.shape-frame .end + .shape-handle {
+  cursor: move;
+}
+
+/* The drawing tools keep the plain arrow; the pen and the eraser show their size. */
+.viewport[data-tool]:not([data-tool='hand']) {
+  cursor: default;
+}
+
+.viewport[data-tool='draw'] {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Ccircle cx='6' cy='6' r='3' fill='%234fc48e' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E")
+      6 6,
+    default;
+}
+
+.viewport[data-tool='erase'] {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='8' fill='rgba(255,255,255,0.15)' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E")
+      10 10,
+    default;
+}
+
+.viewport[data-tool='text'] {
+  cursor: text;
+}
+
+/* The shapes button in the dock: the tool, and a small arrow that opens the menu above it. */
+.dock-split {
+  display: flex;
+  align-items: center;
+}
+
+.dock-caret {
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text-4);
+  background: none;
+  cursor: pointer;
+}
+
+.dock-caret:hover,
+.dock-caret[aria-expanded='true'] {
+  color: var(--text);
+  background: var(--hover-soft);
+}
+
+.dock-menu-anchor {
+  position: relative;
+}
+
+.dock-menu {
+  bottom: calc(100% + 12px);
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 180px;
+  padding: 5px;
+  border-radius: var(--radius-l);
+  transform: translateX(-50%);
+  animation: pop-in var(--fast) var(--ease-out);
+}
+
+.dock-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-m);
+  font-size: 13px;
+  color: var(--text-2);
+  background: none;
+  cursor: pointer;
+}
+
+.dock-menu-item:hover,
+.dock-menu-item[aria-checked='true'] {
+  color: var(--text);
+  background: var(--active-soft);
+}
+
+.dock-menu-item kbd {
+  margin-left: auto;
+}
+
+/* The style of the whiteboard, above the dock. */
+.style-bar {
+  bottom: 80px;
+  left: calc((100% - var(--inspector-room)) / 2);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 12px;
+  transform: translateX(-50%);
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+.style-group {
+  position: relative;
+}
+
+.style-face {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: var(--text-2);
+  background: none;
+  cursor: pointer;
+}
+
+.style-face:hover,
+.style-face[aria-expanded='true'] {
+  color: var(--text);
+  background: var(--active-soft);
+}
+
+.style-swatch-current {
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 2.5px solid var(--swatch);
+  border-radius: 50%;
+}
+
+.style-swatch-current:not([data-fill='none']) {
+  background: color-mix(in srgb, var(--swatch) 45%, transparent);
+}
+
+.style-text-current {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.style-popover {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--material-edge);
+  border-radius: var(--radius-l);
+  background: var(--material);
+  box-shadow: var(--shadow-float);
+  backdrop-filter: blur(24px) saturate(1.6);
+  transform: translateX(-50%);
+  animation: pop-in var(--fast) var(--ease-out);
+}
+
+.style-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.style-row-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.style-row-options {
+  display: flex;
+  gap: 4px;
+}
+
+.style-swatch {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--swatch);
+  cursor: pointer;
+  transition: transform var(--fast) var(--ease-spring);
+}
+
+.style-swatch:hover {
+  transform: scale(1.1);
+}
+
+.style-swatch[aria-pressed='true'] {
+  box-shadow:
+    0 0 0 2px var(--stone),
+    0 0 0 3.5px var(--text);
+}
+
+.style-option {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  height: 30px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--text-3);
+  background: var(--hover-soft);
+  cursor: pointer;
+}
+
+.style-option.text {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.style-option:hover {
+  color: var(--text);
+}
+
+.style-option[aria-pressed='true'] {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+/* The voice settings' fields, stacked. */
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 .settings-presets {
   display: flex;
   gap: 6px;
@@ -7224,4 +9677,35 @@ html.hud #root {
   font-size: 11px;
   text-align: right;
   color: var(--text-3);
+}
+
+/* The voice model's sizes, side by side. */
+.model-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.model-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-m);
+  text-align: left;
+  color: var(--text);
+  background: none;
+  cursor: pointer;
+}
+
+.model-option span {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.model-option[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-softer);
 }

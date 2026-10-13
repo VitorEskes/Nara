@@ -11,6 +11,7 @@ files:
 asarUnpack:
   - resources/**
   - node_modules/node-pty/**
+  - node_modules/onnxruntime-node/**
 win:
   executableName: nara
 nsis:

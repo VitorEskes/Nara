@@ -53,7 +53,7 @@ const SECTIONS = [
       key: 'voice',
       label: 'Voice',
       Icon: MicIcon,
-      keywords: 'dictation microphone speech transcribe whisper openai groq shortcut'
+      keywords: 'dictation microphone speech transcribe whisper local model shortcut'
     },
     {
       key: 'pets',
@@ -346,20 +346,20 @@ function Roles({ roles, onSaveRole, onRemoveRole }) {
   )
 }
 
-// Where the voice bar sends what it hears to become text.
+// What turns speech into text, all on this computer.
 const ENGINES = [
-  { key: 'api', label: 'Transcription API' },
-  { key: 'local', label: 'whisper.cpp on this computer' }
+  { key: 'builtin', label: 'Built in' },
+  { key: 'whispercpp', label: 'whisper.cpp' }
 ]
-const PRESETS = [
-  { label: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'whisper-1' },
-  { label: 'Groq', baseUrl: 'https://api.groq.com/openai/v1', model: 'whisper-large-v3-turbo' }
-]
+const MODELS = {
+  tiny: { label: 'Tiny', detail: '40 MB · fastest, rougher' },
+  base: { label: 'Base', detail: '76 MB · fast and good' },
+  small: { label: 'Small', detail: '250 MB · best, slower' }
+}
 
 // The voice bar: its shortcut, the engine that turns speech into text, and the language.
 function Voice({ prefs, bound, onPrefs }) {
   const [settings, setSettings] = useState(null)
-  const [key, setKey] = useState('')
 
   useEffect(() => {
     window.api.voice.settings().then(setSettings)
@@ -370,7 +370,7 @@ function Voice({ prefs, bound, onPrefs }) {
   }
 
   if (!settings) return null
-  const engine = ENGINES.findIndex((e) => e.key === settings.provider)
+  const engine = ENGINES.findIndex((e) => e.key === settings.engine)
   const field = (name, label, placeholder, mono = true) => (
     <label className="field">
       <span className="field-label">{label}</span>
@@ -391,7 +391,8 @@ function Voice({ prefs, bound, onPrefs }) {
         <h3>Voice bar</h3>
         <p>
           Speak to an agent from anywhere: the bar listens, turns what you said into text you can
-          fix, and sends it to the agent you pick. Enter stops, Enter again sends.
+          fix, and sends it to the agent you pick. It all happens on this computer, with Whisper: no
+          account, and the audio never leaves it.
         </p>
       </div>
 
@@ -420,8 +421,8 @@ function Voice({ prefs, bound, onPrefs }) {
           {ENGINES.map(({ key: name, label }) => (
             <button
               key={name}
-              aria-pressed={settings.provider === name}
-              onClick={() => save({ provider: name })}
+              aria-pressed={settings.engine === name}
+              onClick={() => save({ engine: name })}
             >
               {label}
             </button>
@@ -429,56 +430,40 @@ function Voice({ prefs, bound, onPrefs }) {
         </div>
       </Group>
 
-      {settings.provider === 'api' ? (
-        <div className="settings-form">
-          <div className="settings-presets">
-            {PRESETS.map((preset) => (
-              <button
-                key={preset.label}
-                className="idea"
-                aria-pressed={settings.baseUrl === preset.baseUrl}
-                onClick={() => save({ baseUrl: preset.baseUrl, model: preset.model })}
-              >
-                {preset.label}
-              </button>
-            ))}
-          </div>
-          {field('baseUrl', 'Address', 'https://api.openai.com/v1')}
-          {field('model', 'Model', 'whisper-1')}
-          <label className="field">
-            <span className="field-label">API key</span>
-            <input
-              className="text-input mono"
-              type="password"
-              value={key}
-              placeholder={settings.hasKey ? 'Saved · type to replace it' : 'sk-…'}
-              spellCheck={false}
-              onChange={(e) => setKey(e.target.value)}
-              onBlur={() => {
-                if (!key) return
-                save({ key })
-                setKey('')
-              }}
-            />
-            <span className="field-hint">
-              Kept in Nara’s data folder, encrypted with your system’s keyring when it has one. The
-              audio goes to this address only when you dictate.
-            </span>
-          </label>
-        </div>
-      ) : (
+      {settings.engine === 'whispercpp' ? (
         <div className="settings-form">
           {field('whisperBin', 'Program', 'whisper-cli')}
           {field('whisperModel', 'Model file', '~/models/ggml-base.bin')}
           <span className="field-hint">
-            whisper.cpp runs here, so the audio never leaves this computer. Download a model (ggml)
-            from its repository and point to it.
+            For whisper.cpp built on this computer, with a ggml model from its repository.
           </span>
         </div>
+      ) : (
+        <Group label="Model">
+          <div className="model-options">
+            {Object.entries(MODELS).map(([key, { label, detail }]) => (
+              <button
+                key={key}
+                className="model-option"
+                aria-pressed={settings.model === key}
+                onClick={() => save({ model: key })}
+              >
+                <strong>{label}</strong>
+                <span>{detail}</span>
+              </button>
+            ))}
+          </div>
+          <span className="field-hint">
+            Downloaded the first time you dictate, from Hugging Face, into Nara’s data folder.
+          </span>
+        </Group>
       )}
 
       <div className="settings-form">
-        {field('language', 'Language', 'Detect it (or pt, en, es…)', false)}
+        {field('language', 'Language', `The system’s: ${settings.systemLanguage}`, false)}
+        <span className="field-hint">
+          A code like pt, en or es. Whisper transcribes best when it knows the language.
+        </span>
       </div>
     </>
   )

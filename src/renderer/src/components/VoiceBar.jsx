@@ -20,6 +20,8 @@ export default function VoiceBar() {
   const [agents, setAgents] = useState([])
   const [target, setTarget] = useState(null)
   const [sent, setSent] = useState(null)
+  // How far the voice model's first download has got, while it's downloading.
+  const [download, setDownload] = useState(null)
   const session = useRef(null)
   const field = useRef(null)
 
@@ -54,6 +56,7 @@ export default function VoiceBar() {
       const audio = await current.stop()
       const result = await window.api.voice.transcribe(audio)
       if (result.error) throw new Error(result.error)
+      setDownload(null)
       setText(result.text)
       setPhase(result.text ? 'ready' : 'error')
       if (!result.text) setError('Nothing was heard. Try again a little closer to the microphone.')
@@ -106,6 +109,8 @@ export default function VoiceBar() {
     window.api.voice.take().then((opening) => opening && open(opening.target))
     return off
   }, [])
+
+  useEffect(() => window.api.voice.onProgress((share) => setDownload(share < 1 ? share : null)), [])
 
   useEffect(() => {
     if (phase !== 'listening') return
@@ -171,7 +176,13 @@ export default function VoiceBar() {
         )}
 
         <span className="voice-status">
-          {phase === 'listening' ? time : phase === 'transcribing' ? 'Transcribing…' : ''}
+          {phase === 'listening'
+            ? time
+            : phase === 'transcribing'
+              ? download != null
+                ? `Getting the voice model · ${Math.round(download * 100)}%`
+                : 'Transcribing…'
+              : ''}
         </span>
         <button className="icon-button" aria-label="Close" title="Close · Esc" onClick={close}>
           <CloseIcon />

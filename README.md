@@ -27,7 +27,9 @@ npm run dev
 - `src/main/status.js` — what each agent is doing (working, waiting on the user, done, failed), from Claude Code's hooks (`nara hook`) and its terminal's output
 - `src/main/telemetry.js` — what each agent spends and does, read from Claude Code's transcripts and Codex's rollouts: tokens, context, estimated cost, task list and activity
 - `src/main/git.js` — worktrees of their own for agents, and the changes and diffs in a node's folder, with merging and removing a worktree
-- `src/main/voice.js` — the voice bar's window and shortcut (Ctrl+Alt+V), its settings, and transcription through an OpenAI-style API or whisper.cpp
+- `src/main/voice.js` + `whisper.js` — the voice bar's window and shortcut (Ctrl+Alt+V), its settings, and speech to text on this computer: Whisper through transformers.js in a utility process, or whisper.cpp
+- `src/main/usage.js` — how much of their plans the agents have used (5-hour window and week), from Claude Code's status line and Codex's rollouts
+- `src/main/images.js` — images in notes, kept in the data folder and served as `nara-image:`
 - `src/main/pets.js` — the pets in Nara's pets folder and in Codex's (a folder with `pet.json` and a sprite sheet, Codex's format), and adding one from its `pet.json` or a `.zip`
 - `src/main/hud.js` — the floating HUD: a window over every app with the pet's command center, toggled with a global shortcut (Ctrl+Alt+Space)
 - `src/main/folders.js` — the folder picker, and the short path and git branch the new terminal dialog shows

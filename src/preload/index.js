@@ -65,6 +65,8 @@ const api = {
     take: () => ipcRenderer.invoke('voice:take'),
     settings: () => ipcRenderer.invoke('voice:settings'),
     save: (patch) => ipcRenderer.invoke('voice:save', patch),
+    // How far the voice model's first download has got, 0 to 1.
+    onProgress: (fn) => listen('voice:progress', fn),
     // A WAV (ArrayBuffer) -> { text } or { error }.
     transcribe: (wav) => ipcRenderer.invoke('voice:transcribe', wav)
   },
