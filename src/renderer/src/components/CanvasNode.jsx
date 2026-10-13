@@ -120,7 +120,7 @@ export default function CanvasNode({
         {status && status.state !== 'idle' && (
           <span className="node-state" data-state={status.state} title={STATE_LABELS[status.state]}>
             <span className="state-dot" />
-            {STATE_LABELS[status.state]}
+            <span className="node-state-label">{STATE_LABELS[status.state]}</span>
           </span>
         )}
         {usage?.window > 0 && <ContextRing share={contextShare(usage)} size={16} />}

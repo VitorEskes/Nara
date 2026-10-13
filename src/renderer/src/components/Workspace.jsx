@@ -207,6 +207,9 @@ export default function Workspace({
       return
     }
     raise(node.id)
+    // Looking at an agent that finished counts as having seen it; one that asked for something
+    // still waits for an answer.
+    if (statuses.get(node.id)?.state === 'review') window.api.agents.seen(workspaceId, node.id)
     if (panelTab === 'workspace') setPanelTab('status')
     if (!(e.shiftKey || e.ctrlKey || e.metaKey)) board.setSelected([])
     if (e.shiftKey || e.ctrlKey || e.metaKey) {

@@ -726,6 +726,8 @@ kbd {
 }
 
 .node-bar {
+  /* A container, so what's on the bar can make room on a narrow node (below). */
+  container: node-bar / inline-size;
   height: 36px;
   flex-shrink: 0;
   display: flex;
@@ -7205,4 +7207,31 @@ html.hud #root {
 .model-option[aria-pressed='true'] {
   border-color: var(--accent);
   background: var(--accent-softer);
+}
+
+/* A narrow node keeps its title and its close button: the state shrinks to its dot, the role and
+   the agent's name to what fits. */
+.node-bar .role-pill {
+  min-width: 0;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@container node-bar (max-width: 420px) {
+  .node-state-label {
+    display: none;
+  }
+
+  .node-state {
+    padding: 0 6px;
+  }
+}
+
+@container node-bar (max-width: 300px) {
+  .node-bar .role-pill,
+  .node-bar .context-ring {
+    display: none;
+  }
 }
