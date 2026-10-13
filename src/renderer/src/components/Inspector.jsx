@@ -53,8 +53,9 @@ function sectionsFor(node) {
 }
 
 // The inspector on the right of the canvas. A rail of icons runs down its edge: the workspace at
-// the top, then the selected node's sections. The pane beside it shows the one picked; minimized,
-// only the rail stays. `section` is the one picked, or 'workspace'; onSection changes it.
+// the top, then the selected node's sections. The pane beside it shows the one picked, and the
+// arrow in its header closes the whole inspector (onClose). `section` is the one picked, or
+// 'workspace'; onSection changes it.
 // `nodes` and `links` are the whole canvas, for the connections; `roles` every role by key.
 // `statuses` and `telemetry` are what main reports about the agents, by node id. onChange gets the
 // node's fields that changed; onRestart starts its agent again. onNoteCommand sends a note an
@@ -70,8 +71,7 @@ export default function Inspector({
   telemetry,
   section,
   onSection,
-  open,
-  onToggle,
+  onClose,
   onSaveRole,
   onChange,
   onRestart,
@@ -100,103 +100,93 @@ export default function Inspector({
     links: connections || null
   }
 
-  function pick(key) {
-    onSection(key)
-    if (!open) onToggle(true)
-  }
-
   return (
-    <aside
-      className={open ? 'floating inspector' : 'floating inspector minimized'}
-      aria-label="Inspector"
-    >
-      {open && (
-        <div className="inspector-pane">
-          <header className="inspector-head">
-            {current === 'workspace' ? (
-              <div className="inspector-heading">
-                <span className="inspector-kicker">Workspace</span>
-                <h2 className="inspector-title">{workspace?.name ?? 'Workspace'}</h2>
-              </div>
-            ) : (
-              <div className="inspector-heading">
-                <span className="inspector-kicker">
-                  {nodeLabel(node)}
-                  {status && status.state !== 'idle' && (
-                    <span className="inspector-state" data-state={status.state}>
-                      <span className="state-dot" />
-                      {STATE_LABELS[status.state]}
-                    </span>
-                  )}
-                </span>
-                <h2 className="inspector-title">{SECTIONS[current].label}</h2>
-              </div>
-            )}
-            <button
-              className="icon-button small inspector-fold"
-              title="Minimize (I)"
-              aria-label="Minimize the inspector"
-              onClick={() => onToggle(false)}
-            >
-              <ChevronIcon size={14} />
-            </button>
-          </header>
+    <aside className="floating inspector" aria-label="Inspector">
+      <div className="inspector-pane">
+        <header className="inspector-head">
+          {current === 'workspace' ? (
+            <div className="inspector-heading">
+              <span className="inspector-kicker">Workspace</span>
+              <h2 className="inspector-title">{workspace?.name ?? 'Workspace'}</h2>
+            </div>
+          ) : (
+            <div className="inspector-heading">
+              <span className="inspector-kicker">
+                {nodeLabel(node)}
+                {status && status.state !== 'idle' && (
+                  <span className="inspector-state" data-state={status.state}>
+                    <span className="state-dot" />
+                    {STATE_LABELS[status.state]}
+                  </span>
+                )}
+              </span>
+              <h2 className="inspector-title">{SECTIONS[current].label}</h2>
+            </div>
+          )}
+          <button
+            className="icon-button small inspector-fold"
+            title="Close (I)"
+            aria-label="Close the inspector"
+            onClick={onClose}
+          >
+            <ChevronIcon size={14} />
+          </button>
+        </header>
 
-          {/* The key replays the fade when the section or the node changes. */}
-          <div key={`${node?.id}:${current}`} className="inspector-body">
-            {current === 'workspace' && (
-              <WorkspaceSummary
-                nodes={nodes}
-                folder={folder}
-                statuses={statuses}
-                telemetry={telemetry}
-                roles={roles}
-                onLocate={onLocate}
-              />
-            )}
-            {current === 'status' && <Status status={status} info={info} />}
-            {current === 'tasks' && <Tasks info={info} />}
-            {current === 'activity' && <Activity info={info} />}
-            {current === 'changes' && <Changes key={node.id} node={node} onChange={onChange} />}
-            {current === 'role' && (
-              <Role
-                key={node.id}
-                node={node}
-                roles={roles}
-                onSaveRole={onSaveRole}
-                onChange={onChange}
-                onRestart={onRestart}
-              />
-            )}
-            {current === 'format' && (
-              <NoteFormat
-                node={node}
-                onChange={onChange}
-                onCommand={(command) => onNoteCommand(node.id, command)}
-              />
-            )}
-            {current === 'links' && (
-              <Connections
-                node={node}
-                nodes={nodes}
-                links={links}
-                canConnect={canConnect}
-                onConnectStart={onConnectStart}
-                onDisconnect={onDisconnect}
-                onLocate={onLocate}
-                onPeerHover={onPeerHover}
-              />
-            )}
-            {current === 'settings' && <Settings node={node} onChange={onChange} />}
-          </div>
+        {/* The key replays the fade when the section or the node changes. */}
+        <div key={`${node?.id}:${current}`} className="inspector-body">
+          {current === 'workspace' && (
+            <WorkspaceSummary
+              nodes={nodes}
+              folder={folder}
+              statuses={statuses}
+              telemetry={telemetry}
+              roles={roles}
+              onLocate={onLocate}
+            />
+          )}
+          {current === 'status' && <Status status={status} info={info} />}
+          {current === 'tasks' && <Tasks info={info} />}
+          {current === 'activity' && <Activity info={info} />}
+          {current === 'changes' && <Changes key={node.id} node={node} onChange={onChange} />}
+          {current === 'role' && (
+            <Role
+              key={node.id}
+              node={node}
+              roles={roles}
+              onSaveRole={onSaveRole}
+              onChange={onChange}
+              onRestart={onRestart}
+            />
+          )}
+          {current === 'format' && (
+            <NoteFormat
+              node={node}
+              onChange={onChange}
+              onCommand={(command) => onNoteCommand(node.id, command)}
+            />
+          )}
+          {current === 'links' && (
+            <Connections
+              node={node}
+              nodes={nodes}
+              links={links}
+              canConnect={canConnect}
+              onConnectStart={onConnectStart}
+              onDisconnect={onDisconnect}
+              onLocate={onLocate}
+              onPeerHover={onPeerHover}
+            />
+          )}
+          {current === 'settings' && <Settings node={node} onChange={onChange} />}
         </div>
-      )}
+      </div>
 
       <nav className="inspector-rail" aria-label="Sections">
         <RailButton
           label="Workspace"
-          active={open && current === 'workspace'}
-          onClick={() => pick('workspace')}
+          active={current === 'workspace'}
+          onClick={() => onSection('workspace')}
         >
           <LayoutIcon />
         </RailButton>
@@ -212,24 +202,14 @@ export default function Inspector({
                   key={key}
                   label={label}
                   badge={badges[key]}
-                  active={open && current === key}
-                  onClick={() => pick(key)}
+                  active={current === key}
+                  onClick={() => onSection(key)}
                 >
                   <Icon />
                 </RailButton>
               )
             })}
           </>
-        )}
-        {!open && (
-          <button
-            className="rail-button rail-expand"
-            title="Expand (I)"
-            aria-label="Expand the inspector"
-            onClick={() => onToggle(true)}
-          >
-            <ChevronIcon size={14} />
-          </button>
         )}
       </nav>
     </aside>

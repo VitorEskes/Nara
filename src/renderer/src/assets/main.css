@@ -2712,10 +2712,6 @@ kbd {
   --inspector-room: calc(var(--inspector-width) + var(--rail-width) + 24px);
 }
 
-.workspace[data-inspector='minimized'] {
-  --inspector-room: calc(var(--rail-width) + 24px);
-}
-
 .workspace .dock {
   left: calc((100% - var(--inspector-room)) / 2);
   transition: left var(--slow) var(--ease-out);
@@ -2742,11 +2738,6 @@ kbd {
   border-radius: var(--radius-xl);
   font-size: 12.5px;
   animation: inspector-in var(--slow) var(--ease-out);
-}
-
-/* Minimized, only the rail stays, as tall as what it holds. */
-.inspector.minimized {
-  bottom: auto;
 }
 
 .inspector-pane {
@@ -2840,14 +2831,6 @@ kbd {
   border: 1.5px solid var(--stone);
   border-radius: 50%;
   background: var(--state);
-}
-
-.rail-expand {
-  margin-top: 6px;
-}
-
-.rail-expand .icon {
-  transform: rotate(90deg);
 }
 
 .inspector-fold .icon {
