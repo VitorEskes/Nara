@@ -473,6 +473,9 @@ export default function Workspace({
   function closeNode(id) {
     setNodes((current) => current.filter((node) => node.id !== id))
     setLinks((current) => current.filter((l) => l.from !== id && l.to !== id))
+    // A node that's gone isn't selected any more: with two selected, the inspector would otherwise
+    // keep showing the workspace instead of the one left.
+    setSelection((current) => current.filter((other) => other !== id))
   }
 
   // Whether a link from one node to another would be new and valid. Two linked terminals can
