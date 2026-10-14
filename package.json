@@ -11,7 +11,7 @@
     "lint": "eslint --cache .",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
-    "build": "electron-vite build",
+    "build": "node --max-old-space-size=4096 node_modules/electron-vite/bin/electron-vite.js build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
@@ -26,6 +26,7 @@
     "@huggingface/transformers": "^4.3.1",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "6.0.0",
+    "monaco-editor": "^0.57.0",
     "node-pty": "^1.1.0",
     "perfect-freehand": "^1.2.3",
     "roughjs": "^4.6.6"
