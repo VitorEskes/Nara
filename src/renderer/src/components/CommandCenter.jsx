@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import NodeIcon from './NodeIcon'
 import { ArrowUpRightIcon, ChatIcon } from './icons'
 import { STATE_LABELS, URGENCY, agentKey, agentName, ago, byUrgency } from '../agentStatus'
+import { AGENTS } from '../../../shared/agents'
 
 // Every agent at a glance, grouped by workspace and the most urgent on top, with the answers that
 // don't need a trip to its terminal: yes or no to what it asked, or a line of text. The pet opens
@@ -106,7 +107,8 @@ function AgentRow({ status, onJump }) {
           )}
         </span>
         <div className="command-actions">
-          {status.state === 'waiting' && (
+          {/* Only for agents whose keys for yes and no Nara knows (shared/agents.js). */}
+          {status.state === 'waiting' && AGENTS[status.agent]?.answers && (
             <>
               <button className="command-answer yes" onClick={() => reply({ kind: 'yes' })}>
                 Yes
@@ -146,6 +148,7 @@ function AgentRow({ status, onJump }) {
           <input
             ref={input}
             className="text-input"
+            aria-label="Reply to the agent"
             value={text}
             placeholder={`Message ${agentName(status)}…`}
             onChange={(e) => setText(e.target.value)}

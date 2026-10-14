@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { BringFrontIcon, CopyIcon, SendBackIcon, TrashIcon } from './icons'
 import { COLORS, DASHES, FILLS, STROKES, TEXT_FONTS, TEXT_SIZES, WIDTHS } from '../shapes'
+import { tip } from '../tip'
 
 // The style of the whiteboard: above the dock while a drawing tool is on or shapes are selected.
 // Each group opens a small popover: the color (and the fill, for closed shapes), the stroke
@@ -162,36 +163,20 @@ export default function StyleBar({ style, keys, onChange, actions }) {
       {actions && (
         <>
           <span className="dock-divider" />
-          <button
-            className="icon-button"
-            data-tip="Bring to front · ]"
-            aria-label="Bring to front"
-            onClick={actions.front}
-          >
+          <button className="icon-button" {...tip('Bring to front', ']')} onClick={actions.front}>
             <BringFrontIcon />
           </button>
-          <button
-            className="icon-button"
-            data-tip="Send to back · ["
-            aria-label="Send to back"
-            onClick={actions.back}
-          >
+          <button className="icon-button" {...tip('Send to back', '[')} onClick={actions.back}>
             <SendBackIcon />
           </button>
           <button
             className="icon-button"
-            data-tip="Duplicate · Ctrl+D"
-            aria-label="Duplicate"
+            {...tip('Duplicate', 'Ctrl+D')}
             onClick={actions.duplicate}
           >
             <CopyIcon />
           </button>
-          <button
-            className="icon-button danger"
-            data-tip="Delete · Del"
-            aria-label="Delete"
-            onClick={actions.remove}
-          >
+          <button className="icon-button danger" {...tip('Delete', 'Del')} onClick={actions.remove}>
             <TrashIcon />
           </button>
         </>

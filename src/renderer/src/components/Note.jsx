@@ -402,6 +402,7 @@ export default function Note({ text, style, view, command, onChange }) {
     return (
       <textarea
         className="note-text note-source"
+        aria-label="Note text"
         value={text}
         spellCheck={false}
         placeholder="Markdown"
@@ -578,6 +579,7 @@ function Block({
             <textarea
               ref={input}
               className="md-input md-caption"
+              aria-label="Caption"
               value={b.text}
               rows={1}
               spellCheck={false}
@@ -597,6 +599,7 @@ function Block({
         <textarea
           ref={input}
           className="md-input"
+          aria-label="Block text"
           value={b.text}
           rows={1}
           spellCheck={false}

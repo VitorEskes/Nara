@@ -4,6 +4,7 @@ import { CloseIcon, FolderPlusIcon, NewIcon, PlusIcon, TrashIcon } from './icons
 import { ago, groupByProject } from '../workspaceList'
 import { PAPERS } from '../nodeStyle'
 import { SHORTCUTS } from '../shortcuts'
+import { ariaKeys } from '../tip'
 
 // Full page with every workspace as a card: one section per project, then one with the loose
 // workspaces. Opening a workspace or a project from here takes the canvas back to the screen.
@@ -48,13 +49,23 @@ export default function Overview({
         <h1 className="page-title">Workspaces</h1>
         {!empty && <span className="count-pill">{workspaces.length}</span>}
         <span className="spacer" />
-        <button className="button" title={SHORTCUTS.newProject.keys} onClick={onCreateProject}>
+        <button
+          className="button"
+          data-tip="Add project"
+          data-keys={SHORTCUTS.newProject.keys}
+          data-tip-side="bottom"
+          aria-keyshortcuts={ariaKeys(SHORTCUTS.newProject.keys)}
+          onClick={onCreateProject}
+        >
           <FolderPlusIcon />
           Add project
         </button>
         <button
           className="button primary"
-          title={SHORTCUTS.newWorkspace.keys}
+          data-tip="New workspace"
+          data-keys={SHORTCUTS.newWorkspace.keys}
+          data-tip-side="bottom"
+          aria-keyshortcuts={ariaKeys(SHORTCUTS.newWorkspace.keys)}
           onClick={() => onCreateWorkspace()}
         >
           <PlusIcon />

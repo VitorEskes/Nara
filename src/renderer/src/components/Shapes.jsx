@@ -165,6 +165,7 @@ function Label({ shape, style, editing, onText, onTextDone }) {
           <textarea
             ref={input}
             className="shape-label-input"
+            aria-label="Shape text"
             value={shape.text ?? ''}
             placeholder={free ? 'Text' : ''}
             spellCheck={false}

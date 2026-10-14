@@ -160,6 +160,7 @@ export default function VoiceBar() {
           <textarea
             ref={field}
             className="voice-text"
+            aria-label="Message"
             value={text}
             rows={2}
             spellCheck={false}
