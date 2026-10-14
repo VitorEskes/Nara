@@ -1,4 +1,4 @@
-import { app, dialog, ipcMain } from 'electron'
+import { app, ipcMain } from 'electron'
 import { randomUUID } from 'crypto'
 import { readFileSync, readdirSync, rmSync, statSync } from 'fs'
 import { basename, join } from 'path'
@@ -95,16 +95,13 @@ export function registerWorkspaces(win) {
     written.delete(id)
   })
 
-  // Only closed workspaces can be deleted, so this never takes running terminals with it.
+  // Only closed workspaces can be deleted, so this never takes running terminals with it. The
+  // renderer has asked the user first.
   ipcMain.handle('workspace:remove', async (_ev, id) => {
     const name = !workspaces.has(id) && read(id)?.workspace.name
     if (!name) return false
-    const confirmed = await confirm(win, {
-      message: `Delete workspace "${name}"?`,
-      detail: 'Its terminals, positions and links will be gone for good.'
-    })
-    if (confirmed) rmSync(workspacePath(id), { force: true })
-    return confirmed
+    rmSync(workspacePath(id), { force: true })
+    return true
   })
 
   ipcMain.handle('project:list', () => sortByName([...projects.values()]))
@@ -131,18 +128,12 @@ export function registerWorkspaces(win) {
   })
 
   // Deleting a project deletes its workspaces too, so like a workspace it has to be closed first:
-  // none of them can be open.
+  // none of them can be open. The renderer has asked the user first.
   ipcMain.handle('project:remove', async (_ev, id) => {
     const project = projects.get(id)
     if (!project) return false
     const members = list().filter((w) => w.project === id)
     if (members.some((w) => workspaces.has(w.id))) return false
-    const count = members.length === 1 ? '1 workspace' : `${members.length} workspaces`
-    const confirmed = await confirm(win, {
-      message: `Delete project "${project.name}"?`,
-      detail: `Its ${count} will be deleted with it. The folder ${project.folder} is not touched.`
-    })
-    if (!confirmed) return false
     for (const w of members) rmSync(workspacePath(w.id), { force: true })
     projects.delete(id)
     saveProjects(projects)
@@ -161,18 +152,6 @@ export function registerWorkspaces(win) {
     for (const name of HANDLERS) ipcMain.removeHandler(name)
     for (const name of LISTENERS) ipcMain.removeAllListeners(name)
   })
-}
-
-async function confirm(win, { message, detail }) {
-  const { response } = await dialog.showMessageBox(win, {
-    type: 'warning',
-    message,
-    detail,
-    buttons: ['Delete', 'Cancel'],
-    defaultId: 1,
-    cancelId: 1
-  })
-  return response === 0
 }
 
 // Every saved workspace, open or not, as { id, name, project, folder, terminals, notes, preview }
@@ -247,7 +226,9 @@ function read(id) {
       nodes,
       links,
       shapes,
-      strokes = []
+      strokes = [],
+      code,
+      review
     } = JSON.parse(json)
     if (version !== VERSION) throw new Error(`unsupported version ${version}`)
     if (![nodes, links, shapes ?? strokes].every(Array.isArray)) throw new Error('malformed file')
@@ -260,7 +241,17 @@ function read(id) {
       : strokes.filter((stroke) => typeof stroke.points === 'string').map(strokeToShape)
     return {
       json,
-      workspace: { name, project, folder, camera, nodes: typed, links, shapes: drawn }
+      workspace: {
+        name,
+        project,
+        folder,
+        camera,
+        nodes: typed,
+        links,
+        shapes: drawn,
+        code,
+        review
+      }
     }
   } catch (error) {
     console.error(`nara: could not read workspace ${id}: ${error.message}`)
@@ -323,7 +314,17 @@ function save(id) {
   clearTimeout(timers.get(id))
   timers.delete(id)
 
-  const { name, project, folder, camera, nodes, links, shapes = [] } = workspaces.get(id)
+  const {
+    name,
+    project,
+    folder,
+    camera,
+    nodes,
+    links,
+    shapes = [],
+    code,
+    review
+  } = workspaces.get(id)
   const json = JSON.stringify(
     {
       version: VERSION,
@@ -336,7 +337,11 @@ function save(id) {
         node.type === 'terminal' ? { ...node, cwd: currentCwd(id, node.id) ?? node.cwd } : node
       ),
       links,
-      shapes: shapes.map(packShape)
+      shapes: shapes.map(packShape),
+      // The code view: whether it's showing, the folder its explorer is on, the open files.
+      code,
+      // The review view: what's been viewed and the comments not sent yet, by repository.
+      review
     },
     null,
     2
