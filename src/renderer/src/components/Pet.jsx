@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Shika from './Shika'
 import CommandCenter from './CommandCenter'
 import { BUILT_IN_PET, PET_SIZES, petSprite } from '../pets'
@@ -21,19 +21,20 @@ const FRAME_DEFAULT = 130
 
 // How far the pointer can move for a press to still be a click, not a drag.
 const SLOP = 4
-const POSITION = 'pet-position'
+// How far around what's drawn still belongs to the window's shape, for the shadows.
+const SHADOW = 10
 
-// How far the pet rises when the inspector pushes it aside, to clear the zoom beside it.
-const SHIFT_LIFT = 64
-
-// The pet in the corner of the window, over everything but the dialogs: it shows, in its bubble
-// and its animation, what the agents in every open workspace are doing (`statuses`, from main's
-// status.js). Clicking it opens the command center, where each agent can be answered or visited
-// (onJump); dragging moves it, and it stays where it's left. `pet` is the chosen pet's id
-// ('builtin:shika' or a pet folder's).
-export default function Pet({ pet, size, statuses, onJump, reserved = 0 }) {
-  const width = PET_SIZES[size]?.px ?? PET_SIZES.m.px
-  const [position, setPosition] = useState(recall)
+// The desktop pet (main/petProcess.js): alone on a transparent window over every app, in its
+// bottom right corner. It shows, in its bubble and its animation, what the agents in every open
+// workspace are doing. Clicking it opens the command center above it, where each agent can be
+// answered or visited (Nara comes to the front, on it); dragging it moves the window, which stays
+// where it's left. The pet and its size come from the settings, through the app.
+//
+// Only what's drawn takes the pointer: after every change the pet tells main the rectangles it
+// draws in, and the window lets clicks through everywhere else.
+export default function Pet() {
+  const [prefs, setPrefs] = useState(null)
+  const [statuses, setStatuses] = useState([])
   const [hover, setHover] = useState(false)
   const [drag, setDrag] = useState(null)
   const [open, setOpen] = useState(false)
@@ -43,91 +44,106 @@ export default function Pet({ pet, size, statuses, onJump, reserved = 0 }) {
   const root = useRef(null)
 
   useEffect(() => {
-    localStorage.setItem(POSITION, JSON.stringify(position))
-  }, [position])
-
-  // A click anywhere else, or Escape, puts the command center away.
-  useEffect(() => {
-    if (!open) return
-    function onPointerDown(e) {
-      if (!root.current.contains(e.target)) setOpen(false)
-    }
-    function onKeyDown(e) {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('pointerdown', onPointerDown, true)
-    document.addEventListener('keydown', onKeyDown)
+    window.api.pet.prefs().then(setPrefs)
+    window.api.agents.status().then(setStatuses)
+    const offPrefs = window.api.pet.onPrefs(setPrefs)
+    const offStatus = window.api.agents.onStatus(setStatuses)
+    // Escape, or a click on another app, puts the command center away.
+    const onKeyDown = (e) => e.key === 'Escape' && setOpen(false)
+    const onBlur = () => setOpen(false)
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('blur', onBlur)
     return () => {
-      document.removeEventListener('pointerdown', onPointerDown, true)
-      document.removeEventListener('keydown', onKeyDown)
+      offPrefs()
+      offStatus()
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('blur', onBlur)
     }
-  }, [open])
+  }, [])
 
+  // The window's shape: the pet, its bubble and its panel, as they are on screen now. The panel's
+  // list grows and shrinks as agents come and go, so its size is watched too.
+  useLayoutEffect(() => {
+    const el = root.current
+    if (!el) return
+    const report = () =>
+      window.api.pet.shape(
+        [...el.querySelectorAll('.pet-body, .pet-bubble, .pet-panel')].map((part) => {
+          const r = part.getBoundingClientRect()
+          return {
+            x: r.left - SHADOW,
+            y: r.top - SHADOW,
+            width: r.width + SHADOW * 2,
+            height: r.height + SHADOW * 2
+          }
+        })
+      )
+    report()
+    const observer = new ResizeObserver(report)
+    for (const part of el.querySelectorAll('.pet-bubble, .pet-panel')) observer.observe(part)
+    return () => observer.disconnect()
+  })
+
+  const pet = prefs?.pet
+  const width = PET_SIZES[prefs?.size]?.px ?? PET_SIZES.m.px
   const news = statuses.filter((s) => URGENCY[s.state]).sort(byUrgency)
   const focus = news[0]
   const working = statuses.filter((s) => s.state === 'working').length
   const mood = jumping ? 'jump' : (focus?.state ?? 'idle')
 
+  // A press that moves past the slop drags the window; main moves it with the pointer, so the
+  // pointer stays put over the page and only its place on the screen says which way it goes.
   function onPointerDown(e) {
     if (e.button !== 0) return
     e.currentTarget.setPointerCapture(e.pointerId)
-    press.current = { x: e.clientX, y: e.clientY, from: position, moved: false }
+    press.current = { x: e.screenX, y: e.screenY, moved: false }
   }
 
   function onPointerMove(e) {
     const start = press.current
     if (!start) return
-    const dx = e.clientX - start.x
-    const dy = e.clientY - start.y
-    if (!start.moved && Math.hypot(dx, dy) < SLOP) return
-    start.moved = true
-    setDrag(e.movementX < 0 ? 'left' : e.movementX > 0 ? 'right' : (drag ?? 'right'))
-    setPosition(clamp({ right: start.from.right - dx, bottom: start.from.bottom - dy }, width))
+    const dx = e.screenX - start.x
+    if (!start.moved && Math.hypot(dx, e.screenY - start.y) < SLOP) return
+    if (!start.moved) {
+      start.moved = true
+      setOpen(false)
+      window.api.pet.dragStart()
+    }
+    if (dx) setDrag(dx < 0 ? 'left' : 'right')
+    start.x = e.screenX
   }
 
   function onPointerUp() {
     const start = press.current
     press.current = null
     setDrag(null)
-    if (!start || start.moved) return
+    if (!start) return
+    if (start.moved) return window.api.pet.dragEnd()
     setJumping(true)
     setTimeout(() => setJumping(false), 700)
     setOpen((current) => !current)
   }
 
+  if (!pet) return null
   const bubble = open ? null : focus ? message(focus, working) : hover ? quiet(statuses) : null
-  // The bubble and the command center open toward the middle of the window: leftward from a pet
-  // on the right half.
-  const side = position.right + width / 2 < innerWidth / 2 ? 'left' : 'right'
   const row = drag ?? (hover && !focus && !jumping ? 'wave' : mood)
 
   return (
-    <div
-      ref={root}
-      className="pet"
-      data-mood={mood}
-      // Kept clear of `reserved` pixels on the right (the inspector) when it sits in them, and
-      // lifted over the zoom, which moves there too.
-      style={{
-        right: position.right < reserved ? position.right + reserved : position.right,
-        bottom: position.right < reserved ? position.bottom + SHIFT_LIFT : position.bottom,
-        width
-      }}
-    >
+    <div ref={root} className="pet desktop-pet" data-mood={mood} style={{ width }}>
       {bubble && (
-        <div className="pet-bubble" data-state={focus?.state} data-side={side} role="status">
+        <div className="pet-bubble" data-state={focus?.state} data-side="left" role="status">
           <span className="pet-bubble-text">{bubble.text}</span>
           {bubble.where && <span className="pet-bubble-where">{bubble.where}</span>}
           {news.length > 1 && <span className="pet-bubble-more">+{news.length - 1}</span>}
         </div>
       )}
       {open && (
-        <div className="pet-panel" data-side={side} role="dialog" aria-label="Agents">
+        <div className="pet-panel" data-side="left" role="dialog" aria-label="Agents">
           <CommandCenter
             statuses={statuses}
             onJump={(status) => {
               setOpen(false)
-              onJump(status)
+              window.api.pet.jump(status)
             }}
           />
         </div>
@@ -220,23 +236,5 @@ function quiet(statuses) {
   if (!statuses.length) return { text: 'No agents yet' }
   return {
     text: statuses.length === 1 ? '1 agent, all quiet' : `${statuses.length} agents, all quiet`
-  }
-}
-
-function recall() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(POSITION))
-    if (Number.isFinite(saved?.right) && Number.isFinite(saved?.bottom)) return saved
-  } catch {
-    // Nothing saved yet.
-  }
-  return { right: 28, bottom: 84 }
-}
-
-// Keeps the pet inside the window.
-function clamp({ right, bottom }, width) {
-  return {
-    right: Math.round(Math.min(Math.max(right, 0), innerWidth - width)),
-    bottom: Math.round(Math.min(Math.max(bottom, 0), innerHeight - width * 1.1))
   }
 }
