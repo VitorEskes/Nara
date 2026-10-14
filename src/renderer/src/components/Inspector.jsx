@@ -1,60 +1,52 @@
 import { useEffect, useState } from 'react'
+import { ask } from '../dialogs'
 import RoleEditor, { PromptPreview, RoleBadges } from './RoleEditor'
 import TerminalLook from './TerminalLook'
 import NoteFormat from './NoteFormat'
 import { Group } from './fields'
 import {
-  ActivityIcon,
   BranchIcon,
   CheckIcon,
-  DiffIcon,
   FolderIcon,
-  GaugeIcon,
-  LayoutIcon,
   LinkIcon,
-  ListChecksIcon,
   LocateIcon,
   PlusIcon,
   RestartIcon,
-  SlidersIcon,
-  TextIcon,
-  UnlinkIcon,
-  UsersIcon
+  UnlinkIcon
 } from './icons'
 import NodeIcon from './NodeIcon'
-import ContextRing from './ContextRing'
 import { terminalLook } from '../nodeStyle'
 import { defaultTitle, nodeLabel } from '../nodeLabel'
 import { STATE_LABELS, ago } from '../agentStatus'
-import { contextShare, formatCost, formatTokens } from '../telemetry'
 import { useBranch } from '../useBranch'
 import { AGENTS } from '../../../shared/agents'
 
-// Every section a node can show, each about one thing, with the icon it has on the rail.
+// What a node that isn't an agent is called, above its name.
+const KINDS = { note: 'Note', browser: 'Browser', terminal: 'Terminal' }
+
+// Every section a node can show, each about one thing.
 const SECTIONS = {
-  status: { label: 'Status', Icon: GaugeIcon },
-  tasks: { label: 'Tasks', Icon: ListChecksIcon },
-  activity: { label: 'Activity', Icon: ActivityIcon },
-  changes: { label: 'Changes', Icon: DiffIcon },
-  role: { label: 'Role', Icon: UsersIcon },
-  format: { label: 'Format', Icon: TextIcon },
-  links: { label: 'Connections', Icon: LinkIcon },
-  settings: { label: 'Settings', Icon: SlidersIcon }
+  activity: 'Activity',
+  changes: 'Changes',
+  role: 'Role',
+  format: 'Format',
+  settings: 'Settings'
 }
 
-// The sections each kind of node has, in the rail's order.
-function sectionsFor(node) {
-  if (node.type === 'note') return ['format', 'links', 'settings']
-  if (AGENTS[node.agent]) {
-    return ['status', 'tasks', 'activity', 'changes', 'role', 'links', 'settings']
-  }
-  return ['changes', 'links', 'settings']
+// The sections each kind of node has, in order. What an agent is doing and has spent is in the
+// sidebar, by its name (WorkspaceNav.jsx); its changes are in the review. A plain terminal has a
+// role too, for the agent CLIs typed in it (main/shell.js); `running` is the one there now.
+function sectionsFor(node, running) {
+  if (node.type === 'note') return ['format', 'settings']
+  if (node.type === 'browser') return ['settings']
+  if (AGENTS[node.agent] || running) return ['activity', 'role', 'settings']
+  return ['changes', 'role', 'settings']
 }
 
-// The inspector on the right of the canvas. A rail of icons runs down its edge: the workspace at
-// the top, then the selected node's sections. The pane beside it shows the one picked. It opens
-// and closes only from its button in the top bar. `section` is the one picked, or 'workspace';
-// onSection changes it.
+// The inspector on the right of the canvas, for the selected node: its name and state at the top,
+// its sections in tabs under them. With nothing selected, the notes and terminals on the canvas
+// (its agents are in the sidebar). `views` goes at its top: the workspace's views. `section` is the one picked, kept from node to node; onSection
+// changes it.
 // `nodes` and `links` are the whole canvas, for the connections; `roles` every role by key.
 // `statuses` and `telemetry` are what main reports about the agents, by node id. onChange gets the
 // node's fields that changed; onRestart starts its agent again. onNoteCommand sends a note an
@@ -64,8 +56,6 @@ export default function Inspector({
   nodes,
   links,
   roles,
-  folder,
-  workspace,
   statuses,
   telemetry,
   section,
@@ -78,71 +68,74 @@ export default function Inspector({
   onConnectStart,
   onDisconnect,
   onLocate,
-  onPeerHover
+  onPeerHover,
+  views
 }) {
-  const sections = node ? sectionsFor(node) : []
-  const current =
-    !node || section === 'workspace'
-      ? 'workspace'
-      : sections.includes(section)
-        ? section
-        : sections[0]
-  const status = node && statuses.get(node.id)
-  const info = node && telemetry.get(node.id)
-  const connections = node ? links.filter((l) => l.from === node.id || l.to === node.id).length : 0
-  // Small counts on the rail, where they say something at a glance.
-  const badges = {
-    tasks: info?.tasks?.length
+  if (!node) return <Unselected nodes={nodes} onLocate={onLocate} views={views} />
+  const status = statuses.get(node.id)
+  const running = AGENTS[node.agent] ? null : status?.agent
+  const sections = sectionsFor(node, running)
+  const current = sections.includes(section) ? section : sections[0]
+  const info = telemetry.get(node.id)
+  const connections = links.filter((l) => l.from === node.id || l.to === node.id).length
+  // Small counts on the tabs, where they say something at a glance.
+  const counts = {
+    activity: info?.tasks?.length
       ? `${info.tasks.filter((t) => t.status === 'completed').length}/${info.tasks.length}`
       : null,
-    links: connections || null
+    settings: connections ? `${connections} linked` : null
   }
 
   return (
     <aside className="floating inspector" aria-label="Inspector">
+      {views}
       <div className="inspector-pane">
         <header className="inspector-head">
-          {current === 'workspace' ? (
-            <div className="inspector-heading">
-              <span className="inspector-kicker">Workspace</span>
-              <h2 className="inspector-title">{workspace?.name ?? 'Workspace'}</h2>
-            </div>
-          ) : (
-            <div className="inspector-heading">
-              <span className="inspector-kicker">
-                {nodeLabel(node)}
-                {status && status.state !== 'idle' && (
-                  <span className="inspector-state" data-state={status.state}>
-                    <span className="state-dot" />
-                    {STATE_LABELS[status.state]}
-                  </span>
-                )}
-              </span>
-              <h2 className="inspector-title">{SECTIONS[current].label}</h2>
-            </div>
-          )}
+          <span className="inspector-icon" data-state={status?.state}>
+            <NodeIcon type={node.type} agent={node.agent} icon={node.style?.icon} />
+          </span>
+          <div className="inspector-heading">
+            <span className="inspector-kicker">
+              {AGENTS[node.agent ?? running]?.label ?? KINDS[node.type] ?? 'Terminal'}
+              {status && status.state !== 'idle' && (
+                <span className="inspector-state" data-state={status.state}>
+                  <span className="state-dot" />
+                  {STATE_LABELS[status.state]}
+                </span>
+              )}
+            </span>
+            <h2 className="inspector-title">{nodeLabel(node)}</h2>
+          </div>
         </header>
 
+        <div
+          className="inspector-tabs"
+          role="tablist"
+          aria-label="Sections"
+          style={{ '--count': sections.length }}
+        >
+          {sections.map((key) => (
+            <button
+              key={key}
+              role="tab"
+              aria-selected={current === key}
+              onClick={() => onSection(key)}
+            >
+              {SECTIONS[key]}
+              {counts[key] && <span className="tab-count">{counts[key]}</span>}
+            </button>
+          ))}
+        </div>
+
         {/* The key replays the fade when the section or the node changes. */}
-        <div key={`${node?.id}:${current}`} className="inspector-body">
-          {current === 'workspace' && (
-            <WorkspaceSummary
-              nodes={nodes}
-              folder={folder}
-              statuses={statuses}
-              telemetry={telemetry}
-              roles={roles}
-              onLocate={onLocate}
-            />
-          )}
-          {current === 'status' && <Status status={status} info={info} />}
-          {current === 'tasks' && <Tasks info={info} />}
+        <div key={`${node.id}:${current}`} className="inspector-body">
           {current === 'activity' && <Activity info={info} />}
           {current === 'changes' && <Changes key={node.id} node={node} onChange={onChange} />}
           {current === 'role' && (
             <Role
               key={node.id}
               node={node}
+              running={running}
               roles={roles}
               onSaveRole={onSaveRole}
               onChange={onChange}
@@ -156,251 +149,73 @@ export default function Inspector({
               onCommand={(command) => onNoteCommand(node.id, command)}
             />
           )}
-          {current === 'links' && (
-            <Connections
-              node={node}
-              nodes={nodes}
-              links={links}
-              canConnect={canConnect}
-              onConnectStart={onConnectStart}
-              onDisconnect={onDisconnect}
-              onLocate={onLocate}
-              onPeerHover={onPeerHover}
-            />
+          {current === 'settings' && (
+            <Settings node={node} onChange={onChange}>
+              <Connections
+                node={node}
+                nodes={nodes}
+                links={links}
+                canConnect={canConnect}
+                onConnectStart={onConnectStart}
+                onDisconnect={onDisconnect}
+                onLocate={onLocate}
+                onPeerHover={onPeerHover}
+              />
+            </Settings>
           )}
-          {current === 'settings' && <Settings node={node} onChange={onChange} />}
         </div>
       </div>
-
-      <nav className="inspector-rail" aria-label="Sections">
-        <RailButton
-          label="Workspace"
-          active={current === 'workspace'}
-          onClick={() => onSection('workspace')}
-        >
-          <LayoutIcon />
-        </RailButton>
-        {node && (
-          <>
-            <span className="rail-node" data-state={status?.state} title={nodeLabel(node)}>
-              <NodeIcon type={node.type} agent={node.agent} icon={node.style?.icon} size={14} />
-            </span>
-            {sections.map((key) => {
-              const { label, Icon } = SECTIONS[key]
-              return (
-                <RailButton
-                  key={key}
-                  label={label}
-                  badge={badges[key]}
-                  active={current === key}
-                  onClick={() => onSection(key)}
-                >
-                  <Icon />
-                </RailButton>
-              )
-            })}
-          </>
-        )}
-      </nav>
     </aside>
   )
 }
 
-function RailButton({ label, badge, active, onClick, children }) {
+// The panel with nothing selected: how to fill it, and the notes and plain terminals on the canvas
+// to go to (the agents are in the sidebar, by the workspace's name).
+function Unselected({ nodes, onLocate, views }) {
+  const others = nodes.filter((n) => n.type === 'note' || !AGENTS[n.agent])
   return (
-    <button
-      className="rail-button"
-      data-tip={label}
-      data-tip-side="left"
-      aria-label={label}
-      aria-current={active || undefined}
-      onClick={onClick}
-    >
-      {children}
-      {badge && <span className="rail-badge">{badge}</span>}
-    </button>
-  )
-}
-
-// The workspace at a glance: its agents with what each is doing and has spent, and its notes.
-function WorkspaceSummary({ nodes, folder, statuses, telemetry, roles, onLocate }) {
-  const branch = useBranch(folder)
-  const agents = nodes.filter((n) => n.type === 'terminal' && AGENTS[n.agent])
-  const shells = nodes.filter((n) => n.type === 'terminal' && !AGENTS[n.agent])
-  const notes = nodes.filter((n) => n.type === 'note')
-  const usages = agents.map((a) => telemetry.get(a.id)?.usage).filter(Boolean)
-  const tokens = usages.reduce((sum, u) => sum + (u.tokens ?? 0), 0)
-  const cost = usages.reduce((sum, u) => sum + (u.cost ?? 0), 0)
-  const busy = agents.filter((a) => statuses.get(a.id)?.state === 'working').length
-
-  return (
-    <>
-      <div className="stat-grid">
-        <Stat
-          label="Agents"
-          value={agents.length}
-          detail={busy ? `${busy} working` : 'none working'}
-        />
-        <Stat label="Tokens" value={formatTokens(tokens)} detail={cost ? formatCost(cost) : '—'} />
-      </div>
-
-      {folder && (
-        <div className="inspector-row">
-          <FolderIcon size={14} />
-          <span className="inspector-row-text" title={folder}>
-            <bdi>{folder}</bdi>
-          </span>
-          {branch && (
-            <span className="inspector-branch">
-              <BranchIcon size={11} />
-              {branch}
-            </span>
-          )}
-        </div>
-      )}
-
-      <Group label="Agents">
-        {agents.length === 0 ? (
-          <p className="inspector-empty">Open one from the dock: Claude Code or Codex.</p>
-        ) : (
-          <ul className="agent-list">
-            {agents.map((agent) => {
-              const status = statuses.get(agent.id)
-              const usage = telemetry.get(agent.id)?.usage
-              const role = roles[agent.role]
-              return (
-                <li key={agent.id}>
-                  <button className="agent-item" onClick={() => onLocate(agent.id)}>
-                    <span className="inspector-icon small" data-state={status?.state}>
-                      <NodeIcon type="terminal" agent={agent.agent} icon={agent.style?.icon} />
-                    </span>
-                    <span className="agent-item-text">
-                      <span className="agent-item-name">
-                        {nodeLabel(agent)}
-                        {role && (
-                          <span className="role-pill" data-tone={role.tone}>
-                            {role.label}
-                          </span>
-                        )}
-                      </span>
-                      <span className="agent-item-state" data-state={status?.state ?? 'idle'}>
-                        {STATE_LABELS[status?.state ?? 'idle']}
-                        {usage?.tokens > 0 && ` · ${formatTokens(usage.tokens)} tokens`}
-                      </span>
-                    </span>
-                    {usage?.window > 0 && <ContextRing share={contextShare(usage)} />}
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </Group>
-
-      {(notes.length > 0 || shells.length > 0) && (
-        <Group label="Also here">
-          <ul className="agent-list">
-            {[...shells, ...notes].map((n) => (
-              <li key={n.id}>
-                <button className="agent-item" onClick={() => onLocate(n.id)}>
-                  <span className="inspector-icon small">
-                    <NodeIcon type={n.type} agent={n.agent} icon={n.style?.icon} />
-                  </span>
-                  <span className="agent-item-text">
-                    <span className="agent-item-name">{nodeLabel(n)}</span>
-                  </span>
-                  <LocateIcon size={13} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </Group>
-      )}
-    </>
-  )
-}
-
-function Stat({ label, value, detail }) {
-  return (
-    <div className="stat">
-      <span className="stat-label">{label}</span>
-      <span className="stat-value">{value}</span>
-      {detail && <span className="stat-detail">{detail}</span>}
-    </div>
-  )
-}
-
-// What the agent is doing and has spent: its state, what it's on, how full its context is and
-// the tokens it has gone through.
-function Status({ status, info }) {
-  const usage = info?.usage
-  const share = contextShare(usage)
-  const active = info?.tasks?.find((t) => t.status === 'in_progress')
-  const state = status?.state ?? 'idle'
-  return (
-    <>
-      <div className="agent-card" data-state={state}>
-        <div className="agent-card-head">
-          <span className="state-dot" />
-          <span className="agent-card-state">{STATE_LABELS[state]}</span>
-          {status && <span className="agent-card-ago">{ago(status.since)}</span>}
-          {info?.model && <span className="agent-card-model">{modelName(info.model)}</span>}
-        </div>
-        {(active || info?.title) && (
-          <p className="agent-card-doing">{active ? active.active || active.text : info.title}</p>
-        )}
-      </div>
-
-      {!info ? (
-        <p className="inspector-empty">
-          What it spends shows up here once the agent starts working.
-        </p>
-      ) : (
-        <>
-          {usage?.window > 0 && (
-            <div className="meter" data-level={share > 0.85 ? 'full' : share > 0.6 ? 'high' : 'ok'}>
-              <div className="meter-head">
-                <span>Context</span>
-                <span>
-                  {formatTokens(usage.context)} / {formatTokens(usage.window)} ·{' '}
-                  {Math.round(share * 100)}%
-                </span>
-              </div>
-              <div className="meter-track">
-                <div className="meter-fill" style={{ width: `${share * 100}%` }} />
-              </div>
-            </div>
-          )}
-          <div className="stat-grid">
-            <Stat label="Tokens" value={formatTokens(usage?.tokens ?? 0)} detail="this session" />
-            <Stat label="Cost" value={formatCost(usage?.cost ?? 0)} detail="at API prices" />
+    <aside className="floating inspector" aria-label="Inspector">
+      {views}
+      <div className="inspector-pane">
+        <header className="inspector-head">
+          <div className="inspector-heading">
+            <span className="inspector-kicker">Inspector</span>
+            <h2 className="inspector-title">Nothing selected</h2>
           </div>
-          <dl className="usage-list">
-            <div>
-              <dt>Input</dt>
-              <dd>{formatTokens(usage?.input ?? 0)}</dd>
-            </div>
-            <div>
-              <dt>Read from cache</dt>
-              <dd>{formatTokens(usage?.cacheRead ?? 0)}</dd>
-            </div>
-            <div>
-              <dt>Written to cache</dt>
-              <dd>{formatTokens(usage?.cacheWrite ?? 0)}</dd>
-            </div>
-            <div>
-              <dt>Output</dt>
-              <dd>{formatTokens(usage?.output ?? 0)}</dd>
-            </div>
-          </dl>
-        </>
-      )}
-    </>
+        </header>
+        <div className="inspector-body">
+          <p className="inspector-empty">
+            Select a terminal or a note on the canvas, or an agent in the sidebar, to see what it is
+            doing and change how it works.
+          </p>
+          {others.length > 0 && (
+            <Group label="On the canvas">
+              <ul className="peers">
+                {others.map((n) => (
+                  <li key={n.id} className="peer">
+                    <NodeIcon type={n.type} agent={n.agent} icon={n.style?.icon} />
+                    <span className="peer-name">{nodeLabel(n)}</span>
+                    <button
+                      className="icon-button small"
+                      title="Show on the canvas"
+                      aria-label={`Show ${nodeLabel(n)}`}
+                      onClick={() => onLocate(n.id)}
+                    >
+                      <LocateIcon size={14} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </Group>
+          )}
+        </div>
+      </div>
+    </aside>
   )
 }
 
-// The node's name, where it runs and how it looks.
-function Settings({ node, onChange }) {
+// The node's name, where it runs, what it's linked to (`children`) and how it looks.
+function Settings({ node, onChange, children }) {
   const folder = node.type === 'terminal' ? node.cwd : null
   const branch = useBranch(folder)
   return (
@@ -427,6 +242,8 @@ function Settings({ node, onChange }) {
           </div>
         </div>
       )}
+
+      {children}
 
       {node.type === 'terminal' && (
         <Group label="Appearance">
@@ -480,12 +297,27 @@ function Changes({ node, onChange }) {
   }, [folder, open, changes?.files.find((f) => f.path === open)?.added]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function merge() {
+    const { branch, base, root } = node.worktree
+    const sure = await ask({
+      title: `Merge ${branch} into ${base}?`,
+      message: `In ${root}. Only what’s committed is merged; if it conflicts, the merge is undone.`,
+      confirm: 'Merge'
+    })
+    if (!sure) return
     const result = await window.api.git.merge(node.worktree)
     if (result.canceled) return
     setNotice(result.ok ? { ok: `Merged into ${node.worktree.base}` } : { error: result.error })
   }
 
   async function remove() {
+    const { path, branch } = node.worktree
+    const sure = await ask({
+      title: 'Remove this worktree?',
+      message: `${path} is deleted, along with anything not committed in it. The branch ${branch} and its commits stay.`,
+      confirm: 'Remove',
+      danger: true
+    })
+    if (!sure) return
     const result = await window.api.git.removeWorktree(node.worktree)
     if (result.canceled) return
     if (result.error) return setNotice({ error: result.error })
@@ -601,94 +433,79 @@ function Diff({ text }) {
   )
 }
 
-// "claude-opus-5-5" reads "Opus 5.5"; anything else as it is.
-function modelName(model) {
-  const match = model.match(/^claude-([a-z]+)-(\d+)(?:-(\d{1,2}))?(?:-\d{8})?/)
-  if (!match) return model
-  const [, family, major, minor] = match
-  return `${family[0].toUpperCase()}${family.slice(1)} ${major}${minor ? `.${minor}` : ''}`
-}
-
-// The agent's own task list, as it keeps it: what's done, what it's on, what's next.
-function Tasks({ info }) {
+// What the agent is working through and has done: its own task list when it keeps one (for
+// bigger requests), then each tool it ran, newest first, with what it ran it on.
+function Activity({ info }) {
   const tasks = info?.tasks ?? []
-  if (!tasks.length) {
+  const entries = info?.activity ?? []
+  if (!tasks.length && !entries.length) {
     return (
       <p className="inspector-empty">
-        No task list yet. Agents keep one for bigger requests; it shows up here as they plan and
-        work through it.
+        Nothing yet. Its task list, and each file it reads or edits and each command it runs, show
+        up here as it works.
       </p>
     )
   }
   const done = tasks.filter((t) => t.status === 'completed').length
   return (
     <>
-      <div className="meter" data-level="ok">
-        <div className="meter-head">
-          <span>Progress</span>
-          <span>
-            {done} of {tasks.length}
-          </span>
-        </div>
-        <div className="meter-track">
-          <div className="meter-fill" style={{ width: `${(done / tasks.length) * 100}%` }} />
-        </div>
-      </div>
-      <ol className="task-list">
-        {tasks.map((task) => (
-          <li key={task.id} className="task" data-status={task.status}>
-            <span className="task-check" aria-hidden="true">
-              {task.status === 'completed' && <CheckIcon size={11} />}
-            </span>
-            <span className="task-text">
-              {task.status === 'in_progress' && task.active ? task.active : task.text}
-            </span>
-          </li>
-        ))}
-      </ol>
-    </>
-  )
-}
-
-// What the agent did, newest first: each tool it ran, with what it ran it on.
-function Activity({ info }) {
-  const entries = info?.activity ?? []
-  if (!entries.length) {
-    return (
-      <p className="inspector-empty">
-        Nothing yet. Each file read, edit and command shows up here.
-      </p>
-    )
-  }
-  return (
-    <>
-      {info.lines && (info.lines.added > 0 || info.lines.removed > 0) && (
-        <div className="lines-changed">
-          <span className="added">+{info.lines.added}</span>
-          <span className="removed">−{info.lines.removed}</span>
-          <span>lines changed</span>
-        </div>
+      {tasks.length > 0 && (
+        <Group label={`Tasks · ${done} of ${tasks.length}`}>
+          <ol className="task-list">
+            {tasks.map((task) => (
+              <li key={task.id} className="task" data-status={task.status}>
+                <span className="task-check" aria-hidden="true">
+                  {task.status === 'completed' && <CheckIcon size={11} />}
+                </span>
+                <span className="task-text">
+                  {task.status === 'in_progress' && task.active ? task.active : task.text}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </Group>
       )}
-      <ol className="activity-list">
-        {[...entries].reverse().map((entry) => (
-          <li key={entry.id} className="activity" data-status={entry.status} data-kind={entry.kind}>
-            <span className="activity-tool">{entry.tool}</span>
-            <span className="activity-summary" title={entry.summary}>
-              {entry.summary}
-            </span>
-            <span className="activity-time">{ago(entry.at)}</span>
-          </li>
-        ))}
-      </ol>
+      {entries.length > 0 && (
+        <Group label="Recent">
+          {info.lines && (info.lines.added > 0 || info.lines.removed > 0) && (
+            <div className="lines-changed">
+              <span className="added">+{info.lines.added}</span>
+              <span className="removed">−{info.lines.removed}</span>
+              <span>lines changed</span>
+            </div>
+          )}
+          <ol className="activity-list">
+            {[...entries].reverse().map((entry) => (
+              <li
+                key={entry.id}
+                className="activity"
+                data-status={entry.status}
+                data-kind={entry.kind}
+              >
+                <span className="activity-tool">{entry.tool}</span>
+                <span className="activity-summary" title={entry.summary}>
+                  {entry.summary}
+                </span>
+                <span className="activity-time">{ago(entry.at)}</span>
+              </li>
+            ))}
+          </ol>
+        </Group>
+      )}
     </>
   )
 }
 
 // The role: pick one, see what it holds the agent to, write a new one in place. A new role
 // restarts the agent, which picks its conversation back up.
-function Role({ node, roles, onSaveRole, onChange, onRestart }) {
+// In a plain terminal the role waits for the next agent CLI typed there (`running` is the one
+// there now), and nothing restarts.
+function Role({ node, running, roles, onSaveRole, onChange, onRestart }) {
   const agent = AGENTS[node.agent]
   const [draft, setDraft] = useState(null)
+  const later = agent
+    ? `Restarts ${agent.label}; its conversation picks up where it left off`
+    : 'For the next agent started in this terminal'
   const role = roles[node.role]
   return (
     <>
@@ -699,7 +516,7 @@ function Role({ node, roles, onSaveRole, onChange, onRestart }) {
               key={key ?? 'none'}
               className="choice"
               data-tone={tone}
-              title={`Restarts ${agent.label}; its conversation picks up where it left off`}
+              title={later}
               aria-pressed={node.role === key}
               onClick={() => node.role !== key && onChange({ role: key })}
             >
@@ -739,11 +556,21 @@ function Role({ node, roles, onSaveRole, onChange, onRestart }) {
         </div>
       )}
       {!draft && <PromptPreview role={role} nodeId={node.id} />}
-      {!draft && (
+      {!draft && agent && (
         <button className="button small restart" onClick={onRestart}>
           <RestartIcon size={14} />
           Restart {agent.label}
         </button>
+      )}
+      {!draft && !agent && (
+        <p className="field-hint">
+          {running
+            ? `${AGENTS[running].label} is running here: the role holds from the next time it starts.`
+            : `Start an agent here (${Object.values(AGENTS)
+                .slice(0, 3)
+                .map((a) => a.command)
+                .join(', ')}…) and it starts with this role, linked to the canvas.`}
+        </p>
       )}
     </>
   )

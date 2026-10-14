@@ -1,5 +1,7 @@
 import { connect } from 'net'
-import { spawnSync } from 'child_process'
+import { spawn, spawnSync } from 'child_process'
+import { accessSync, constants, statSync } from 'fs'
+import { delimiter, join } from 'path'
 
 // The `nara` command that runs inside canvas terminals. It does nothing on its own: it sends
 // the request to the app over the socket in NARA_SOCK and prints the response. This file is run
@@ -11,16 +13,27 @@ const HELP = `usage:
   nara note read <note>             print the text of a linked note
   nara note write <note> <text>     replace the note's text
   nara note append <note> <text>    add the text to the end of the note, on a new line
+  nara browser open <browser> <url> load a page in a linked browser
+  nara browser read <browser>       print the page's address, title and text
+  nara browser shot <browser>       save a screenshot of the page and print its path
+  nara browser reload <browser>     load the page again
 
 Without <text>, send, write and append read it from stdin.
 
 A message arrives in the target terminal as if someone had typed it and pressed Enter.
 The reply, if any, arrives in this terminal the same way: no need to wait or check for it.
-A note is shared text on the canvas: anyone linked to it can read it, and so can the user.`
+A note is shared text on the canvas: anyone linked to it can read it, and so can the user.
+A browser is a web page on the canvas that the user sees too: open your dev server in it.`
 
 // `nara hook <event>` is run by Claude Code's hooks (main/pty.js), not by hand: it tells Nara what
 // the agent just did. It never fails out loud, since an error would show up in the agent.
-if (process.argv[2] === 'hook') {
+// `nara run <cli> [args]` is how the shell integration starts an agent CLI typed in a canvas
+// terminal (main/shell.js): it asks the app for the flags and variables to start it with, runs it
+// in this terminal, and tells the app when it's gone. Outside Nara, or if the app doesn't answer,
+// the CLI runs as it is.
+if (process.argv[2] === 'run') {
+  run(process.argv[3], process.argv.slice(4))
+} else if (process.argv[2] === 'hook') {
   hook(process.argv[3]).finally(() => process.exit(0))
 } else if (process.argv[2] === 'statusline') {
   statusline().finally(() => process.exit(0))
@@ -29,6 +42,65 @@ if (process.argv[2] === 'hook') {
     console.error(`nara: ${error.message}`)
     process.exit(1)
   })
+}
+
+async function run(name, args) {
+  let launch = { command: name, args: [], env: {} }
+  let started = false
+  if (process.env.NARA_SOCK) {
+    try {
+      launch = await request({ command: 'run', agent: name, args })
+      started = true
+    } catch (error) {
+      console.error(`nara: ${error.message}; starting ${name} on its own`)
+    }
+  }
+  const program = findProgram(launch.command)
+  if (!program) {
+    console.error(`${launch.command}: command not found`)
+    process.exit(127)
+  }
+  // The CLI gets the keys: Ctrl+C is for it, and only it decides whether to quit.
+  process.on('SIGINT', () => {})
+  const env = { ...process.env, ...launch.env }
+  delete env.ELECTRON_RUN_AS_NODE
+  const child = spawn(program, [...launch.args, ...args], { stdio: 'inherit', env })
+  for (const signal of ['SIGTERM', 'SIGHUP']) {
+    process.on(signal, () => child.kill(signal))
+  }
+  const done = async (code) => {
+    if (started) {
+      await Promise.race([
+        request({ command: 'run-exit' }).catch(() => {}),
+        new Promise((resolve) => setTimeout(resolve, 1000))
+      ])
+    }
+    process.exit(code)
+  }
+  child.on('error', (error) => {
+    console.error(`${launch.command}: ${error.message}`)
+    done(126)
+  })
+  child.on('exit', (code, signal) => done(code ?? (signal ? 128 : 1)))
+}
+
+// The program on the PATH, as the shell would find it.
+function findProgram(name) {
+  if (!name) return null
+  if (name.includes('/')) return name
+  for (const dir of (process.env.PATH ?? '').split(delimiter)) {
+    if (!dir) continue
+    const file = join(dir, name)
+    try {
+      if (statSync(file).isFile()) {
+        accessSync(file, constants.X_OK)
+        return file
+      }
+    } catch {
+      // Not here.
+    }
+  }
+  return null
 }
 
 async function hook(event) {
@@ -96,11 +168,15 @@ async function main() {
   if (command === 'peers') {
     const { peers } = await request({ command })
     if (peers.length === 0) console.log('nothing linked to this terminal')
-    for (const { nodeId, type, title, program, role, canReceive } of peers) {
+    for (const { nodeId, type, title, program, role, canReceive, url } of peers) {
       // A node the user renamed shows its name after the id, which is still what commands take.
       const name = title && title !== `${type} ${nodeId}` ? `  "${title}"` : ''
       if (type === 'note') {
         console.log(`note ${nodeId}${name}`)
+        continue
+      }
+      if (type === 'browser') {
+        console.log(`browser ${nodeId}${name}  ${url || '(not loaded)'}`)
         continue
       }
       const roleName = role ? `  (${role})` : ''
@@ -137,6 +213,22 @@ async function main() {
     const text = await readText(words, `missing text, e.g. nara note ${action} 2 "hi"`)
     await request({ command, action, to, text })
     console.log(action === 'write' ? `wrote note ${to}` : `appended to note ${to}`)
+    return
+  }
+
+  if (command === 'browser') {
+    const [action, target, ...words] = args
+    if (!['open', 'read', 'shot', 'reload'].includes(action)) {
+      throw new Error('usage: nara browser <open|read|shot|reload> <browser> [url]')
+    }
+    const to = nodeNumber(target, `which browser? e.g. nara browser ${action} 3`)
+    const text = action === 'open' ? words.join(' ') : undefined
+    const result = await request({ command, action, to, text })
+    if (action === 'read') {
+      console.log(`${result.title || '(untitled)'}\n${result.url}\n`)
+      process.stdout.write(result.text.endsWith('\n') ? result.text : `${result.text}\n`)
+    } else if (action === 'shot') console.log(result.file)
+    else console.log(`browser ${to}: ${result.url}${result.title ? `  "${result.title}"` : ''}`)
     return
   }
 

@@ -3,7 +3,10 @@ import { createServer } from 'net'
 import { tmpdir } from 'os'
 import { basename, delimiter, dirname, join } from 'path'
 import nara from '../../resources/bin/nara?asset'
-import { findTerminal, terminals } from './pty'
+import { browse, pageUrl } from './browser'
+import { HOOKS, currentCwd, endAgent, findTerminal, startAgent, terminals } from './pty'
+import { agentRun } from './agents'
+import { AGENTS, agentForCommand } from '../shared/agents'
 import { agentHook } from './status'
 import { reportClaude } from './usage'
 import { findRole } from './roles'
@@ -27,10 +30,10 @@ export function registerMessages(win) {
     let request = ''
     conn.setEncoding('utf8')
     conn.on('data', (chunk) => (request += chunk))
-    conn.on('end', () => {
+    conn.on('end', async () => {
       let response
       try {
-        response = handle(JSON.parse(request), win)
+        response = await handle(JSON.parse(request), win)
       } catch (error) {
         response = { error: error.message }
       }
@@ -49,11 +52,13 @@ export function registerMessages(win) {
     PATH: `${dirname(nara)}${delimiter}${process.env.PATH}`,
     NARA_SOCK: SOCKET,
     NARA_ELECTRON: process.execPath,
-    NARA_CLI: join(__dirname, 'cli.js')
+    NARA_CLI: join(__dirname, 'cli.js'),
+    // The shell integration's functions run `nara run` by its full path (shell.js).
+    NARA_BIN: nara
   }
 }
 
-function handle({ from, command, action, to, text, event, payload }, win) {
+async function handle({ from, command, action, to, text, event, payload, agent, args }, win) {
   const sender = terminals.get(Number(from))
   if (!sender) throw new Error('this terminal no longer exists in Nara')
 
@@ -68,6 +73,32 @@ function handle({ from, command, action, to, text, event, payload }, win) {
   }
   const { workspaceId, nodeId } = sender
 
+  // An agent CLI typed in a plain terminal (shell.js): what to start it with, as if the node had
+  // opened with it. `agent` is the command typed; `args` are the user's own arguments.
+  if (command === 'run') {
+    const key = agentForCommand(agent)
+    if (!key) throw new Error(`${agent} isn't an agent Nara knows`)
+    if (sender.agent) throw new Error(`an agent is already running in this terminal`)
+    const node = workspaces.get(workspaceId)?.nodes.find((n) => n.id === nodeId)
+    const cwd = currentCwd(workspaceId, nodeId) ?? node?.cwd
+    const launch = agentRun({
+      agent: key,
+      args: Array.isArray(args) ? args.map(String) : [],
+      role: node?.role,
+      nodeId,
+      worktree: node?.worktree,
+      cwd,
+      hooks: key === 'claude' && HOOKS
+    })
+    startAgent(Number(from), { agent: key, session: launch.session, message: launch.message, cwd })
+    return { command: AGENTS[key].command, args: launch.args, env: launch.env }
+  }
+
+  if (command === 'run-exit') {
+    endAgent(Number(from))
+    return { ok: true }
+  }
+
   // Links have no direction: from→to works the same as to→from.
   const { nodes = [], links = [] } = workspaces.get(workspaceId) ?? {}
   const peers = links.flatMap((l) => (l.from === nodeId ? [l.to] : l.to === nodeId ? [l.from] : []))
@@ -79,6 +110,9 @@ function handle({ from, command, action, to, text, event, payload }, win) {
         // The name the user gave the node, if any: new nodes are just "terminal 3".
         const title = nodeOf(peerId)?.title
         if (nodeOf(peerId)?.type === 'note') return { nodeId: peerId, type: 'note', title }
+        if (nodeOf(peerId)?.type === 'browser') {
+          return { nodeId: peerId, type: 'browser', title, url: pageUrl(workspaceId, peerId) }
+        }
         const target = findTerminal(workspaceId, peerId)
         const program = target && foregroundProgram(target)
         const role = findRole(nodeOf(peerId)?.role)?.label.toLowerCase()
@@ -99,6 +133,9 @@ function handle({ from, command, action, to, text, event, payload }, win) {
     if (nodeOf(to)?.type === 'note') {
       throw new Error(`${to} is a note, not a terminal: use nara note write ${to} "..."`)
     }
+    if (nodeOf(to)?.type === 'browser') {
+      throw new Error(`${to} is a browser, not a terminal: use nara browser open ${to} <url>`)
+    }
     const target = findTerminal(workspaceId, to)
     if (!target) throw new Error(`terminal ${to} no longer exists`)
     if (SHELLS.has(foregroundProgram(target))) {
@@ -117,7 +154,7 @@ function handle({ from, command, action, to, text, event, payload }, win) {
     if (!peers.includes(to)) throw new Error(`note ${to} is not linked to this terminal`)
     const note = nodeOf(to)
     if (note?.type !== 'note') {
-      throw new Error(`${to} is a terminal, not a note: use nara send ${to} "..."`)
+      throw new Error(`${to} is not a note: see nara peers`)
     }
     if (action === 'read') return { text: note.text ?? '' }
 
@@ -133,6 +170,12 @@ function handle({ from, command, action, to, text, event, payload }, win) {
     updateNode(workspaceId, to, { text: next })
     win.webContents.send('workspace:note-written', workspaceId, to, next)
     return { ok: true }
+  }
+
+  if (command === 'browser') {
+    if (!peers.includes(to)) throw new Error(`browser ${to} is not linked to this terminal`)
+    if (nodeOf(to)?.type !== 'browser') throw new Error(`${to} is not a browser`)
+    return browse(workspaceId, to, action, text)
   }
 
   throw new Error(`unknown command: ${command}`)

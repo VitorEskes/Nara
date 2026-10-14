@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import { existsSync, readFileSync, readdirSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
@@ -15,33 +16,56 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 //
 // Free text (the prompt, the first message, the hooks) goes through the environment and the shell
 // expands each as a single argument, so it never has to be quoted into the command line. The
-// rest comes from fixed lists (shared/prompt.js) and goes in as it is.
-export function agentLaunch({
-  agent,
-  command: typed,
-  session,
-  role: key,
-  nodeId,
-  hooks,
-  worktree,
-  cwd
-}) {
+// rest comes from fixed lists (shared/prompt.js) and goes in as it is. An agent that takes its
+// context as a message gets it back as `message`, for main to paste once it's up (pty.js).
+export function agentLaunch({ agent, command: typed, session, ...options }) {
   const command = typeof typed === 'string' && typed.trim() ? typed.trim() : AGENTS[agent].command
+  const resuming = agent === 'claude' && UUID.test(session ?? '') && hasConversation(session)
+  const parts = agentParts({ agent, session, resuming, ...options })
+  const words = parts.args.map((arg) => (typeof arg === 'string' ? arg : `"$${arg.env}"`))
+  return { command: [command, ...words].join(' '), env: parts.env, message: parts.message }
+}
+
+// The same for an agent typed in a plain terminal (`nara run`, main/shell.js): the arguments as
+// they are, to go before the user's own, which win where they say the same thing. Claude Code gets
+// a session id of its own unless the user picked one (or a conversation to resume), so what it
+// does and spends shows up like an agent node's. The role's first message only goes in when the
+// user typed nothing after the command.
+export function agentRun({ agent, args: typed = [], ...options }) {
+  const own = typed.some((arg) => SESSION_FLAGS.has(arg.split('=')[0]))
+  const session = agent === 'claude' && !own ? randomUUID() : undefined
+  const parts = agentParts({ agent, session, resuming: false, quiet: typed.length > 0, ...options })
+  const args = parts.args.map((arg) => (typeof arg === 'string' ? arg : parts.env[arg.env]))
+  return { args, env: parts.env, message: parts.message, session }
+}
+
+// Claude Code's flags that pick the conversation: with one of them, Nara leaves the session alone.
+const SESSION_FLAGS = new Set([
+  '--resume',
+  '-r',
+  '--continue',
+  '-c',
+  '--session-id',
+  '--print',
+  '-p',
+  '--fork-session'
+])
+
+// The arguments and variables both of the above start from. An argument is a word, or { env } for
+// the value of one of the variables. `quiet` leaves the role's first message out.
+function agentParts({ agent, session, resuming, role: key, nodeId, hooks, worktree, cwd, quiet }) {
   const role = findRole(key)
   const { model, mode, access, kickoff } = roleProfile(role)
   const args = []
   const env = { NARA_PROMPT: agentPrompt(nodeId, role, worktree) }
-  let resuming = false
+  let message = null
 
   if (agent === 'claude') {
     // The id ends up in a shell command line: anything but a UUID could smuggle in a command.
-    if (UUID.test(session ?? '')) {
-      resuming = hasConversation(session)
-      args.push(resuming ? '--resume' : '--session-id', session)
-    }
+    if (UUID.test(session ?? '')) args.push(resuming ? '--resume' : '--session-id', session)
     // Passed again on every resume: Claude Code may reuse the one saved at the first launch, but
     // where it doesn't, the role would be lost.
-    args.push('--append-system-prompt', '"$NARA_PROMPT"')
+    args.push('--append-system-prompt', { env: 'NARA_PROMPT' })
     if (model) args.push('--model', model)
     if (mode) args.push('--permission-mode', mode)
     if (access === 'read-only') args.push('--disallowedTools', EDIT_TOOLS.join(','))
@@ -54,7 +78,7 @@ export function agentLaunch({
         hooks,
         statusLine: { type: 'command', command: 'nara statusline' }
       })
-      args.push('--settings', '"$NARA_SETTINGS"')
+      args.push('--settings', { env: 'NARA_SETTINGS' })
       const own = userStatusLine(cwd)
       if (own) env.NARA_USER_STATUSLINE = own
     }
@@ -62,18 +86,32 @@ export function agentLaunch({
     // Codex takes extra instructions as a config value, in TOML. A JSON string is a valid TOML
     // string, escapes and all.
     env.NARA_CODEX_CONFIG = `developer_instructions=${JSON.stringify(env.NARA_PROMPT)}`
-    args.push('-c', '"$NARA_CODEX_CONFIG"')
+    args.push('-c', { env: 'NARA_CODEX_CONFIG' })
     if (access === 'read-only') args.push('--sandbox', 'read-only')
+  } else {
+    // The rest have no flag for it that holds across versions: the prompt is their first message,
+    // and the role's first task follows it there.
+    message = contextMessage(env.NARA_PROMPT, quiet ? '' : kickoff)
+    return { args, env, message }
   }
 
   // The role's first message starts the conversation, once: a node that resumes is past it. `--`
   // ends the options, so a flag that takes several values can't swallow it.
-  if (kickoff && !resuming) {
+  if (kickoff && !resuming && !quiet) {
     env.NARA_KICKOFF = kickoff
-    args.push('--', '"$NARA_KICKOFF"')
+    args.push('--', { env: 'NARA_KICKOFF' })
   }
 
-  return { command: [command, ...args].join(' '), env }
+  return { args, env, message }
+}
+
+// The first message of an agent that takes its context that way: Nara's prompt, said to be
+// standing instructions, and then the role's first task or a short acknowledgement.
+function contextMessage(prompt, kickoff) {
+  const ask = kickoff
+    ? `Then start with this:\n\n${kickoff}`
+    : 'Reply with one short line saying you are ready, and wait for the next message.'
+  return `[nara] Standing instructions for this whole session, from the app you run in:\n\n${prompt}\n\n${ask}`
 }
 
 // A plain terminal can run a command as it opens (a dev server, a watcher) and stay a shell after
@@ -82,7 +120,8 @@ export function agentLaunch({
 // the command line; it runs again whenever the node reopens.
 export function startupLaunch(command, shell) {
   return {
-    command: 'eval "$NARA_STARTUP"; exec "$NARA_SHELL"',
+    // bash only loads the shell integration (shell.js) with its --rcfile, on the exec too.
+    command: 'eval "$NARA_STARTUP"; exec "$NARA_SHELL" ${NARA_BASHRC:+--rcfile "$NARA_BASHRC"}',
     env: { NARA_STARTUP: command, NARA_SHELL: shell }
   }
 }

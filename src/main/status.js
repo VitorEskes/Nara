@@ -21,6 +21,8 @@ const TICK = 500
 const agents = new Map()
 let send = () => {}
 let describe = () => ({})
+// Who else hears every change besides the windows: the desktop pet's process (pet.js).
+const listeners = new Set()
 
 // `name(workspaceId, nodeId)` gives the node's title and its workspace's name for the pet's
 // bubble.
@@ -31,13 +33,10 @@ export function registerStatus(win, name) {
     const statuses = list()
     for (const other of BrowserWindow.getAllWindows())
       other.webContents.send('agents:status', statuses)
+    for (const fn of listeners) fn(statuses)
   }
   ipcMain.handle('agents:status', () => list())
-  ipcMain.on('agents:seen', (_ev, workspaceId, nodeId) => {
-    for (const agent of agents.values()) {
-      if (agent.workspaceId === workspaceId && agent.nodeId === nodeId) settle(agent)
-    }
-  })
+  ipcMain.on('agents:seen', (_ev, workspaceId, nodeId) => seenAgent(workspaceId, nodeId))
   const timer = setInterval(tick, TICK)
   win.on('closed', () => {
     clearInterval(timer)
@@ -46,6 +45,20 @@ export function registerStatus(win, name) {
     ipcMain.removeHandler('agents:status')
     ipcMain.removeAllListeners('agents:seen')
   })
+}
+
+// Calls fn with every agent's status now and whenever they change; returns what stops it.
+export function onStatuses(fn) {
+  listeners.add(fn)
+  fn(list())
+  return () => listeners.delete(fn)
+}
+
+// The user looked at the agent: what it finished or asked for has been seen.
+export function seenAgent(workspaceId, nodeId) {
+  for (const agent of agents.values()) {
+    if (agent.workspaceId === workspaceId && agent.nodeId === nodeId) settle(agent)
+  }
 }
 
 // A node has one agent at a time: one that restarts (a new role) replaces the one before.
@@ -119,6 +132,14 @@ export function agentHook(id, event, { message, type } = {}) {
       : /permission|approv|needs your/i.test(message ?? '')
     if (asks) change(agent, 'waiting')
   }
+}
+
+// Whether an agent is running in the node, opened with it or typed in it.
+export function agentIn(workspaceId, nodeId) {
+  for (const agent of agents.values()) {
+    if (agent.workspaceId === workspaceId && agent.nodeId === nodeId) return agent.agent
+  }
+  return null
 }
 
 export function untrackAgent(id) {

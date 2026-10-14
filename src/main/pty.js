@@ -4,6 +4,7 @@ import { existsSync, readlinkSync } from 'fs'
 import * as pty from 'node-pty'
 import { AGENTS } from '../shared/agents'
 import { agentLaunch, startupLaunch } from './agents'
+import { shellIntegration } from './shell'
 import { agentExited, agentOutput, agentTouched, trackAgent, untrackAgent } from './status'
 import { unwatchAgent, watchAgent } from './telemetry'
 
@@ -15,7 +16,7 @@ export const terminals = new Map()
 let nextId = 1
 // Claude Code's hooks that tell Nara, through the `nara` command, when the agent takes a prompt,
 // ends its turn and asks for something (status.js), more reliably than its output can.
-const HOOKS = Object.fromEntries(
+export const HOOKS = Object.fromEntries(
   [
     ['UserPromptSubmit', 'prompt'],
     ['Stop', 'stop'],
@@ -29,9 +30,18 @@ const HOOKS = Object.fromEntries(
 const KILL_GRACE = 2000
 // Exits still pending from kill().
 const exiting = new Set()
+// The context an agent gets as its first message (agents.js), by pty id, until it's delivered:
+// { text, started, last }. It goes once the agent's start-up output has gone quiet, or after
+// CONTEXT_WAIT whatever it's doing.
+const contexts = new Map()
+const CONTEXT_QUIET = 1500
+const CONTEXT_WAIT = 20000
+let send = () => {}
 
 // `extraEnv` holds the variables every terminal gets (the ones the `nara` command uses).
 export function registerPty(win, extraEnv) {
+  send = (...args) => !win.isDestroyed() && win.webContents.send(...args)
+  const contextTimer = setInterval(deliverContexts, 300)
   ipcMain.handle('pty:create', (_ev, options = {}) => {
     const { workspaceId, nodeId, agent, session, role, command, worktree } = options
     const { cols = 80, rows = 24, cwd } = options
@@ -55,34 +65,44 @@ export function registerPty(win, extraEnv) {
       : typeof command === 'string' && command.trim()
         ? startupLaunch(command, shell)
         : null
-    const args = launch ? ['-ic', launch.command] : []
+    // A plain terminal, or one that runs a command first, loads the shell integration
+    // (shell.js): an agent typed in it starts through Nara. An agent node's shell only runs the
+    // agent, as it is.
+    const integration = AGENTS[agent] ? { args: [], env: {} } : shellIntegration(shell)
+    const args = [...integration.args, ...(launch ? ['-ic', launch.command] : [])]
     const term = pty.spawn(shell, args, {
       name: 'xterm-256color',
       cols,
       rows,
       cwd: start,
       // NARA_PTY is how `nara` tells the app which terminal the message came from.
-      env: { ...ownEnv(), ...extraEnv, ...launch?.env, NARA_PTY: String(id) }
+      env: {
+        ...ownEnv(),
+        ...extraEnv,
+        ...integration.env,
+        ...launch?.env,
+        NARA_PTY: String(id)
+      }
     })
 
     // A killed program can still write on its way out (Claude Code restores the terminal), and
     // by then the window may be gone: sending to it would throw in main.
     term.onData((data) => {
       agentOutput(id, data)
+      const context = contexts.get(id)
+      if (context) context.last = Date.now()
       if (!win.isDestroyed()) win.webContents.send('pty:data', id, data)
     })
     term.onExit(({ exitCode }) => {
       agentExited(id, exitCode)
+      contexts.delete(id)
       terminals.delete(id)
       if (!win.isDestroyed()) win.webContents.send('pty:exit', id, exitCode)
     })
 
     terminals.set(id, { workspaceId, nodeId, term, agent: AGENTS[agent] ? agent : undefined })
     // The pet follows the agents, not the shells.
-    if (AGENTS[agent]) {
-      trackAgent(id, { workspaceId, nodeId, agent })
-      watchAgent(id, { workspaceId, nodeId, agent, session, cwd: start })
-    }
+    if (AGENTS[agent]) startAgent(id, { agent, session, message: launch.message, cwd: start })
     return id
   })
 
@@ -98,21 +118,13 @@ export function registerPty(win, extraEnv) {
 
   // An answer from the pet's command center, to the agent in a node: yes or no to what it asked,
   // or text, which arrives like a message from another agent (pasted, then Enter).
-  ipcMain.handle('agents:reply', (_ev, workspaceId, nodeId, reply = {}) => {
-    const target = findTerminal(workspaceId, nodeId)
-    const agent = AGENTS[target && agentOf(target.id)]
-    if (!target || !agent) return false
-    if (reply.kind === 'yes' || reply.kind === 'no') {
-      target.term.write(agent.answers[reply.kind])
-    } else if (reply.kind === 'text' && String(reply.text ?? '').trim()) {
-      if (win.isDestroyed()) return false
-      win.webContents.send('pty:paste', target.id, String(reply.text).trim())
-    } else return false
-    agentTouched(target.id, true)
-    return true
-  })
+  ipcMain.handle('agents:reply', (_ev, workspaceId, nodeId, reply) =>
+    replyToAgent(workspaceId, nodeId, reply)
+  )
 
   win.on('closed', () => {
+    clearInterval(contextTimer)
+    contexts.clear()
     for (const id of terminals.keys()) kill(id)
     ipcMain.removeHandler('pty:create')
     ipcMain.removeHandler('agents:reply')
@@ -144,6 +156,57 @@ function ownEnv() {
   return Object.fromEntries(
     Object.entries(process.env).filter(([key]) => !SESSION_MARKERS.has(key))
   )
+}
+
+// An answer to the agent in a node, from the pet's command center or the HUD: yes or no to what it
+// asked, or text, which arrives like a message from another agent (pasted, then Enter). Returns
+// whether it went.
+export function replyToAgent(workspaceId, nodeId, reply = {}) {
+  const target = findTerminal(workspaceId, nodeId)
+  const agent = AGENTS[target && agentOf(target.id)]
+  if (!target || !agent) return false
+  if (reply.kind === 'yes' || reply.kind === 'no') {
+    if (!agent.answers) return false
+    target.term.write(agent.answers[reply.kind])
+  } else if (reply.kind === 'text' && String(reply.text ?? '').trim()) {
+    send('pty:paste', target.id, String(reply.text).trim())
+  } else return false
+  agentTouched(target.id, true)
+  return true
+}
+
+// An agent began in a terminal: one its node opened with, or one typed in a plain terminal (`nara
+// run`). The pet and the side panel follow it, what it spends is read where Nara can, and one that
+// takes its context as a message gets it once it's up.
+export function startAgent(id, { agent, session, message, cwd }) {
+  const terminal = terminals.get(id)
+  if (!terminal || !AGENTS[agent]) return
+  terminal.agent = agent
+  const { workspaceId, nodeId } = terminal
+  trackAgent(id, { workspaceId, nodeId, agent })
+  if (AGENTS[agent].telemetry) watchAgent(id, { workspaceId, nodeId, agent, session, cwd })
+  if (message) contexts.set(id, { text: message, started: Date.now(), last: 0 })
+}
+
+// An agent typed in a plain terminal quit, and the shell is back.
+export function endAgent(id) {
+  const terminal = terminals.get(id)
+  if (!terminal?.agent) return
+  terminal.agent = undefined
+  contexts.delete(id)
+  untrackAgent(id)
+  unwatchAgent(id)
+}
+
+function deliverContexts() {
+  const now = Date.now()
+  for (const [id, context] of contexts) {
+    const quiet = context.last && now - context.last >= CONTEXT_QUIET
+    if (!quiet && now - context.started < CONTEXT_WAIT) continue
+    contexts.delete(id)
+    agentTouched(id, true)
+    send('pty:paste', id, context.text)
+  }
 }
 
 function agentOf(id) {

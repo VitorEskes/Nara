@@ -1,3 +1,5 @@
+import { AGENTS } from './agents'
+
 // What an agent is told when it opens in a node, and the flags that hold it to its role. Main
 // builds the command line from this (main/agents.js) and the renderer shows the same text in the
 // role's preview, so what the user reads is exactly what the agent gets.
@@ -80,7 +82,7 @@ export function rolePrompt(role) {
 export function naraPrompt(nodeId) {
   return `# Working inside Nara
 
-You are running inside Nara, a desktop app where terminals and AI agents live as nodes on an infinite canvas. You are terminal ${nodeId}. The user sees your terminal on the canvas and can link it to other nodes: other terminals, usually running agents, and notes, which are shared text.
+You are running inside Nara, a desktop app where terminals and AI agents live as nodes on an infinite canvas. You are terminal ${nodeId}. The user sees your terminal on the canvas and can link it to other nodes: other terminals, usually running agents, notes, which are shared text, and browsers, web pages the user sees too.
 
 You reach the nodes linked to you with the \`nara\` command, run from your shell:
   nara peers                        list the terminals and notes linked to you, with their roles
@@ -88,6 +90,9 @@ You reach the nodes linked to you with the \`nara\` command, run from your shell
   nara note read <note>             print a linked note
   nara note write <note> <text>     replace the note's text
   nara note append <note> <text>    add a line to the end of the note
+  nara browser open <browser> <url> load a page in a linked browser
+  nara browser read <browser>       print the page's address, title and text
+  nara browser shot <browser>       save a screenshot of the page (prints the PNG's path)
 
 How it works:
 - The user can add and remove links at any time. Run \`nara peers\` whenever you need to know who you can reach, instead of relying on an earlier answer.
@@ -95,6 +100,7 @@ How it works:
 - Don't sleep, poll or wait for a reply: end your turn, and the reply will arrive as a new message.
 - Only terminals running an agent can receive messages; \`nara peers\` marks the ones that only have a shell.
 - Notes are Markdown, and the user reads them rendered: headings, lists, checklists (- [ ] and - [x]), code. Use them for what's worth keeping in view, like a plan, a status or a result, and tick checklist items as they get done. Keep messages short and point to a note or a file for anything long.
+- A linked browser is where to check a web UI you're working on: open the dev server in it, read it, or take a screenshot and look at the image.
 - Text with several lines or with quotes is safer through stdin: nara send 2 <<'EOF' ... EOF`
 }
 
@@ -114,13 +120,19 @@ You work in a git worktree of your own, on the branch ${worktree.branch}, made f
 
 // The settings the role turns into, in words, for the role's card and the inspector:
 // [{ label, value }].
+// Without an agent (a plain terminal, where any of them may start), every flag shows: each holds
+// where the agent that starts has it. Agents that take their context as a message (shared/agents.js)
+// have none of them.
 export function roleFlags(agent, role) {
   if (!role) return []
   const { model, mode, access, kickoff } = roleProfile(role)
+  const flagged = !agent || AGENTS[agent]?.context === 'flags'
+  const claudeLike = flagged && agent !== 'codex'
   const flags = []
-  if (agent !== 'codex' && model) flags.push({ label: 'Model', value: MODELS[model].label })
-  if (agent !== 'codex' && mode) flags.push({ label: 'Permissions', value: MODES[mode].label })
-  if (access === 'read-only') flags.push({ label: 'Access', value: ACCESS[access].label })
+  if (claudeLike && model) flags.push({ label: 'Model', value: MODELS[model].label })
+  if (claudeLike && mode) flags.push({ label: 'Permissions', value: MODES[mode].label })
+  if (flagged && access === 'read-only')
+    flags.push({ label: 'Access', value: ACCESS[access].label })
   if (kickoff) flags.push({ label: 'Starts with', value: kickoff })
   return flags
 }
