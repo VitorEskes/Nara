@@ -1,38 +1,102 @@
-// Links look like a string pinned between two nodes. Everything is drawn in world coordinates
+import { useEffect, useLayoutEffect, useRef } from 'react'
+
+// Links look like a rope pinned between two nodes. Everything is drawn in world coordinates
 // inside .world, so pan and zoom come for free from the camera transform.
 //
-// The string sits behind the nodes (z-index 0), and its pins go in the overlay, above them: a pin
-// sits on the node's edge, and half of it would be hidden under the node otherwise. The string
+// The rope sits behind the nodes (z-index 0), and its pins go in the overlay, above them: a pin
+// sits on the node's edge, and half of it would be hidden under the node otherwise. The rope
 // being pulled goes in the overlay too, whole: it has to stay in sight over any node it crosses.
+//
+// Each rope hangs from its belly, the point halfway along it, which a spring pulls toward where
+// gravity would leave it. When a node moves the belly lags behind and swings a little before it
+// settles, so the rope reads as a rope and not a line. The springs run outside React: a frame
+// loop writes the paths straight into the DOM while any rope is still moving, and stops after.
 
-// How far a string sags below the straight line, as a share of its length, and at most.
-const SAG = 0.2
-const MAX_SAG = 120
+// How much slack a rope has, past the straight line between its ends: a little always, and more
+// the longer it is. The sag follows from it, up to a limit.
+const SLACK = 18
+const SLACK_SHARE = 0.06
+const MAX_SAG = 140
 const PIN_RADIUS = 5
+// The belly's spring, per second: how hard it's pulled to rest, and how fast its swing dies out.
+const STIFFNESS = 140
+const DAMPING = 11
+// Below this, in world units and units per second, the belly counts as at rest.
+const REST = 0.05
 
-export default function Links({ nodes, links, onRemove }) {
+// `live` has the ids of the nodes whose agent is at work: a rope to one carries a pulse.
+// `focus` has the ids of the selected nodes: the ropes to them stand out.
+export default function Links({ nodes, links, live, focus, onRemove }) {
   const byId = new Map(nodes.map((node) => [node.id, node]))
+  const svg = useRef(null)
+  // link id -> { a, b, p, v }: the ends, the belly and its velocity.
+  const ropes = useRef(new Map())
+  const frame = useRef(0)
+  const ropesShown = links
+    .map((l) => ({ link: l, ends: linkEnds(byId.get(l.from), byId.get(l.to)) }))
+    .filter((r) => r.ends)
+
+  // After every render: the ends move to where the nodes are now, and the springs take it from
+  // there. Before paint, so a new rope never shows up without its path.
+  useLayoutEffect(() => {
+    const state = ropes.current
+    const shown = new Set()
+    for (const {
+      link,
+      ends: [a, b]
+    } of ropesShown) {
+      shown.add(link.id)
+      const rope = state.get(link.id)
+      if (rope) Object.assign(rope, { a, b })
+      else state.set(link.id, { a, b, p: belly(a, b), v: { x: 0, y: 0 } })
+    }
+    for (const id of state.keys()) if (!shown.has(id)) state.delete(id)
+    paint(svg.current, state)
+    if (frame.current) return
+    let last = null
+    const step = (now) => {
+      const dt = Math.min(1 / 30, last == null ? 1 / 60 : (now - last) / 1000)
+      last = now
+      const still = matchMedia('(prefers-reduced-motion: reduce)').matches
+      let moving = false
+      for (const rope of ropes.current.values()) moving = swing(rope, dt, still) || moving
+      paint(svg.current, ropes.current)
+      frame.current = moving ? requestAnimationFrame(step) : 0
+    }
+    frame.current = requestAnimationFrame(step)
+  })
+
+  useEffect(() => () => cancelAnimationFrame(frame.current), [])
 
   return (
-    <svg className="links" width="1" height="1">
-      {links.map((l) => {
-        const ends = linkEnds(byId.get(l.from), byId.get(l.to))
-        if (!ends) return null
-        const d = stringPath(...ends)
-        return (
-          <g key={l.id} className="link" onClick={() => onRemove(l.id)}>
-            <title>Click to unlink</title>
-            {/* Wide invisible stroke: a bigger click target than the thin line. */}
-            <path className="link-hitbox" d={d} />
-            <path className="link-line" d={d} />
+    <svg ref={svg} className="links" width="1" height="1">
+      {ropesShown.map(({ link: l }) => (
+        <g
+          key={l.id}
+          className="link"
+          data-link={l.id}
+          data-live={live?.has(l.from) || live?.has(l.to) || undefined}
+          data-focus={focus?.has(l.from) || focus?.has(l.to) || undefined}
+          onClick={() => onRemove(l.id)}
+        >
+          <title>Click to unlink</title>
+          <path className="link-shadow" />
+          <path className="link-line" />
+          <path className="link-strand" />
+          <path className="link-flow" />
+          {/* Wide invisible stroke: a bigger click target than the thin line. */}
+          <path className="link-hitbox" />
+          <g className="link-cut">
+            <circle r="9" />
+            <path d="M-3 -3L3 3M3 -3L-3 3" />
           </g>
-        )
-      })}
+        </g>
+      ))}
     </svg>
   )
 }
 
-// `draft` is the string being pulled: from the edge of its node to the cursor, with a pin at the
+// `draft` is the rope being pulled: from the edge of its node to the cursor, with a pin at the
 // cursor end.
 export function LinkPins({ nodes, links, draft }) {
   const byId = new Map(nodes.map((node) => [node.id, node]))
@@ -42,7 +106,7 @@ export function LinkPins({ nodes, links, draft }) {
     <svg className="link-pins" width="1" height="1">
       {source && (
         <g className="draft">
-          <path className="link-draft" d={stringPath(start, draft)} />
+          <path className="link-draft" d={ropePath(start, draft, belly(start, draft))} />
           <circle className="draft-pin" cx={draft.x} cy={draft.y} r={PIN_RADIUS} />
         </g>
       )}
@@ -51,6 +115,7 @@ export function LinkPins({ nodes, links, draft }) {
         if (!ends) return []
         return ends.map(({ x, y }, i) => (
           <g key={`${l.id}-${i}`}>
+            <circle className="pin-halo" cx={x} cy={y} r={PIN_RADIUS + 3} />
             <circle cx={x} cy={y} r={PIN_RADIUS} />
             <circle className="pin-hole" cx={x} cy={y} r={PIN_RADIUS * 0.4} />
           </g>
@@ -60,7 +125,59 @@ export function LinkPins({ nodes, links, draft }) {
   )
 }
 
-// Where the string meets each node: the point on the node's edge along the line between the two
+// One step of a belly's spring. Returns whether it's still moving.
+function swing(rope, dt, still) {
+  const target = belly(rope.a, rope.b)
+  if (still) {
+    rope.p = target
+    rope.v = { x: 0, y: 0 }
+    return false
+  }
+  const dx = target.x - rope.p.x
+  const dy = target.y - rope.p.y
+  rope.v.x += (dx * STIFFNESS - rope.v.x * DAMPING) * dt
+  rope.v.y += (dy * STIFFNESS - rope.v.y * DAMPING) * dt
+  rope.p.x += rope.v.x * dt
+  rope.p.y += rope.v.y * dt
+  const resting =
+    Math.abs(dx) < REST && Math.abs(dy) < REST && Math.hypot(rope.v.x, rope.v.y) < REST
+  if (resting) {
+    rope.p = target
+    rope.v = { x: 0, y: 0 }
+  }
+  return !resting
+}
+
+// Writes each rope's path into its elements, and puts the cut mark on its belly.
+function paint(svg, ropes) {
+  if (!svg) return
+  for (const [id, { a, b, p }] of ropes) {
+    const group = svg.querySelector(`[data-link="${id}"]`)
+    if (!group) continue
+    const d = ropePath(a, b, p)
+    for (const path of group.querySelectorAll(':scope > path')) path.setAttribute('d', d)
+    group.querySelector('.link-cut')?.setAttribute('transform', `translate(${p.x} ${p.y})`)
+  }
+}
+
+// Where the belly of a rope between a and b hangs at rest: below the middle, by how much its
+// slack lets it (a parabola's sag for a rope that much longer than the span).
+function belly(a, b) {
+  const span = Math.hypot(b.x - a.x, b.y - a.y)
+  const slack = SLACK + span * SLACK_SHARE
+  const sag = Math.min(MAX_SAG, Math.sqrt((3 * span * slack) / 8))
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 + sag }
+}
+
+// A quadratic curve from a to b that passes through the belly p halfway: its control point is
+// twice as far from the chord's middle as the belly is.
+function ropePath(a, b, p) {
+  const cx = 2 * p.x - (a.x + b.x) / 2
+  const cy = 2 * p.y - (a.y + b.y) / 2
+  return `M ${a.x} ${a.y} Q ${cx} ${cy} ${b.x} ${b.y}`
+}
+
+// Where the rope meets each node: the point on the node's edge along the line between the two
 // centers. Nodes that overlap enough to share a center have no line between them.
 function linkEnds(a, b) {
   if (!a || !b) return null
@@ -87,12 +204,4 @@ function edgePoint(node, from, to) {
   // the other center instead of flying past it.
   const k = Math.min(t, 1)
   return { x: from.x + dx * k, y: from.y + dy * k }
-}
-
-// A quadratic curve whose control point hangs below the midpoint, like a string under gravity.
-function stringPath(a, b) {
-  const sag = Math.min(MAX_SAG, Math.hypot(b.x - a.x, b.y - a.y) * SAG)
-  const cx = (a.x + b.x) / 2
-  const cy = (a.y + b.y) / 2 + sag
-  return `M ${a.x} ${a.y} Q ${cx} ${cy} ${b.x} ${b.y}`
 }
