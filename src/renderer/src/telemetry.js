@@ -30,3 +30,17 @@ export function totalUsage(list) {
     { tokens: 0, cost: 0 }
   )
 }
+
+// "claude-opus-5-5" reads "Opus 5.5"; anything else as it is.
+export function modelName(model) {
+  const match = model.match(/^claude-([a-z]+)-(\d+)(?:-(\d{1,2}))?(?:-\d{8})?/)
+  if (!match) return model
+  const [, family, major, minor] = match
+  return `${family[0].toUpperCase()}${family.slice(1)} ${major}${minor ? `.${minor}` : ''}`
+}
+
+// What the agent is on: the task it's working through, else its conversation's title.
+export function agentDoing(info) {
+  const active = info?.tasks?.find((t) => t.status === 'in_progress')
+  return active ? active.active || active.text : (info?.title ?? null)
+}

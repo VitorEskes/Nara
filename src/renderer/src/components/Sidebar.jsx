@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { isRenameKey, useRename } from '../rename'
 import ProjectBadge from './ProjectBadge'
+import StateGlyph from './StateGlyph'
 import {
   BrandMark,
   ChevronIcon,
@@ -16,17 +17,22 @@ import {
 } from './icons'
 import { ago, groupByProject } from '../workspaceList'
 import { SHORTCUTS, keysLabel } from '../shortcuts'
+import { ariaKeys, tip } from '../tip'
 
 // Column on the left: the app's actions, then every project with its workspaces, then the loose
 // workspaces. Clicking a workspace opens it, and clicking a project opens one of its workspaces;
-// an open one stays mounted, with its terminals running, until it's closed here. Only a closed
-// workspace can be deleted, and only a project with none open. `active` is the workspace on
-// screen, if any: with the overview showing there is none. While `hidden`, the sidebar slides
-// shut and nothing in it can take focus. At the bottom, the way to the settings.
+// an open one stays mounted, with its terminals running, until it's closed here. Only a closed workspace can be deleted, and only a project with none open. `active` is
+// the workspace on screen, if any: with the overview showing there is none. It opens into a card
+// whose slot (onSlot) the workspace fills with its branch and agents (WorkspaceNav.jsx). The other
+// open ones show how their agents are doing: `summaries` has each one's most urgent state and
+// its count of agents. While `hidden`, the sidebar slides shut and nothing in it can take focus.
+// At the bottom, the way to the settings.
 export default function Sidebar({
   projects,
   workspaces,
   active,
+  summaries,
+  onSlot,
   overview,
   hidden,
   onHide,
@@ -59,6 +65,8 @@ export default function Sidebar({
         key={w.id}
         {...w}
         active={w.id === active}
+        summary={summaries.get(w.id)}
+        onSlot={onSlot}
         onSelect={() => onSelect(w.id)}
         onClose={() => onCloseWorkspace(w.id)}
         onRename={(name) => onRenameWorkspace(w.id, name)}
@@ -75,8 +83,7 @@ export default function Sidebar({
           <span className="brand">Nara</span>
           <button
             className="icon-button"
-            title={`Hide sidebar (${SHORTCUTS.sidebar.keys})`}
-            aria-label="Hide sidebar"
+            {...tip('Hide sidebar', SHORTCUTS.sidebar.keys, 'bottom')}
             onClick={onHide}
           >
             <SidebarIcon />
@@ -183,13 +190,12 @@ function NavItem({ icon, label, shortcut, active, onClick }) {
     <button
       className={active ? 'nav-row active' : 'nav-row'}
       aria-current={active ? 'page' : undefined}
-      aria-keyshortcuts={shortcut.keys.replaceAll('Ctrl', 'Control')}
-      title={shortcut.keys}
+      aria-keyshortcuts={ariaKeys(shortcut.keys)}
       onClick={onClick}
     >
       {icon}
       <span className="row-name">{label}</span>
-      <kbd>{keysLabel(shortcut)}</kbd>
+      <kbd aria-hidden="true">{keysLabel(shortcut)}</kbd>
     </button>
   )
 }
@@ -239,22 +245,25 @@ function Row({
   )
 }
 
-// An open workspace shows a breathing dot instead of its age: its file is saved all the time
-// while it runs.
+// An open workspace shows how its agents are doing instead of its age (a breathing dot when none
+// is running): its file is saved all the time while it runs. The one on screen opens into a card
+// with the slot its own part of the sidebar goes in.
 function WorkspaceRow({
   name,
   folder,
   open,
   updated,
   active,
+  summary,
+  onSlot,
   onSelect,
   onClose,
   onRename,
   onRemove
 }) {
-  return (
+  const row = (
     <Row
-      as="li"
+      as={active ? 'div' : 'li'}
       className={open ? 'workspace-row open' : 'workspace-row'}
       current={active}
       title={folder}
@@ -262,12 +271,17 @@ function WorkspaceRow({
       icon={<FolderIcon />}
       meta={
         <span className="row-meta">
-          {open ? (
+          {!open ? (
+            ago(updated)
+          ) : summary ? (
+            <span className="row-agents">
+              <StateGlyph state={summary.state} />
+              {summary.count}
+            </span>
+          ) : (
             <span className="live-dot" title="Running">
               <span className="sr-only">running</span>
             </span>
-          ) : (
-            ago(updated)
           )}
         </span>
       }
@@ -295,5 +309,12 @@ function WorkspaceRow({
       onOpen={onSelect}
       onRename={onRename}
     />
+  )
+  if (!active) return row
+  return (
+    <li className="workspace-card">
+      {row}
+      <div ref={onSlot} />
+    </li>
   )
 }

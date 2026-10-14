@@ -1,103 +1,71 @@
 import ProjectBadge from './ProjectBadge'
 import UsageMeter from './UsageMeter'
 import { BranchIcon, MicIcon, PanelRightIcon, SidebarIcon } from './icons'
-import { STATE_LABELS } from '../agentStatus'
 import { SHORTCUTS } from '../shortcuts'
 import { useBranch } from '../useBranch'
+import ViewSwitch from './ViewSwitch'
+import { VOICE } from '../../../shared/features'
+import { tip } from '../tip'
 
-// The bar across the top of a canvas: where you are (the project, the workspace, the branch), how
-// the agents in it are doing, what they've spent, and the inspector's switch. Translucent, so the
-// canvas runs on under it. `agents` are this workspace's statuses; clicking a state goes to the
-// agent that's been in it longest. `limits` are the plans' limits (main/usage.js) and `spend` what
-// this workspace's agents have spent (UsageMeter.jsx).
+// What the panel on the right holds in each view.
+const PANELS = { canvas: 'Inspector', code: 'Explorer', review: 'Review panel' }
+
+// The bar across the top of a workspace: what its agents have spent, the dictation and the side
+// panel's switch. Translucent, so the canvas runs on under it. Where you are is in the sidebar,
+// and the views at the top of the side panel; while either is closed, the bar takes over what it
+// held: the project, the workspace and the branch, or the views. `limits` are the plans' limits (main/usage.js) and `spend` what this
+// workspace's agents have spent (UsageMeter.jsx). `mode` is 'canvas', 'code' or 'review',
+// switched with onMode; `toReview` counts the agents' changes waiting to be reviewed.
 export default function TopBar({
   workspace,
   project,
   folder,
-  agents,
   limits,
   spend,
   sidebarHidden,
   onShowSidebar,
   inspector,
   onInspector,
+  mode,
+  onMode,
+  toReview,
   onLocate,
   onVoice
 }) {
-  const branch = useBranch(folder)
-  const counts = {}
-  for (const agent of agents) (counts[agent.state] ??= []).push(agent)
-
   return (
     <header className="topbar">
       {sidebarHidden && (
-        <button
-          className="icon-button"
-          title={`Show sidebar (${SHORTCUTS.sidebar.keys})`}
-          aria-label="Show sidebar"
-          onClick={onShowSidebar}
-        >
-          <SidebarIcon />
-        </button>
+        <>
+          <button
+            className="icon-button"
+            {...tip('Show sidebar', SHORTCUTS.sidebar.keys, 'bottom')}
+            onClick={onShowSidebar}
+          >
+            <SidebarIcon />
+          </button>
+          <Where workspace={workspace} project={project} folder={folder} />
+        </>
       )}
-      <nav className="crumbs" aria-label="Current workspace">
-        {project && (
-          <>
-            <ProjectBadge project={project} />
-            <span className="crumb">{project.name}</span>
-            <span className="crumb-separator" aria-hidden="true">
-              /
-            </span>
-          </>
-        )}
-        <span className="crumb current" aria-current="page">
-          {workspace?.name}
-        </span>
-        {branch && (
-          <span className="topbar-branch" title={`On branch ${branch}`}>
-            <BranchIcon size={12} />
-            {branch}
-          </span>
-        )}
-      </nav>
+
+      {!inspector && (
+        <ViewSwitch mode={mode} onMode={onMode} toReview={toReview} className="topbar-views" />
+      )}
 
       <div className="topbar-end">
-        <div className="topbar-states" aria-label="Agents">
-          {['waiting', 'failed', 'working', 'review'].map(
-            (state) =>
-              counts[state] && (
-                <button
-                  key={state}
-                  className="state-pill"
-                  data-state={state}
-                  title={`Go to ${counts[state].length === 1 ? 'it' : 'the first one'}`}
-                  onClick={() => onLocate(oldest(counts[state]).nodeId)}
-                >
-                  <span className="state-dot" />
-                  {counts[state].length} {STATE_LABELS[state].toLowerCase()}
-                </button>
-              )
-          )}
-          {agents.length > 0 && !agents.some((a) => a.state !== 'idle') && (
-            <span className="state-pill quiet">
-              <span className="state-dot" data-state="idle" />
-              {agents.length === 1 ? '1 agent' : `${agents.length} agents`}, all quiet
-            </span>
-          )}
-        </div>
         <UsageMeter limits={limits} spend={spend} onLocate={onLocate} />
-        <button
-          className="icon-button"
-          title="Dictate to an agent (Ctrl+Alt+V)"
-          aria-label="Dictate to an agent"
-          onClick={onVoice}
-        >
-          <MicIcon />
-        </button>
+        {VOICE && (
+          <button
+            className="icon-button"
+            {...tip('Dictate to an agent', 'Ctrl+Alt+V', 'bottom')}
+            onClick={onVoice}
+          >
+            <MicIcon />
+          </button>
+        )}
         <button
           className={inspector ? 'icon-button active' : 'icon-button'}
-          title="Inspector"
-          aria-label="Inspector"
+          title={PANELS[mode]}
+          aria-label={PANELS[mode]}
           aria-pressed={inspector}
           onClick={onInspector}
         >
@@ -108,6 +76,28 @@ export default function TopBar({
   )
 }
 
-function oldest(agents) {
-  return agents.reduce((a, b) => (b.since < a.since ? b : a))
+function Where({ workspace, project, folder }) {
+  const branch = useBranch(folder)
+  return (
+    <nav className="crumbs" aria-label="Current workspace">
+      {project && (
+        <>
+          <ProjectBadge project={project} />
+          <span className="crumb">{project.name}</span>
+          <span className="crumb-separator" aria-hidden="true">
+            /
+          </span>
+        </>
+      )}
+      <span className="crumb current" aria-current="page">
+        {workspace?.name}
+      </span>
+      {branch && (
+        <span className="topbar-branch" title={`On branch ${branch}`}>
+          <BranchIcon size={12} />
+          {branch}
+        </span>
+      )}
+    </nav>
+  )
 }
