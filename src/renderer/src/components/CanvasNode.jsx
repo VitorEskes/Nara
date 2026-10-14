@@ -16,10 +16,13 @@ const EDGES = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw']
 // `label` is the name on the bar; `agent` ({ key, label }) and `role` ({ label, tone }) go on it
 // too. `look` is a terminal's (terminalLook): its colors, tone and icon. `paper` is a note's color
 // (`paperDark` when it's a dark one). An agent's `status` (status.js) and `usage` (telemetry.js)
-// show as its state and how full its context is.
-// and `linked` says whether any string is pinned to it. While a string is
-// being pulled, `dimmed` marks a node it can't be tied to; `highlighted` lights the node up while
-// its row in the side panel's connections is hovered.
+// show as its state and how full its context is, and `linked` says whether any rope is pinned to
+// it. While a rope is being pulled, `dimmed` marks a node it can't be tied to; `highlighted`
+// lights the node up while its row in the side panel's connections is hovered. `frame` ({ x, y,
+// w, h, scale, screen }) takes the node out of its place on the canvas: a browser filling the
+// screen, in world coordinates that land on the room between the panels, scaled back to the
+// screen's own size. There its bar and its edges move and resize that box on screen (`screen`, in
+// pixels) through onFrame, and a double-click on the bar gives it the whole room again (null).
 export default function CanvasNode({
   id,
   type,
@@ -41,6 +44,8 @@ export default function CanvasNode({
   isLinkTarget,
   dimmed,
   highlighted,
+  frame,
+  onFrame,
   onChange,
   onRaise,
   onMoveStart,
@@ -56,11 +61,22 @@ export default function CanvasNode({
   // The bar moves the node, and with it the rest of the selection, which Workspace tracks.
   function move(e) {
     if (e.button !== 0) return
+    if (frame) {
+      const box = frame.screen
+      drag(e, setDragging, (dx, dy) => onFrame({ ...box, x: box.x + dx, y: box.y + dy }))
+      return
+    }
     onMoveStart()
     drag(e, setDragging, onMoveBy)
   }
 
+  // On screen the frame is at scale 1, so the drag's offsets are already in pixels.
   function resize(e, edge) {
+    if (frame) {
+      const box = frame.screen
+      drag(e, setDragging, (dx, dy) => onFrame(resized(box, edge, dx, dy)))
+      return
+    }
     drag(e, setDragging, (dx, dy) => onChange(resized({ x, y, w, h }, edge, dx, dy)))
   }
 
@@ -74,7 +90,8 @@ export default function CanvasNode({
     dimmed && 'dimmed',
     highlighted && 'highlighted',
     dragging && 'dragging',
-    leaving && 'leaving'
+    leaving && 'leaving',
+    frame && 'expanded'
   ]
   return (
     <div
@@ -85,13 +102,21 @@ export default function CanvasNode({
       data-scheme={theme?.light ? 'light' : undefined}
       data-paper={paperDark ? 'dark' : undefined}
       data-tone={look?.tone ?? undefined}
+      data-size={
+        frame ? `${Math.round(frame.screen.w)} × ${Math.round(frame.screen.h)}` : undefined
+      }
       role="group"
       aria-label={label}
       style={{
-        left: x,
-        top: y,
-        width: w,
-        height: h,
+        ...(frame
+          ? {
+              left: frame.x,
+              top: frame.y,
+              width: frame.w,
+              height: frame.h,
+              transform: `scale(${frame.scale})`
+            }
+          : { left: x, top: y, width: w, height: h }),
         zIndex: layer,
         '--paper': paper,
         '--terminal': theme?.colors.background,
@@ -102,7 +127,11 @@ export default function CanvasNode({
       onPointerDownCapture={onRaise}
       onAnimationEnd={(e) => e.animationName === 'node-out' && onClose()}
     >
-      <div className="node-bar" onPointerDown={move}>
+      <div
+        className="node-bar"
+        onPointerDown={move}
+        onDoubleClick={(e) => frame && !e.target.closest('button') && onFrame(null)}
+      >
         <div
           className={linked ? 'node-port linked' : 'node-port'}
           title="Drag onto another node to connect them, or click and then pick one"
