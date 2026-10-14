@@ -1,4 +1,4 @@
-import { app, dialog, ipcMain } from 'electron'
+import { app, ipcMain } from 'electron'
 import { execFile } from 'child_process'
 import { createHash, randomBytes } from 'crypto'
 import { existsSync, mkdirSync } from 'fs'
@@ -64,24 +64,13 @@ export function registerGit(win) {
     }
   })
 
-  // Merges a worktree's branch into the branch it came from, in the main checkout, after asking.
-  // A merge that conflicts is undone and reported. Returns { ok } or { error }.
+  // Merges a worktree's branch into the branch it came from, in the main checkout (the renderer
+  // has asked the user). A merge that conflicts is undone and reported. Returns { ok } or
+  // { error }.
   ipcMain.handle('git:merge', async (_ev, worktree) => {
-    const { root, branch, base, path } = worktree ?? {}
+    const { root, branch, base } = worktree ?? {}
     if (!root || !branch) return { error: 'This terminal has no worktree' }
     try {
-      const pending = (await git(path, ['status', '--porcelain'])).trim()
-      const { response } = await dialog.showMessageBox(win, {
-        type: 'question',
-        message: `Merge ${branch} into ${base}?`,
-        detail: pending
-          ? 'The worktree has changes that aren’t committed: only commits are merged. Ask the agent to commit first.'
-          : `In ${root}. If it conflicts, the merge is undone.`,
-        buttons: ['Merge', 'Cancel'],
-        defaultId: 0,
-        cancelId: 1
-      })
-      if (response !== 0) return { canceled: true }
       const current = (await git(root, ['rev-parse', '--abbrev-ref', 'HEAD'])).trim()
       if (current !== base) return { error: `${root} is on ${current}, not ${base}` }
       try {
@@ -96,19 +85,11 @@ export function registerGit(win) {
     }
   })
 
-  // Removes a worktree and its folder, after asking; the branch stays, with its commits.
+  // Removes a worktree and its folder (the renderer has asked the user); the branch stays, with
+  // its commits.
   ipcMain.handle('git:remove-worktree', async (_ev, worktree) => {
-    const { root, path, branch } = worktree ?? {}
+    const { root, path } = worktree ?? {}
     if (!root || !path) return { error: 'This terminal has no worktree' }
-    const { response } = await dialog.showMessageBox(win, {
-      type: 'warning',
-      message: 'Remove this worktree?',
-      detail: `${path} is deleted, uncommitted changes with it. The branch ${branch} and its commits stay.`,
-      buttons: ['Remove', 'Cancel'],
-      defaultId: 1,
-      cancelId: 1
-    })
-    if (response !== 0) return { canceled: true }
     try {
       await git(root, ['worktree', 'remove', '--force', path])
       return { ok: true }
@@ -131,7 +112,7 @@ export function registerGit(win) {
 }
 
 // `git diff --no-index` exits 1 when the files differ, which here is the normal case.
-function git(cwd, args, { allowDiff = false } = {}) {
+export function git(cwd, args, { allowDiff = false } = {}) {
   return new Promise((resolve, reject) => {
     execFile(
       'git',
@@ -193,7 +174,7 @@ function slugify(text = '') {
     .slice(0, 32)
 }
 
-function firstLine(text = '') {
+export function firstLine(text = '') {
   return (
     String(text)
       .split('\n')
