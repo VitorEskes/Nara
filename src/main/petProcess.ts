@@ -119,16 +119,22 @@ function start(): void {
   )
   ipcMain.on('pet:jump', (_ev, status: AgentStatus) => tell({ type: 'jump', status }))
 
-  // Where the window takes the pointer: the rectangles the renderer draws in, in its pixels.
+  // Where the window takes the pointer: the rectangles the renderer draws in, in its pixels. Each
+  // edge is rounded outward on its own, so a part that sits between pixels keeps its last row and
+  // column (rounding the start down and the size up loses them).
   ipcMain.on('pet:shape', (_ev, rects: Electron.Rectangle[]) => {
     if (!Array.isArray(rects) || win.isDestroyed()) return
     win.setShape(
-      rects.map(({ x, y, width, height }) => ({
-        x: Math.max(0, Math.floor(x)),
-        y: Math.max(0, Math.floor(y)),
-        width: Math.ceil(width),
-        height: Math.ceil(height)
-      }))
+      rects.map(({ x, y, width, height }) => {
+        const left = Math.max(0, Math.floor(x))
+        const top = Math.max(0, Math.floor(y))
+        return {
+          x: left,
+          y: top,
+          width: Math.ceil(x + width) - left,
+          height: Math.ceil(y + height) - top
+        }
+      })
     )
   })
 

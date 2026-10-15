@@ -5281,7 +5281,6 @@ kbd {
   cursor: grab;
   pointer-events: auto;
   touch-action: none;
-  filter: drop-shadow(0 6px 8px rgb(var(--shade) / 18%));
 }
 
 .pet-body:active {
@@ -5317,7 +5316,6 @@ kbd {
   white-space: nowrap;
   color: var(--text);
   background: var(--stone);
-  box-shadow: var(--shadow-float);
   pointer-events: auto;
   animation: bubble-in var(--base) var(--ease-spring);
 }
@@ -5551,8 +5549,10 @@ kbd {
   bottom: 8px;
 }
 
+/* On the desktop the window ends right at the panel: a shadow would be cut off in a hard edge. */
 .desktop-pet .pet-panel {
   max-height: calc(100vh - 150px);
+  box-shadow: none;
 }
 
 /* The command center (CommandCenter.jsx): a summary, then the agents by workspace, the most

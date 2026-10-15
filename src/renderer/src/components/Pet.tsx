@@ -22,8 +22,8 @@ const FRAME_DEFAULT = 130
 
 // How far the pointer can move for a press to still be a click, not a drag.
 const SLOP = 4
-// How far around what's drawn still belongs to the window's shape, for the shadows.
-const SHADOW = 10
+// How far around the pet its part of the window's shape reaches: it hops out of its box.
+const HOP = 16
 
 // The desktop pet (main/petProcess.js): alone on a transparent window over every app, in its
 // bottom right corner. It shows, in its bubble and its animation, what the agents in every open
@@ -73,18 +73,24 @@ export default function Pet(): JSX.Element | null {
       window.api.pet.shape(
         [...el.querySelectorAll('.pet-body, .pet-bubble, .pet-panel')].map((part) => {
           const r = part.getBoundingClientRect()
+          const room = part.classList.contains('pet-body') ? HOP : 0
           return {
-            x: r.left - SHADOW,
-            y: r.top - SHADOW,
-            width: r.width + SHADOW * 2,
-            height: r.height + SHADOW * 2
+            x: r.left - room,
+            y: r.top - room,
+            width: r.width + room * 2,
+            height: r.height + room * 2
           }
         })
       )
     report()
     const observer = new ResizeObserver(report)
     for (const part of el.querySelectorAll('.pet-bubble, .pet-panel')) observer.observe(part)
-    return () => observer.disconnect()
+    // The bubble and the panel grow into place, and were measured smaller while they did.
+    el.addEventListener('animationend', report)
+    return () => {
+      observer.disconnect()
+      el.removeEventListener('animationend', report)
+    }
   })
 
   const pet = prefs?.pet
