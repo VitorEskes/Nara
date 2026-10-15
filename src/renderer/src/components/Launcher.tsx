@@ -39,12 +39,19 @@ interface Memory {
 
 type Tab = 'general' | 'style' | 'role'
 
-// The programs a new terminal can open with: the shell, then the agents, each with the command
-// that starts it.
+// The programs a new terminal can open with: the shell, then the main agents, each with the
+// command that starts it. The other agent CLIs (shared/agents.js) start from a plain terminal,
+// typed in it or as its command, and get the same context there.
+const LISTED = ['claude', 'codex', 'gemini']
 const PROGRAMS = [
   { key: 'shell', label: 'Terminal', command: '' },
-  ...Object.entries(AGENTS).map(([key, { label, command }]) => ({ key, label, command }))
+  ...LISTED.map((key) => ({ key, label: AGENTS[key].label, command: AGENTS[key].command }))
 ]
+
+// The other agent CLIs, for the hint under a plain terminal.
+const OTHERS = Object.entries(AGENTS)
+  .filter(([key]) => !LISTED.includes(key))
+  .map(([, { command }]) => command)
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'general', label: 'General' },
@@ -63,7 +70,8 @@ const NO_ROLE: Role = {
 
 // The dialog behind the dock's Terminal button, in three tabs: General (the program, which is the
 // only choice that matters, its name, the command that starts it and the folder), Style (the
-// look, with a preview) and Role (for an agent that takes one). Every tab starts filled in, so the
+// look, with a preview) and Role (for the agent, or in a plain terminal for whichever agent CLI
+// starts in it). Every tab starts filled in, so the
 // terminal can open from any of them. `number` is the id the node will get, for its default name;
 // `folder` is the workspace's. `roles` has every role, built-in and custom, by key; onSaveRole and
 // onRemoveRole change the custom ones; `commands` has the commands set in the settings in place
@@ -122,7 +130,8 @@ export default function Launcher({
 
   const agent = AGENTS[program]
   const chosenRole = roleByAgent[program]
-  const role = agent?.prompt && Object.hasOwn(roles, chosenRole ?? '') ? chosenRole : undefined
+  const takesRole = program === 'shell' || Boolean(agent?.prompt)
+  const role = takesRole && Object.hasOwn(roles, chosenRole ?? '') ? chosenRole : undefined
   const programIndex = PROGRAMS.findIndex((p) => p.key === program)
 
   // The dialog takes the focus itself, so nothing inside opens with a focus ring.
@@ -248,7 +257,7 @@ export default function Launcher({
     pickRole(undefined)
   }
 
-  const tabs = TABS.map((t) => ({ ...t, disabled: t.key === 'role' && !agent?.prompt }))
+  const tabs = TABS.map((t) => ({ ...t, disabled: t.key === 'role' && !takesRole }))
   return (
     <dialog
       ref={dialog}
@@ -297,7 +306,7 @@ export default function Launcher({
               aria-controls="launcher-panel"
               tabIndex={tab === key ? 0 : -1}
               disabled={disabled}
-              title={disabled ? 'A plain terminal has no role' : undefined}
+              title={disabled ? 'This program takes no role' : undefined}
               onClick={() => setTab(key)}
             >
               {label}
@@ -343,6 +352,13 @@ export default function Launcher({
                     </button>
                   ))}
                 </div>
+                {!agent && (
+                  <p className="field-hint program-hint">
+                    Any agent CLI started here, like <code>{OTHERS.slice(0, 3).join(', ')}</code>,
+                    knows Nara, its links and this terminal’s role. Another CLI starts the same way
+                    with <code>nara run &lt;cli&gt;</code>.
+                  </p>
+                )}
 
                 <div className="field-pair">
                   <label className="field">

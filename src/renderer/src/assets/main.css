@@ -3885,6 +3885,18 @@ kbd {
   color: var(--danger);
 }
 
+/* Under a plain terminal in the new terminal dialog: what starts in it knows Nara. */
+.program-hint {
+  margin: -4px 2px 0;
+  line-height: 1.5;
+}
+
+.program-hint code {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
 .link-button {
   align-self: flex-start;
   padding: 0;
