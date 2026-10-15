@@ -1,13 +1,19 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, ipcMain, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { registerBrowser } from './browser'
+import { writeShellIntegration } from './shell'
+import { registerCode } from './code'
+import { registerReview } from './review'
 import { setUpDataFolder } from './dataFolder'
 import { registerFolders } from './folders'
 import { registerGit } from './git'
 import { registerHud } from './hud'
 import { registerImageScheme, registerImages } from './images'
 import { registerPets } from './pets'
+import { PET_FLAG, registerDesktopPet } from './pet'
+import { runPetProcess } from './petProcess'
 import { registerMessages } from './messages'
 import { registerPty, terminalsExited } from './pty'
 import { registerRoles } from './roles'
@@ -15,16 +21,60 @@ import { registerStatus } from './status'
 import { registerTelemetry } from './telemetry'
 import { registerUsage } from './usage'
 import { registerVoice } from './voice'
+import { VOICE } from '../shared/features'
 import { loadTheme, registerTheme, windowBackground } from './theme'
 import { registerWorkspaces, workspaces } from './workspaces'
 
 setUpDataFolder()
-registerImageScheme()
 
-// Under Wayland, global shortcuts (the HUD's) go through the desktop portal, which Chromium only
-// uses when asked. It has to be asked before the app is ready.
-if (process.platform === 'linux')
-  app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal')
+// The same program runs the desktop pet in a process of its own (pet.js): that process shows the
+// pet and nothing else.
+if (process.argv.includes(PET_FLAG)) runPetProcess()
+else runApp()
+
+function runApp() {
+  registerImageScheme()
+
+  // Under Wayland, global shortcuts (the HUD's) go through the desktop portal, which Chromium only
+  // uses when asked. It has to be asked before the app is ready.
+  if (process.platform === 'linux')
+    app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal')
+
+  app.whenReady().then(() => {
+    electronApp.setAppUserModelId('dev.vitor.nara')
+
+    // F12 opens DevTools in dev; Ctrl+R is ignored in production.
+    app.on('browser-window-created', (_, window) => {
+      optimizer.watchWindowShortcuts(window)
+    })
+
+    loadTheme()
+    writeShellIntegration()
+    createWindow()
+
+    app.on('activate', function () {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
+  })
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+      app.quit()
+    }
+  })
+
+  // Closing the window kills the terminals, but Electron hangs if it quits while one of them is
+  // still running. The first quit waits for them to exit; the second one goes through.
+  let terminalsDone = false
+  app.on('will-quit', (event) => {
+    if (terminalsDone) return
+    event.preventDefault()
+    terminalsExited().then(() => {
+      terminalsDone = true
+      app.quit()
+    })
+  })
+}
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -39,7 +89,9 @@ function createWindow() {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      // The browser nodes (BrowserNode.jsx); main/browser.js locks their pages down.
+      webviewTag: true
     }
   })
 
@@ -49,11 +101,15 @@ function createWindow() {
   registerWorkspaces(mainWindow)
   registerFolders(mainWindow)
   registerGit(mainWindow)
+  registerBrowser(mainWindow, ipcMain)
+  registerCode(mainWindow)
+  registerReview(mainWindow)
   registerImages(mainWindow)
   registerRoles(mainWindow)
   registerPets(mainWindow)
   registerHud(mainWindow)
-  registerVoice(mainWindow)
+  registerDesktopPet(mainWindow)
+  if (VOICE) registerVoice(mainWindow)
   // The pet's bubble names the agent and where it is.
   registerStatus(mainWindow, (workspaceId, nodeId) => {
     const workspace = workspaces.get(workspaceId)
@@ -80,37 +136,3 @@ function createWindow() {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 }
-
-app.whenReady().then(() => {
-  electronApp.setAppUserModelId('dev.vitor.nara')
-
-  // F12 opens DevTools in dev; Ctrl+R is ignored in production.
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
-  })
-
-  loadTheme()
-  createWindow()
-
-  app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-  })
-})
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
-
-// Closing the window kills the terminals, but Electron hangs if it quits while one of them is
-// still running. The first quit waits for them to exit; the second one goes through.
-let terminalsDone = false
-app.on('will-quit', (event) => {
-  if (terminalsDone) return
-  event.preventDefault()
-  terminalsExited().then(() => {
-    terminalsDone = true
-    app.quit()
-  })
-})

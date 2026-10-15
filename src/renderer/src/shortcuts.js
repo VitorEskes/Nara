@@ -10,6 +10,12 @@ export const SHORTCUTS = {
   settings: { code: 'Comma', keys: 'Ctrl+,', shift: false }
 }
 
+// Switches a workspace between its canvas and its code. Not in SHORTCUTS: the workspace on screen
+// takes it (Workspace.jsx), not the app.
+export const CODE_TOGGLE = { code: 'KeyE', keys: 'Ctrl+Shift+E' }
+// Switches to the review of the agents' changes and back; G as in VS Code's source control.
+export const REVIEW_TOGGLE = { code: 'KeyG', keys: 'Ctrl+Shift+G' }
+
 // The name of the shortcut matching a keydown, if any.
 export function shortcutFor(e) {
   if (!e.ctrlKey || e.altKey || e.metaKey) return null
@@ -39,12 +45,14 @@ export const CANVAS_KEYS = {
   c: 'link',
   t: 'terminal',
   n: 'note',
+  b: 'browser',
   m: 'minimap',
   '=': 'zoomIn',
   '+': 'zoomIn',
   '-': 'zoomOut',
   0: 'zoomReset',
-  1: 'zoomFit'
+  1: 'zoomFit',
+  '?': 'shortcuts'
 }
 
 export function canvasKeyFor(e) {

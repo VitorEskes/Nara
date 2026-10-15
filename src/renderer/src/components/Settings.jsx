@@ -28,7 +28,8 @@ import {
 } from './icons'
 import { terminalLook } from '../nodeStyle'
 import { BUILT_IN_PET, PET_SIZES, forgetSprites, petSprite } from '../pets'
-import { CANVAS_KEYS, SHORTCUTS, keysLabel } from '../shortcuts'
+import { CANVAS_KEYS, CODE_TOGGLE, REVIEW_TOGGLE, SHORTCUTS, keysLabel } from '../shortcuts'
+import { VOICE } from '../../../shared/features'
 import { AGENTS } from '../../../shared/agents'
 
 // The sections down the left, in groups; `keywords` are what the search also matches.
@@ -49,12 +50,16 @@ const SECTIONS = [
       Icon: UsersIcon,
       keywords: 'role instructions orchestrator worker reviewer prompt team'
     },
-    {
-      key: 'voice',
-      label: 'Voice',
-      Icon: MicIcon,
-      keywords: 'dictation microphone speech transcribe whisper local model shortcut'
-    },
+    ...(VOICE
+      ? [
+          {
+            key: 'voice',
+            label: 'Voice',
+            Icon: MicIcon,
+            keywords: 'dictation microphone speech transcribe whisper local model shortcut'
+          }
+        ]
+      : []),
     {
       key: 'pets',
       label: 'Pets',
@@ -85,7 +90,7 @@ const LAUNCHER_MEMORY = 'new-terminal'
 // The settings, in a dialog with the sections on the left and the chosen one on the right, and a
 // search over the sections. `prefs` are the renderer's preferences (App.jsx) and onPrefs changes
 // some of them; `hudBound` says whether the HUD's global shortcut could be bound; `theme` and onTheme are the app's theme; `roles` and the role handlers are the
-// same the new terminal dialog uses.
+// same the new terminal dialog uses. `initial` is the section it opens on.
 export default function Settings({
   theme,
   onTheme,
@@ -96,10 +101,11 @@ export default function Settings({
   roles,
   onSaveRole,
   onRemoveRole,
+  initial = 'appearance',
   onClose
 }) {
   const dialog = useRef(null)
-  const [section, setSection] = useState('appearance')
+  const [section, setSection] = useState(initial)
   const [query, setQuery] = useState('')
   const [closing, setClosing] = useState(false)
   const [info, setInfo] = useState(null)
@@ -523,9 +529,9 @@ function Pets({ prefs, hudBound, onPrefs }) {
           {current?.id && <span>{current.name}</span>}
         </div>
         <p>
-          A companion in the corner of the window that follows your agents. Its bubble says who is
-          working, who needs you and who is done; click it for the command center, where each agent
-          can be answered or visited. Drag it anywhere.
+          A companion on your desktop, over every app, that follows your agents while Nara is open.
+          Its bubble says who is working, who needs you and who is done; click it for the command
+          center, where each agent can be answered or visited. Drag it anywhere on the screen.
         </p>
       </div>
 
@@ -650,15 +656,13 @@ function Keyboard() {
     ['Switch light and dark', SHORTCUTS.theme],
     ['Settings', SHORTCUTS.settings]
   ]
-  const anywhere = [
-    ['Floating HUD', '⌃⌥Space'],
-    ['Voice bar', '⌃⌥V']
-  ]
+  const anywhere = [['Floating HUD', '⌃⌥Space'], ...(VOICE ? [['Voice bar', '⌃⌥V']] : [])]
   const canvas = {
     select: 'Pointer',
     hand: 'Hand',
     terminal: 'New terminal',
     note: 'New note',
+    browser: 'New browser',
     draw: 'Draw',
     rect: 'Rectangle',
     ellipse: 'Ellipse',
@@ -669,7 +673,10 @@ function Keyboard() {
     link: 'Connect',
     minimap: 'Minimap',
     zoomFit: 'Fit everything',
-    zoomReset: 'Zoom to 100%'
+    zoomReset: 'Zoom to 100%',
+    zoomIn: 'Zoom in',
+    zoomOut: 'Zoom out',
+    shortcuts: 'Show the shortcuts'
   }
   const keys = Object.entries(canvas).map(([action, label]) => [
     label,
@@ -682,6 +689,21 @@ function Keyboard() {
     ['Bring to front, send to back', ']  ['],
     ['Square, straight line', 'Shift + Drag'],
     ['Edit text', 'Enter or double-click']
+  ]
+  const code = [
+    ['Switch between canvas and code', keysLabel(CODE_TOGGLE)],
+    ['Open a file by name', '⌃P'],
+    ['Save', '⌃S'],
+    ['Close the file', '⌃W'],
+    ['Next, previous file', '⌃Tab  ⌃⇧Tab'],
+    ['Rename, trash in the explorer', 'F2  Del']
+  ]
+  const review = [
+    ['Switch between canvas and review', keysLabel(REVIEW_TOGGLE)],
+    ['Comment on a line', 'Click beside it'],
+    ['Comment on lines', 'Select, right-click'],
+    ['Leave the comment', '⌃Enter'],
+    ['Save an edit to the file', '⌃S']
   ]
   const pointer = [
     ['Select several', 'Drag on the canvas'],
@@ -696,6 +718,8 @@ function Keyboard() {
       <ShortcutList title="From any app" rows={anywhere} />
       <ShortcutList title="Canvas" rows={keys.map(([label, key]) => [label, key.toUpperCase()])} />
       <ShortcutList title="Whiteboard" rows={board} />
+      <ShortcutList title="Code" rows={code} />
+      <ShortcutList title="Review" rows={review} />
       <ShortcutList title="Pointer" rows={pointer} />
     </>
   )

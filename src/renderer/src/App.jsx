@@ -4,12 +4,16 @@ import Sidebar from './components/Sidebar'
 import Overview from './components/Overview'
 import ProjectBadge from './components/ProjectBadge'
 import Settings from './components/Settings'
-import Pet from './components/Pet'
+import DialogHost from './components/DialogHost'
+import { ask } from './dialogs'
 import { BUILT_IN_PET } from './pets'
 import { byName } from './workspaceList'
 import { SidebarIcon } from './components/icons'
 import { SHORTCUTS, shortcutFor } from './shortcuts'
 import { ROLES } from '../../shared/roles'
+import { URGENCY } from './agentStatus'
+import { VOICE } from '../../shared/features'
+import { tip } from './tip'
 
 // Below this window width the sidebar hides itself, leaving the room to the canvas.
 const NARROW = 760
@@ -22,8 +26,6 @@ const PREF_DEFAULTS = { pet: BUILT_IN_PET, petSize: 'm', hud: true, voice: true,
 
 // Stands in for a workspace with no agents yet, so it keeps the same empty map between renders.
 const NO_AGENTS = new Map()
-// How much of the window's right side the inspector takes (main.css, .inspector), for the pet.
-const INSPECTOR_ROOM = 380
 
 export default function App() {
   // Every project as { id, name, folder }, and every saved workspace as { id, name, project,
@@ -56,8 +58,10 @@ export default function App() {
   const [jump, setJump] = useState(null)
   // Whether the HUD's shortcut is bound: the desktop may refuse it.
   const [hudBound, setHudBound] = useState(null)
-  // The inspector on the right of the canvas, open or not, the same on every workspace.
+  // The side panel on the right, open or not, the same on every workspace.
   const [inspector, setInspector] = useState(() => localStorage.getItem('inspector') !== 'closed')
+  // Where in the sidebar the workspace on screen puts its views and agents (WorkspaceNav.jsx).
+  const [navSlot, setNavSlot] = useState(null)
   useEffect(() => {
     localStorage.setItem('inspector', inspector ? 'open' : 'closed')
   }, [inspector])
@@ -75,10 +79,15 @@ export default function App() {
     window.api.hud.enable(prefs.hud).then(setHudBound)
   }, [prefs.hud])
 
+  // The pet lives on the desktop, outside this window, over every app (main/pet.js).
+  useEffect(() => {
+    window.api.pet.configure({ pet: prefs.pet, size: prefs.petSize })
+  }, [prefs.pet, prefs.petSize])
+
   // Whether the voice bar's shortcut is bound.
   const [voiceBound, setVoiceBound] = useState(null)
   useEffect(() => {
-    window.api.voice.enable(prefs.voice).then(setVoiceBound)
+    if (VOICE) window.api.voice.enable(prefs.voice).then(setVoiceBound)
   }, [prefs.voice])
 
   useEffect(() => {
@@ -194,7 +203,7 @@ export default function App() {
       newProject: createProject,
       sidebar: toggleSidebar,
       theme: toggleTheme,
-      settings: () => setSettings(true)
+      settings: () => setSettings('appearance')
     }
     function onKeyDown(e) {
       const name = shortcutFor(e)
@@ -206,6 +215,18 @@ export default function App() {
     window.addEventListener('keydown', onKeyDown, true)
     return () => window.removeEventListener('keydown', onKeyDown, true)
   })
+
+  // A browser node's page doesn't let keys out; main hands the app's shortcuts back, and they're
+  // pressed again here, where the app and the workspace on screen hear them.
+  useEffect(
+    () =>
+      window.api.browser.onKey(({ code, key, shift }) =>
+        window.dispatchEvent(
+          new KeyboardEvent('keydown', { code, key, ctrlKey: true, shiftKey: shift })
+        )
+      ),
+    []
+  )
 
   function openWorkspace(id) {
     setOpen((current) => (current.includes(id) ? current : [...current, id]))
@@ -266,7 +287,15 @@ export default function App() {
   }
 
   async function removeWorkspace(id) {
-    if (await window.api.workspace.remove(id)) {
+    const name = all.find((w) => w.id === id)?.name
+    const sure = await ask({
+      title: `Delete workspace “${name}”?`,
+      message:
+        'Its terminals, notes, positions and links are gone for good. Its folder isn’t touched.',
+      confirm: 'Delete',
+      danger: true
+    })
+    if (sure && (await window.api.workspace.remove(id))) {
       setAll((current) => current.filter((w) => w.id !== id))
     }
   }
@@ -310,7 +339,15 @@ export default function App() {
   }
 
   async function removeProject(id) {
-    if (await window.api.project.remove(id)) {
+    const project = projects.find((p) => p.id === id)
+    const count = all.filter((w) => w.project === id).length
+    const sure = await ask({
+      title: `Delete project “${project?.name}”?`,
+      message: `Its ${count === 1 ? 'workspace is' : `${count} workspaces are`} deleted with it. The folder ${project?.folder} isn’t touched.`,
+      confirm: 'Delete',
+      danger: true
+    })
+    if (sure && (await window.api.project.remove(id))) {
       setProjects((current) => current.filter((p) => p.id !== id))
       setAll((current) => current.filter((w) => w.project !== id))
     }
@@ -326,6 +363,14 @@ export default function App() {
     if (!byWorkspace.has(status.workspaceId)) byWorkspace.set(status.workspaceId, new Map())
     byWorkspace.get(status.workspaceId).set(status.nodeId, status)
   }
+  // How each open workspace's agents are doing, for its row in the sidebar: the most urgent state
+  // among them, and how many there are.
+  const summaries = new Map()
+  for (const [id, agents] of byWorkspace) {
+    const states = [...agents.values()].map((a) => a.state)
+    const state = states.sort((a, b) => URGENCY[b] - URGENCY[a])[0]
+    summaries.set(id, { state, count: states.length })
+  }
   const roles = { ...ROLES, ...Object.fromEntries(customRoles.map((role) => [role.key, role])) }
   const workspaces = all.map((w) => ({ ...w, open: open.includes(w.id) }))
   return (
@@ -336,6 +381,8 @@ export default function App() {
         projects={projects}
         workspaces={workspaces}
         active={overview ? null : active}
+        summaries={summaries}
+        onSlot={setNavSlot}
         overview={overview}
         onOverview={showOverview}
         onSelect={openWorkspace}
@@ -347,7 +394,7 @@ export default function App() {
         onRemoveWorkspace={removeWorkspace}
         onRenameProject={renameProject}
         onRemoveProject={removeProject}
-        onSettings={() => setSettings(true)}
+        onSettings={() => setSettings('appearance')}
       />
       <main className="workspaces">
         {sidebar === 'closed' && (overview || !active) && (
@@ -372,6 +419,7 @@ export default function App() {
               telemetry={telemetry.get(id) ?? NO_AGENTS}
               limits={limits}
               inspector={inspector}
+              navSlot={id === active && !overview && sidebar !== 'closed' ? navSlot : null}
               // With a boolean it opens or minimizes; without one it switches.
               onInspector={(force) =>
                 setInspector((open) => (typeof force === 'boolean' ? force : !open))
@@ -384,6 +432,7 @@ export default function App() {
               jump={jump?.workspaceId === id ? jump : null}
               onSaveRole={saveRole}
               onRemoveRole={removeRole}
+              onShortcuts={() => setSettings('keyboard')}
             />
           ))}
         {(overview || !active) && (
@@ -402,16 +451,7 @@ export default function App() {
           />
         )}
       </main>
-      {prefs.pet && (
-        <Pet
-          pet={prefs.pet}
-          size={prefs.petSize}
-          statuses={statuses}
-          onJump={jumpTo}
-          // Out of the inspector's way while it's open on a canvas.
-          reserved={inspector && !overview && active ? INSPECTOR_ROOM : 0}
-        />
-      )}
+      <DialogHost />
       {settings && (
         <Settings
           theme={theme}
@@ -423,6 +463,7 @@ export default function App() {
           roles={roles}
           onSaveRole={saveRole}
           onRemoveRole={removeRole}
+          initial={settings}
           onClose={() => setSettings(false)}
         />
       )}
@@ -446,8 +487,7 @@ function SidebarPeek({ workspace, projects, onShow }) {
     <div className="sidebar-peek">
       <button
         className="icon-button"
-        title={`Show sidebar (${SHORTCUTS.sidebar.keys})`}
-        aria-label="Show sidebar"
+        {...tip('Show sidebar', SHORTCUTS.sidebar.keys, 'bottom')}
         onClick={onShow}
       >
         <SidebarIcon />

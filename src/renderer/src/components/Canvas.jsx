@@ -20,11 +20,13 @@ const MAJOR = 5
 // - With a drawing `tool` on (the whiteboard's, or the eraser), the nodes ignore the pointer and a
 //   left-button drag anywhere goes to onToolStart/Move/End, in world coordinates, with the event
 //   for its modifier keys.
+// - While `locked` (a browser fills the screen), the camera stays put: no pan, no zoom, no box.
 export default function Canvas({
   cam,
   setCam,
   tool,
   grab,
+  locked,
   onToolStart,
   onToolMove,
   onToolEnd,
@@ -37,6 +39,11 @@ export default function Canvas({
   const drag = useRef(null)
   // The selection box being drawn, in viewport pixels.
   const [box, setBox] = useState(null)
+  // The wheel's listener is added once and reads this.
+  const lockedRef = useRef(locked)
+  useEffect(() => {
+    lockedRef.current = locked
+  }, [locked])
 
   // A point in viewport pixels, counted from its top-left corner.
   function local(e) {
@@ -52,6 +59,7 @@ export default function Canvas({
   // Runs before any node sees the press, so a pan can start on top of one and the node stays
   // put.
   function onPointerDownCapture(e) {
+    if (locked) return
     const overText = e.target.closest('.xterm')
     const pans = tool === 'hand' || grab || e.button === 2 || (e.button === 1 && !overText)
     if (!pans) return
@@ -63,17 +71,22 @@ export default function Canvas({
   }
 
   function onPointerDown(e) {
-    if (e.target !== e.currentTarget || e.button !== 0) return
+    if (locked || e.target !== e.currentTarget || e.button !== 0) return
     e.currentTarget.setPointerCapture(e.pointerId)
     // No text selection and no focus change from this press: a text just made by the tool keeps
     // the keyboard.
     e.preventDefault()
+    // The press doesn't move the focus, so a terminal, note or page clicked into earlier would
+    // keep the keyboard, and the canvas's keys would go to it. Leaving it is what a click on the
+    // empty canvas means; a drawing tool's own text keeps it (below).
+    if (!tool || tool === 'hand') leaveNode()
     if (tool && tool !== 'hand') {
       drag.current = 'tool'
       onToolStart(toWorld(local(e)), e)
       return
     }
     drag.current = { start: local(e), additive: e.shiftKey || e.ctrlKey || e.metaKey }
+    e.currentTarget.classList.add('selecting')
   }
 
   function onPointerMove(e) {
@@ -106,12 +119,13 @@ export default function Canvas({
     if (drag.current === 'tool') onToolEnd()
     drag.current = null
     setBox(null)
-    e.currentTarget.classList.remove('panning')
+    e.currentTarget.classList.remove('panning', 'selecting')
   }
 
   useEffect(() => {
     const el = viewport.current
     const onWheel = (e) => {
+      if (lockedRef.current) return
       if (e.ctrlKey) {
         e.preventDefault()
         const rect = el.getBoundingClientRect()
@@ -147,6 +161,7 @@ export default function Canvas({
       className="viewport"
       data-tool={tool || undefined}
       data-grab={grab || undefined}
+      data-locked={locked || undefined}
       onPointerDownCapture={onPointerDownCapture}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -171,6 +186,12 @@ export default function Canvas({
       )}
     </div>
   )
+}
+
+// Takes the keyboard back from whatever node had it: a terminal, a note, a browser's page.
+function leaveNode() {
+  const active = document.activeElement
+  if (active?.closest?.('.node, .shape-label, .shapes')) active.blur()
 }
 
 // Whether the wheel belongs to what's under the pointer instead of the camera: only inside the

@@ -744,6 +744,33 @@ export function DividerIcon(props) {
   )
 }
 
+export function FileIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M9 2H4.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V5.5z" />
+      <path d="M9 2v3.5h3.5" />
+    </Icon>
+  )
+}
+
+export function FilePlusIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M8 14H4.5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1H9l3.5 3.5V8" />
+      <path d="M9 2v3.5h3.5M12 10v4M10 12h4" />
+    </Icon>
+  )
+}
+
+// Folders folding up: two chevrons pointing at each other.
+export function CollapseIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M5 2.5L8 5.5l3-3M5 13.5L8 10.5l3 3" />
+    </Icon>
+  )
+}
+
 export function MarkdownIcon(props) {
   return (
     <Icon {...props}>
@@ -755,6 +782,50 @@ export function MarkdownIcon(props) {
 
 // The mark: the Nara deer, a nod to the clan that tends the deer of the Nara forest. Decorative
 // next to the name, so it has no alt text of its own.
+export function ArrowLeftIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M13 8H3.5M7.5 4L3.5 8l4 4" />
+    </Icon>
+  )
+}
+
+export function ArrowRightIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M3 8h9.5M8.5 4l4 4-4 4" />
+    </Icon>
+  )
+}
+
+// Out to the corners: fill the screen.
+export function ExpandIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5L9 7M2.5 13.5L7 9" />
+    </Icon>
+  )
+}
+
+// In from the corners: back to its size.
+export function ShrinkIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M13.5 6.5h-4v-4M2.5 9.5h4v4M9.5 6.5L14 2M6.5 9.5L2 14" />
+    </Icon>
+  )
+}
+
+// A commit on its line, as in every git client.
+export function CommitIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="8" cy="8" r="2.75" />
+      <path d="M1.5 8h3.75M10.75 8h3.75" />
+    </Icon>
+  )
+}
+
 export function BrandMark() {
   return <img className="brand-mark" src={logo} alt="" width="28" height="28" />
 }

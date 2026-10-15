@@ -86,6 +86,47 @@ const api = {
     merge: (worktree) => ipcRenderer.invoke('git:merge', worktree),
     removeWorktree: (worktree) => ipcRenderer.invoke('git:remove-worktree', worktree)
   },
+  browser: {
+    // A browser node's page, so `nara browser` in a linked terminal can drive and read it
+    // (main/browser.js). `contentsId` is its webview's webContents id.
+    attach: (workspaceId, nodeId, contentsId) =>
+      ipcRenderer.send('browser:attach', workspaceId, nodeId, contentsId),
+    detach: (workspaceId, nodeId) => ipcRenderer.send('browser:detach', workspaceId, nodeId),
+    // An app shortcut pressed while a page had the keyboard: { code, key, shift }.
+    onKey: (fn) => listen('browser:key', fn)
+  },
+  code: {
+    // Every path is absolute and has to be inside one of the workspace's folders (main/code.js).
+    // { files, status, repo, truncated } for a folder; files are relative to it.
+    list: (workspaceId, root) => ipcRenderer.invoke('code:list', workspaceId, root),
+    // { text, mtime } or { error }.
+    read: (workspaceId, path) => ipcRenderer.invoke('code:read', workspaceId, path),
+    // { mtime }, { conflict: true } if the file changed since `mtime`, or { error }.
+    write: (workspaceId, path, text, mtime) =>
+      ipcRenderer.invoke('code:write', workspaceId, path, text, mtime),
+    // kind: 'file' or 'folder'.
+    create: (workspaceId, path, kind) => ipcRenderer.invoke('code:create', workspaceId, path, kind),
+    rename: (workspaceId, from, to) => ipcRenderer.invoke('code:rename', workspaceId, from, to),
+    trash: (workspaceId, path) => ipcRenderer.invoke('code:trash', workspaceId, path),
+    reveal: (workspaceId, path) => ipcRenderer.invoke('code:reveal', workspaceId, path),
+    // The files open in the editor; onChanged hears when one of them changes on disk.
+    watch: (paths) => ipcRenderer.send('code:watch', paths),
+    onChanged: (fn) => listen('code:changed', fn)
+  },
+  review: {
+    // What the workspace's agents changed, one item per repository (main/review.js).
+    queue: (workspaceId) => ipcRenderer.invoke('review:queue', workspaceId),
+    // `path` is relative to the item's folder; `commit` is the item's baseCommit.
+    original: (workspaceId, folder, path, commit) =>
+      ipcRenderer.invoke('review:original', workspaceId, folder, path, commit),
+    discard: (workspaceId, folder, path, commit) =>
+      ipcRenderer.invoke('review:discard', workspaceId, folder, path, commit),
+    commit: (workspaceId, folder, message) =>
+      ipcRenderer.invoke('review:commit', workspaceId, folder, message),
+    // { ok }, { conflict: [paths] } or { error }; `message` commits what isn't committed first.
+    merge: (workspaceId, folder, message) =>
+      ipcRenderer.invoke('review:merge', workspaceId, folder, message)
+  },
   usage: {
     // { claude?, codex? }: each { fiveHour, sevenDay, updated }, a window being { used, resetsAt }.
     get: () => ipcRenderer.invoke('usage:get'),
@@ -102,6 +143,18 @@ const api = {
     toggle: () => ipcRenderer.send('hud:toggle'),
     hide: () => ipcRenderer.send('hud:hide'),
     jump: (status) => ipcRenderer.send('hud:jump', status)
+  },
+  pet: {
+    // The app tells main which pet is out on the desktop, if any: { pet, size } (main/pet.js).
+    configure: (config) => ipcRenderer.send('pet:configure', config),
+    // The rest is the desktop pet's own window (main/petProcess.js).
+    prefs: () => ipcRenderer.invoke('pet:prefs'),
+    onPrefs: (fn) => listen('pet:prefs', fn),
+    // The rectangles it draws in, in its pixels: only those take the pointer.
+    shape: (rects) => ipcRenderer.send('pet:shape', rects),
+    dragStart: () => ipcRenderer.send('pet:drag-start'),
+    dragEnd: () => ipcRenderer.send('pet:drag-end'),
+    jump: (status) => ipcRenderer.send('pet:jump', status)
   },
   pets: {
     list: () => ipcRenderer.invoke('pets:list'),

@@ -1,21 +1,28 @@
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
+import { tell } from '../dialogs'
+import { createPortal } from 'react-dom'
 import Canvas, { ZOOM_MAX, ZOOM_MIN } from './Canvas'
 import Links, { LinkPins } from './Links'
 import CanvasNode from './CanvasNode'
 import Terminal from './Terminal'
 import Note from './Note'
+import BrowserNode from './BrowserNode'
 import Shapes from './Shapes'
 import StyleBar from './StyleBar'
 import Launcher from './Launcher'
 import Inspector from './Inspector'
 import TopBar from './TopBar'
 import Minimap from './Minimap'
+import Explorer from './Explorer'
+import WorkspaceNav from './WorkspaceNav'
+import ViewSwitch from './ViewSwitch'
 import {
   ArrowIcon,
   CircleIcon,
   DiamondIcon,
   EraserIcon,
   FitIcon,
+  GlobeIcon,
   HandIcon,
   LineIcon,
   LinkIcon,
@@ -34,14 +41,30 @@ import { useWhiteboard } from '../whiteboard'
 import { PAPERS, resolveStyle, terminalLook } from '../nodeStyle'
 import { defaultTitle, nodeLabel } from '../nodeLabel'
 import { AGENTS } from '../../../shared/agents'
-import { canvasKeyFor } from '../shortcuts'
+import { CODE_TOGGLE, REVIEW_TOGGLE, canvasKeyFor } from '../shortcuts'
 import { totalUsage } from '../telemetry'
+import { tip } from '../tip'
+
+// Monaco is big; it loads the first time a workspace switches to code or review.
+const CodeView = lazy(() => import('./CodeView'))
+const ReviewView = lazy(() => import('./ReviewView'))
+
+// How often the explorer reads its folder again while it's on screen, in ms. Agents add and remove
+// files all the time; a read is one git command.
+const FILES_POLL = 4000
+// How often the review queue is read again, in ms: often while it's on screen, now and then
+// otherwise, for the count on the Review tab. A read is a few git commands per agent.
+const QUEUE_POLL = { shown: 3000, hidden: 10000 }
 
 // Size of a new node of each type.
 const SIZES = {
   terminal: { w: 640, h: 400 },
-  note: { w: 280, h: 200 }
+  note: { w: 280, h: 200 },
+  browser: { w: 960, h: 640 }
 }
+// The room a browser filling the screen leaves around it, in screen pixels: the same as the side
+// panel's.
+const EXPANDED_MARGIN = 10
 
 // Each step of the zoom buttons and keys multiplies the zoom by this.
 const ZOOM_STEP = 1.25
@@ -63,7 +86,9 @@ const FIT_PADDING = { side: 64, top: 64, bottom: 110 }
 // for the new terminal dialog. `jump` ({ nodeId, at }) is the pet sending the user to one of this
 // workspace's agents. `meta` and `project` are the workspace's name and project, for the top bar;
 // `statuses` and `telemetry` what main reports about its agents, by node id. `inspector` says
-// whether the inspector is open, and onInspector opens or closes it.
+// whether the side panel is open, and onInspector opens or closes it. `navSlot` is where in the sidebar its views and
+// agents go while it's on screen, or null while the sidebar is hidden. onShortcuts opens the list
+// of shortcuts (the ? key).
 export default function Workspace({
   workspaceId,
   saved,
@@ -80,10 +105,12 @@ export default function Workspace({
   jump,
   inspector,
   onInspector,
+  navSlot,
   sidebarHidden,
   onShowSidebar,
   onSaveRole,
-  onRemoveRole
+  onRemoveRole,
+  onShortcuts
 }) {
   const container = useRef(null)
   const [cam, setCam] = useState(saved.camera)
@@ -109,14 +136,14 @@ export default function Workspace({
   const shapeBoxBase = useRef([])
   // Where each node of the group being dragged started.
   const moveOrigin = useRef(null)
-  // The viewport's size in pixels, for the minimap's view of the camera.
-  const [size, setSize] = useState({ w: 0, h: 0 })
+  // The viewport's size in pixels, for the minimap's view of the camera, with the side panel's
+  // width and the top bar's height (main.css) for a browser filling the room between them.
+  const [size, setSize] = useState({ w: 0, h: 0, panel: 0, top: 0 })
   const [minimap, setMinimap] = useState(() => localStorage.getItem('minimap') === 'open')
   // The new terminal dialog, while open: { number } is the id the terminal will get.
   const [launcher, setLauncher] = useState(null)
-  // The inspector's section, kept while the selection moves from node to node; 'workspace' shows
-  // the workspace instead of the node.
-  const [panelTab, setPanelTab] = useState('status')
+  // The inspector's section, kept while the selection moves from node to node.
+  const [panelTab, setPanelTab] = useState('activity')
   // How many times each node's agent was restarted from the inspector: a new count remounts its
   // terminal, which starts the agent again and resumes its conversation.
   const [restarts, setRestarts] = useState({})
@@ -124,6 +151,40 @@ export default function Workspace({
   const [noteCommands, setNoteCommands] = useState({})
   // The node whose row the pointer is on in the panel's connections, lit up on the canvas.
   const [hoveredPeer, setHoveredPeer] = useState(null)
+  // The code view: whether it shows instead of the canvas, the folder its explorer is on (the
+  // workspace's own or an agent's worktree), the open files and the one showing. Saved with the
+  // workspace.
+  const [code, setCode] = useState(() => ({
+    mode: 'canvas',
+    root: null,
+    tabs: [],
+    current: null,
+    ...saved.code
+  }))
+  // Once the code view has been opened it stays mounted, with its editor's state, until the
+  // workspace closes.
+  const [codeMounted, setCodeMounted] = useState(code.mode === 'code')
+  // The explorer's folder as main read it: { root, files, status, repo, truncated } or null.
+  const [listing, setListing] = useState(null)
+  const [listingSeq, setListingSeq] = useState(0)
+  // Folders made in the explorer that have no files yet: git doesn't list those.
+  const [madeFolders, setMadeFolders] = useState([])
+  // The review view (ReviewView.jsx): the item showing, split or inline, and by repository what's
+  // been viewed and the comments not sent yet. Saved with the workspace.
+  const [review, setReview] = useState(() => ({
+    folder: null,
+    inline: true,
+    items: {},
+    ...saved.review
+  }))
+  const [reviewMounted, setReviewMounted] = useState(code.mode === 'review')
+  // What the agents changed (main/review.js), or null until it's first read.
+  const [queue, setQueue] = useState(null)
+  const [queueSeq, setQueueSeq] = useState(0)
+  // The browser node filling the room between the panels, or null, and the box it was resized
+  // to there (in screen pixels), or null for the whole room.
+  const [expanded, setExpanded] = useState(null)
+  const [expandedBox, setExpandedBox] = useState(null)
   // Counters pick up after the saved ids and layers.
   const nextId = useRef(highest(saved.nodes, 'id') + 1)
   const nextLinkId = useRef(highest(saved.links, 'id') + 1)
@@ -155,8 +216,15 @@ export default function Workspace({
 
   // Main saves the workspace to disk and delivers agent messages along its links.
   useEffect(() => {
-    window.api.workspace.update(workspaceId, { camera: cam, nodes, links, shapes: board.shapes })
-  }, [workspaceId, cam, nodes, links, board.shapes])
+    window.api.workspace.update(workspaceId, {
+      camera: cam,
+      nodes,
+      links,
+      shapes: board.shapes,
+      code,
+      review
+    })
+  }, [workspaceId, cam, nodes, links, board.shapes, code, review])
 
   // An agent wrote to a note with `nara note`. Main has already changed its own copy; this
   // brings the screen in line with it.
@@ -190,7 +258,13 @@ export default function Workspace({
   useEffect(() => {
     const observer = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect
-      setSize({ w: width, h: height })
+      const css = getComputedStyle(entry.target)
+      setSize({
+        w: width,
+        h: height,
+        panel: parseFloat(css.getPropertyValue('--inspector-width')) || 0,
+        top: parseFloat(css.getPropertyValue('--topbar-height')) || 0
+      })
     })
     observer.observe(container.current)
     return () => observer.disconnect()
@@ -210,7 +284,6 @@ export default function Workspace({
     // Looking at an agent that finished counts as having seen it; one that asked for something
     // still waits for an answer.
     if (statuses.get(node.id)?.state === 'review') window.api.agents.seen(workspaceId, node.id)
-    if (panelTab === 'workspace') setPanelTab('status')
     if (!(e.shiftKey || e.ctrlKey || e.metaKey)) board.setSelected([])
     if (e.shiftKey || e.ctrlKey || e.metaKey) {
       setSelection((current) =>
@@ -303,6 +376,22 @@ export default function Workspace({
     createNodeAtCenter('note', { text: '', style: { paper: 'graphite' } })
   }
 
+  // A browser starts blank, its address bar waiting.
+  function newBrowser() {
+    createNodeAtCenter('browser', { url: '' })
+  }
+
+  // A browser fills the room between the panels, or goes back to its place on the canvas. It's
+  // the one selected while it's there, so the side panel shows it.
+  function toggleExpanded(id) {
+    setExpandedBox(null)
+    if (expanded === id) return setExpanded(null)
+    raise(id)
+    setSelection([id])
+    board.setSelected([])
+    setExpanded(id)
+  }
+
   // Center of the viewport converted to world coordinates: world = (screen - (x, y)) / z.
   function createNodeAtCenter(type, fields) {
     const { width, height } = container.current.getBoundingClientRect()
@@ -327,7 +416,7 @@ export default function Workspace({
     if (isolate) {
       const made = await window.api.git.worktree(dir, fields.title)
       if (made.error) {
-        alert(`Couldn't make a worktree: ${made.error}`)
+        tell({ title: 'Couldn’t make a worktree', message: made.error })
         return
       }
       worktree = made
@@ -402,9 +491,164 @@ export default function Workspace({
     if (!active) setLauncher(null)
   }
 
-  // Single-key tools and zoom, while this workspace is on screen and nothing takes text.
+  // The folders the code view can work in: the workspace's, and each agent's worktree.
+  const roots = [
+    folder && { path: folder, label: folder.split('/').pop() || folder },
+    ...nodes
+      .filter((n) => n.worktree?.path)
+      .map((n) => ({ path: n.worktree.path, label: `${nodeLabel(n)} · ${n.worktree.branch}` }))
+  ].filter(Boolean)
+  const root = roots.find((r) => r.path === code.root)?.path ?? roots[0]?.path ?? null
+  const coding = code.mode === 'code'
+  const reviewing = code.mode === 'review'
+  // Code and review both take the canvas's place.
+  const offCanvas = coding || reviewing
+  const codeVisible = active && coding
+
+  function setMode(mode) {
+    if (mode === 'code') setCodeMounted(true)
+    if (mode === 'review') setReviewMounted(true)
+    setCode((current) => ({ ...current, mode }))
+  }
+
+  // Opens the review on the change a node's agent is making.
+  function reviewNode(nodeId) {
+    const item = queue?.find((i) => i.nodeIds.includes(nodeId))
+    if (item) setReview((current) => ({ ...current, folder: item.folder }))
+    setMode('review')
+  }
+
+  // Reads the review queue: now, every few seconds while the window has the focus (more often
+  // while the review shows), and whenever it gets the focus back.
   useEffect(() => {
-    if (!active || launcher) return
+    if (!active) return
+    let live = true
+    const read = () => window.api.review.queue(workspaceId).then((items) => live && setQueue(items))
+    read()
+    const timer = setInterval(
+      () => document.hasFocus() && read(),
+      reviewing ? QUEUE_POLL.shown : QUEUE_POLL.hidden
+    )
+    window.addEventListener('focus', read)
+    return () => {
+      live = false
+      clearInterval(timer)
+      window.removeEventListener('focus', read)
+    }
+  }, [active, reviewing, workspaceId, queueSeq])
+
+  // Changes waiting on the user: their agents aren't at work on them.
+  const toReview = (queue ?? []).filter(
+    (item) => !item.nodeIds.some((id) => statuses.get(id)?.state === 'working')
+  ).length
+
+  // Opens a file in the code view, switching to it, in a new tab unless it has one.
+  function openFile(path) {
+    setCodeMounted(true)
+    setCode((current) => ({
+      ...current,
+      mode: 'code',
+      tabs: current.tabs.includes(path) ? current.tabs : [...current.tabs, path],
+      current: path
+    }))
+  }
+
+  // A file or folder renamed in the explorer: its tabs follow it, unsaved edits and all.
+  async function movedFile(from, to, type) {
+    const { moveBuffer } = await import('../buffers')
+    const moves = new Map()
+    for (const tab of code.tabs) {
+      if (tab === from) moves.set(tab, to)
+      else if (type === 'folder' && tab.startsWith(`${from}/`)) {
+        moves.set(tab, to + tab.slice(from.length))
+      }
+    }
+    for (const [a, b] of moves) moveBuffer(a, b)
+    const move = (path) => moves.get(path) ?? path
+    setCode((current) => ({
+      ...current,
+      tabs: current.tabs.map(move),
+      current: current.current && move(current.current)
+    }))
+    refreshFiles()
+  }
+
+  // A file or folder moved to the trash: its tabs close.
+  function trashedFile(path) {
+    const gone = (tab) => tab === path || tab.startsWith(`${path}/`)
+    setCode((current) => {
+      const tabs = current.tabs.filter((tab) => !gone(tab))
+      return {
+        ...current,
+        tabs,
+        current: current.current && gone(current.current) ? (tabs.at(-1) ?? null) : current.current
+      }
+    })
+    const rel = root && path.startsWith(`${root}/`) ? path.slice(root.length + 1) : null
+    if (rel)
+      setMadeFolders((current) => current.filter((f) => f !== rel && !f.startsWith(`${rel}/`)))
+    refreshFiles()
+  }
+
+  function refreshFiles() {
+    setListingSeq((n) => n + 1)
+  }
+
+  // Reads the explorer's folder while the code view shows: now, every few seconds while the
+  // window has the focus, and whenever it gets it back.
+  useEffect(() => {
+    if (!codeVisible || !root) return
+    let live = true
+    const read = () =>
+      window.api.code.list(workspaceId, root).then((result) => {
+        if (live) setListing({ root, ...result })
+      })
+    read()
+    const timer = setInterval(() => document.hasFocus() && read(), FILES_POLL)
+    window.addEventListener('focus', read)
+    return () => {
+      live = false
+      clearInterval(timer)
+      window.removeEventListener('focus', read)
+    }
+  }, [codeVisible, root, workspaceId, listingSeq])
+
+  // A new root starts without the folders made in the last one.
+  const [madeRoot, setMadeRoot] = useState(root)
+  if (root !== madeRoot) {
+    setMadeRoot(root)
+    setMadeFolders([])
+  }
+
+  // Ctrl+Shift+E switches between the canvas and the code, and Ctrl+Shift+G to the review and
+  // back, from anywhere in the workspace: taken in the capture phase, before a terminal or the
+  // editor gets it.
+  useEffect(() => {
+    if (!active) return
+    function onKeyDown(e) {
+      if (!e.ctrlKey || !e.shiftKey || e.altKey || e.metaKey) return
+      const to =
+        e.code === CODE_TOGGLE.code
+          ? coding
+            ? 'canvas'
+            : 'code'
+          : e.code === REVIEW_TOGGLE.code
+            ? reviewing
+              ? 'canvas'
+              : 'review'
+            : null
+      if (!to) return
+      e.preventDefault()
+      e.stopPropagation()
+      setMode(to)
+    }
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
+  })
+
+  // Single-key tools and zoom, while this workspace's canvas is on screen and nothing takes text.
+  useEffect(() => {
+    if (!active || launcher || offCanvas) return
     const actions = {
       select: () => setTool(null),
       hand: () => setTool('hand'),
@@ -419,14 +663,22 @@ export default function Workspace({
       arrow: () => pickShape('arrow'),
       terminal: openLauncher,
       note: newNote,
+      browser: newBrowser,
       zoomIn: () => zoomTo(camRef.current.z * ZOOM_STEP),
       zoomOut: () => zoomTo(camRef.current.z / ZOOM_STEP),
       zoomReset: () => zoomTo(1),
-      zoomFit: zoomToFit
+      zoomFit: zoomToFit,
+      shortcuts: onShortcuts
     }
     const typing = (e) => e.target.closest?.('.xterm, input, textarea, select')
     function onKeyDown(e) {
       if (e.defaultPrevented || typing(e)) return
+      if (e.key === 'Escape' && expanded != null) {
+        setExpanded(null)
+        return
+      }
+      // A browser filling the screen keeps the camera and the tools out of it.
+      if (expanded != null) return
       if (e.key === 'Escape') {
         setTool(null)
         setSelection([])
@@ -476,6 +728,7 @@ export default function Workspace({
     // A node that's gone isn't selected any more: with two selected, the inspector would otherwise
     // keep showing the workspace instead of the one left.
     setSelection((current) => current.filter((other) => other !== id))
+    setExpanded((current) => (current === id ? null : current))
   }
 
   // Whether a link from one node to another would be new and valid. Two linked terminals can
@@ -593,8 +846,12 @@ export default function Workspace({
     if (!node) return
     const { width, height } = container.current.getBoundingClientRect()
     const { z } = camRef.current
+    // Selecting it opens the inspector if the panel is on: the node centers in the room left.
+    const panel = inspector
+      ? parseFloat(getComputedStyle(container.current).getPropertyValue('--inspector-width')) + 24
+      : 0
     flyTo({
-      x: width / 2 - (node.x + node.w / 2) * z,
+      x: (width - panel) / 2 - (node.x + node.w / 2) * z,
       y: height / 2 - (node.y + node.h / 2) * z,
       z
     })
@@ -608,6 +865,7 @@ export default function Workspace({
   useEffect(() => {
     if (!jump || !active || jumped.current === jump.at) return
     jumped.current = jump.at
+    setMode('canvas')
     locate(jump.nodeId)
     container.current
       .querySelector(`.node[data-id="${jump.nodeId}"] .xterm-helper-textarea`)
@@ -622,12 +880,51 @@ export default function Workspace({
   }
 
   const selectedNode = selection.length === 1 && nodes.find((node) => node.id === selection[0])
+  // The side panel, while it's open: the inspector on the canvas, the explorer in the code, the
+  // files and actions in the review. The views sit at its top.
+  const panelShown = inspector
+  const views = (
+    <ViewSwitch mode={code.mode} onMode={setMode} toReview={toReview} className="panel-views" />
+  )
   const linked = new Set(links.flatMap((l) => [l.from, l.to]))
+  const working = new Set(
+    [...statuses.values()].filter((s) => s.state === 'working').map((s) => s.nodeId)
+  )
+  // The browser filling the screen: its box in world coordinates, on the room left of the side
+  // panel and under the top bar, scaled back by the zoom so the page shows at its own size.
+  const expandedNode = !offCanvas && nodes.find((n) => n.id === expanded && n.type === 'browser')
+  const frame = expandedNode && size.w > 0 && expandedFrame()
+  function expandedFrame() {
+    const room = expandedRoom()
+    const box = expandedBox ? fitIn(expandedBox, room) : room
+    return {
+      x: (box.x - cam.x) / cam.z,
+      y: (box.y - cam.y) / cam.z,
+      w: box.w,
+      h: box.h,
+      scale: 1 / cam.z,
+      screen: box
+    }
+  }
+  // The room between the panels, in screen pixels.
+  function expandedRoom() {
+    const x = EXPANDED_MARGIN
+    const y = size.top + EXPANDED_MARGIN
+    const right = size.w - (panelShown ? size.panel + EXPANDED_MARGIN * 2 : EXPANDED_MARGIN)
+    return { x, y, w: Math.max(240, right - x), h: Math.max(160, size.h - EXPANDED_MARGIN - y) }
+  }
+  // Whether a browser takes the pointer: the one selected alone, or filling the screen.
+  const browsing = (node) =>
+    expanded === node.id || (selection.length === 1 && selection[0] === node.id && !tool)
   // While a string is out, the nodes it can't be tied to step back.
   const dimmed = (node) => draft && node.id !== draft.from && !canLink(draft.from, node.id)
   const linkSource = draft && nodes.find((n) => n.id === draft.from)
   const hasTargets = draft && nodes.some((n) => canLink(draft.from, n.id))
-  const agentNodes = nodes.filter((n) => n.type === 'terminal' && AGENTS[n.agent])
+  // The agent in a terminal: the one it opened with, or one typed in it (main/shell.js).
+  const agentOf = (n) => (AGENTS[n.agent] ? n.agent : (statuses.get(n.id)?.agent ?? null))
+  const agentNodes = nodes
+    .filter((n) => n.type === 'terminal' && agentOf(n))
+    .map((n) => (AGENTS[n.agent] ? n : { ...n, agent: agentOf(n) }))
   const spend = {
     ...totalUsage(agentNodes.map((n) => telemetry.get(n.id)?.usage)),
     agents: agentNodes.map((n) => ({
@@ -643,7 +940,9 @@ export default function Workspace({
       className={draft ? 'workspace linking' : 'workspace'}
       ref={container}
       hidden={!active}
-      data-inspector={inspector ? 'open' : undefined}
+      data-inspector={panelShown ? 'open' : undefined}
+      data-mode={code.mode}
+      data-expanded={frame ? '' : undefined}
       onPointerDownCapture={pointerDownAnywhere}
     >
       <Canvas
@@ -651,6 +950,7 @@ export default function Workspace({
         setCam={setCam}
         tool={tool}
         grab={grab}
+        locked={Boolean(frame)}
         onSelectBox={selectBox}
         onToolStart={board.toolStart}
         onToolMove={board.toolMove}
@@ -673,13 +973,19 @@ export default function Workspace({
           </>
         }
       >
-        <Links nodes={nodes} links={links} onRemove={removeLink} />
+        <Links
+          nodes={nodes}
+          links={links}
+          live={working}
+          focus={new Set(selection)}
+          onRemove={removeLink}
+        />
         {nodes.map((node) => (
           <CanvasNode
             key={node.id}
             {...node}
             label={nodeLabel(node)}
-            agent={AGENTS[node.agent] && { key: node.agent, label: AGENTS[node.agent].label }}
+            agent={agentOf(node) && { key: agentOf(node), label: AGENTS[agentOf(node)].label }}
             role={Object.hasOwn(roles, node.role ?? '') ? roles[node.role] : undefined}
             look={node.type === 'terminal' ? terminalLook(node.style) : undefined}
             paper={node.type === 'note' ? PAPERS[resolveStyle(node.style).paper].color : undefined}
@@ -691,6 +997,8 @@ export default function Workspace({
             isLinkTarget={draft?.target === node.id}
             dimmed={dimmed(node)}
             highlighted={hoveredPeer === node.id}
+            frame={expandedNode?.id === node.id ? frame : undefined}
+            onFrame={setExpandedBox}
             onChange={(changes) => updateNode(node.id, changes)}
             onRaise={(e) => pointerDownOnNode(node, e)}
             onMoveStart={() => moveStart(node.id)}
@@ -706,6 +1014,20 @@ export default function Workspace({
                 command={noteCommands[node.id]}
                 onChange={(text) => updateNode(node.id, { text })}
               />
+            ) : node.type === 'browser' ? (
+              <BrowserNode
+                workspaceId={workspaceId}
+                nodeId={node.id}
+                url={node.url}
+                interactive={browsing(node)}
+                expanded={expandedNode?.id === node.id}
+                onUrl={(url) => node.url !== url && updateNode(node.id, { url })}
+                onExpand={() => toggleExpanded(node.id)}
+                onFocus={() => {
+                  raise(node.id)
+                  if (expanded == null && !selection.includes(node.id)) setSelection([node.id])
+                }}
+              />
             ) : (
               <Terminal
                 key={restarts[node.id] ?? 0}
@@ -713,7 +1035,9 @@ export default function Workspace({
                 nodeId={node.id}
                 agent={node.agent}
                 session={node.session}
-                role={node.role}
+                // A plain terminal's role is for the agents typed in it, which main reads when
+                // one starts; changing it mustn't restart the shell.
+                role={AGENTS[node.agent] ? node.role : undefined}
                 command={node.command}
                 cwd={node.cwd}
                 worktree={
@@ -729,18 +1053,46 @@ export default function Workspace({
         ))}
       </Canvas>
 
+      {navSlot &&
+        createPortal(
+          <WorkspaceNav
+            folder={folder}
+            agents={agentNodes}
+            statuses={statuses}
+            telemetry={telemetry}
+            queue={queue}
+            selected={selectedNode ? selectedNode.id : null}
+            onSelect={(id) => {
+              if (id == null) setSelection([])
+              else if (offCanvas) setSelection([id])
+              else locate(id)
+            }}
+            onLocate={(id) => {
+              setMode('canvas')
+              locate(id)
+            }}
+            onReview={reviewNode}
+          />,
+          navSlot
+        )}
+
       <TopBar
         workspace={meta}
         project={project}
         folder={folder}
-        agents={[...statuses.values()]}
         limits={limits}
         spend={spend}
         sidebarHidden={sidebarHidden}
         onShowSidebar={onShowSidebar}
         inspector={inspector}
         onInspector={onInspector}
-        onLocate={locate}
+        mode={code.mode}
+        onMode={setMode}
+        toReview={toReview}
+        onLocate={(id) => {
+          setMode('canvas')
+          locate(id)
+        }}
         // Dictation goes to the selected agent, if one is.
         onVoice={() =>
           window.api.voice.open(
@@ -751,8 +1103,83 @@ export default function Workspace({
         }
       />
 
-      {inspector && (
+      {codeMounted && (
+        <Suspense fallback={null}>
+          <CodeView
+            workspaceId={workspaceId}
+            visible={codeVisible}
+            root={root}
+            files={listing?.root === root ? listing.files : null}
+            tabs={code.tabs}
+            current={code.current}
+            onTabs={({ tabs, current }) => setCode((c) => ({ ...c, tabs, current }))}
+            onOpen={openFile}
+          />
+        </Suspense>
+      )}
+
+      {reviewMounted && (
+        <Suspense fallback={null}>
+          <ReviewView
+            workspaceId={workspaceId}
+            visible={active && reviewing}
+            panel={inspector}
+            items={queue}
+            nodes={nodes}
+            statuses={statuses}
+            state={review}
+            onState={setReview}
+            onOpenFile={openFile}
+            onNodeChange={updateNode}
+            onRefresh={() => setQueueSeq((n) => n + 1)}
+            views={views}
+          />
+        </Suspense>
+      )}
+
+      {coding && !root && (
+        <div className="code-view code-message">
+          <div className="empty-state">
+            <h2 className="empty-title">No folder yet</h2>
+            <p className="empty-text">
+              Pick the folder this workspace works in, and its files show here.
+            </p>
+            <div className="empty-actions">
+              <button className="button primary" onClick={onPickFolder}>
+                Pick a folder
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {inspector && coding && !root && (
+        <aside className="floating inspector explorer" aria-label="Explorer">
+          {views}
+        </aside>
+      )}
+
+      {inspector && coding && root && (
+        <Explorer
+          workspaceId={workspaceId}
+          roots={roots}
+          root={root}
+          onRoot={(path) => setCode((c) => ({ ...c, root: path }))}
+          listing={listing?.root === root ? listing : null}
+          made={madeFolders}
+          onMade={(path) => setMadeFolders((current) => [...current, path])}
+          activePath={code.current}
+          onOpen={openFile}
+          onRefresh={refreshFiles}
+          onMoved={movedFile}
+          onTrashed={trashedFile}
+          views={views}
+        />
+      )}
+
+      {inspector && !offCanvas && (
         <Inspector
+          views={views}
           node={selectedNode || null}
           nodes={nodes}
           links={links}
@@ -764,7 +1191,7 @@ export default function Workspace({
           section={panelTab}
           onSection={setPanelTab}
           onSaveRole={onSaveRole}
-          onChange={(changes) => updateNode(selectedNode.id, changes)}
+          onChange={(changes) => selectedNode && updateNode(selectedNode.id, changes)}
           onNoteCommand={(id, command) =>
             setNoteCommands((current) => ({
               ...current,
@@ -774,18 +1201,19 @@ export default function Workspace({
           onRestart={() =>
             setRestarts((current) => ({
               ...current,
-              [selectedNode.id]: (current[selectedNode.id] ?? 0) + 1
+              [selectedNode?.id]: (current[selectedNode?.id] ?? 0) + 1
             }))
           }
           canConnect={selectedNode && nodes.some((n) => canLink(selectedNode.id, n.id))}
-          onConnectStart={(e) => startLink(selectedNode.id, e)}
+          onConnectStart={(e) => selectedNode && startLink(selectedNode.id, e)}
           onPeerHover={setHoveredPeer}
           onDisconnect={removeLink}
           onLocate={locate}
+          onReview={reviewNode}
         />
       )}
 
-      {tool === 'link' && !draft && (
+      {!offCanvas && tool === 'link' && !draft && (
         <div className="floating link-hint" role="status">
           <LinkIcon size={14} />
           Drag from a node to another, or click one and then the other
@@ -793,7 +1221,7 @@ export default function Workspace({
         </div>
       )}
 
-      {draft && (
+      {!offCanvas && draft && (
         <div className="floating link-hint" role="status">
           <LinkIcon size={14} />
           {!hasTargets
@@ -805,90 +1233,149 @@ export default function Workspace({
         </div>
       )}
 
-      <div className="floating dock" role="toolbar" aria-label="Tools">
-        <button
-          className={tool ? 'dock-button tool' : 'dock-button tool active'}
-          data-tip="Select · V"
-          aria-label="Select"
-          aria-pressed={!tool}
-          onClick={() => setTool(null)}
-        >
-          <PointerIcon />
-        </button>
-        <button
-          className={tool === 'hand' ? 'dock-button tool active' : 'dock-button tool'}
-          data-tip="Hand · H, or hold Space"
-          aria-label="Hand"
-          aria-pressed={tool === 'hand'}
-          onClick={() => setTool((current) => (current === 'hand' ? null : 'hand'))}
-        >
-          <HandIcon />
-        </button>
-        <span className="dock-divider" />
-        <button
-          className="dock-button tool"
-          data-tip="Terminal or agent · T"
-          aria-label="Terminal or agent"
-          aria-haspopup="dialog"
-          aria-expanded={Boolean(launcher)}
-          onClick={openLauncher}
-        >
-          <TerminalIcon />
-        </button>
-        <button
-          className="dock-button tool"
-          data-tip="Note · N"
-          aria-label="Note"
-          onClick={newNote}
-        >
-          <NoteIcon />
-        </button>
-        <ToolButton tool={tool} name="link" label="Connect" keys="C" onTool={setTool}>
-          <LinkIcon />
-        </ToolButton>
-        <span className="dock-divider" />
-        <ToolButton tool={tool} name="draw" label="Draw" keys="D" onTool={setTool}>
-          <PenIcon />
-        </ToolButton>
-        <div className="dock-menu-anchor">
-          <ToolButton
-            tool={tool}
-            name={shapeKind}
-            label={`${SHAPES[shapeKind].label} · ${SHAPES[shapeKind].key}`}
-            onTool={setTool}
-            menu={shapeMenu}
-            onMenu={() => setShapeMenu((open) => !open)}
-          >
-            {SHAPES[shapeKind].icon}
-          </ToolButton>
-          {shapeMenu && (
-            <div className="floating dock-menu" role="menu">
-              {Object.entries(SHAPES).map(([kind, { label, key, icon }]) => (
-                <button
-                  key={kind}
-                  role="menuitemradio"
-                  aria-checked={shapeKind === kind}
-                  className="dock-menu-item"
-                  onClick={() => pickShape(kind)}
-                >
-                  {icon}
-                  <span>{label}</span>
-                  {key && <kbd>{key}</kbd>}
-                </button>
-              ))}
+      {/* The dock in the middle of the room the canvas has, the zoom on its right; where the room
+          is too narrow for both on one line, the zoom goes up above the dock (main.css). */}
+      <div className="canvas-controls" hidden={offCanvas || Boolean(frame)}>
+        <div className="canvas-controls-grid">
+          <div className="floating dock" role="toolbar" aria-label="Tools">
+            <button
+              className={tool ? 'dock-button tool' : 'dock-button tool active'}
+              {...tip('Select', 'V')}
+              aria-pressed={!tool}
+              onClick={() => setTool(null)}
+            >
+              <PointerIcon />
+            </button>
+            <button
+              className={tool === 'hand' ? 'dock-button tool active' : 'dock-button tool'}
+              {...tip('Hand', 'H')}
+              aria-pressed={tool === 'hand'}
+              onClick={() => setTool((current) => (current === 'hand' ? null : 'hand'))}
+            >
+              <HandIcon />
+            </button>
+            <span className="dock-divider" />
+            <button
+              className="dock-button tool"
+              {...tip('Terminal or agent', 'T')}
+              aria-haspopup="dialog"
+              aria-expanded={Boolean(launcher)}
+              onClick={openLauncher}
+            >
+              <TerminalIcon />
+            </button>
+            <button className="dock-button tool" {...tip('Note', 'N')} onClick={newNote}>
+              <NoteIcon />
+            </button>
+            <button className="dock-button tool" {...tip('Browser', 'B')} onClick={newBrowser}>
+              <GlobeIcon />
+            </button>
+            <ToolButton tool={tool} name="link" label="Connect" keys="C" onTool={setTool}>
+              <LinkIcon />
+            </ToolButton>
+            <span className="dock-divider" />
+            <ToolButton tool={tool} name="draw" label="Draw" keys="D" onTool={setTool}>
+              <PenIcon />
+            </ToolButton>
+            <div className="dock-menu-anchor">
+              <ToolButton
+                tool={tool}
+                name={shapeKind}
+                label={`${SHAPES[shapeKind].label} · ${SHAPES[shapeKind].key}`}
+                onTool={setTool}
+                menu={shapeMenu}
+                onMenu={() => setShapeMenu((open) => !open)}
+              >
+                {SHAPES[shapeKind].icon}
+              </ToolButton>
+              {shapeMenu && (
+                <div className="floating dock-menu" role="menu">
+                  {Object.entries(SHAPES).map(([kind, { label, key, icon }]) => (
+                    <button
+                      key={kind}
+                      role="menuitemradio"
+                      aria-checked={shapeKind === kind}
+                      aria-keyshortcuts={key}
+                      className="dock-menu-item"
+                      onClick={() => pickShape(kind)}
+                    >
+                      {icon}
+                      <span>{label}</span>
+                      {key && <kbd aria-hidden="true">{key}</kbd>}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+            <ToolButton tool={tool} name="text" label="Text" keys="W" onTool={setTool}>
+              <TextIcon />
+            </ToolButton>
+            <ToolButton tool={tool} name="erase" label="Erase" keys="E" onTool={setTool}>
+              <EraserIcon />
+            </ToolButton>
+          </div>
+          <div className="zoom-area">
+            {minimap && (
+              <Minimap
+                nodes={nodes}
+                links={links}
+                cam={cam}
+                size={size}
+                onLook={(point) =>
+                  setCam((c) => ({
+                    ...c,
+                    x: size.w / 2 - point.x * c.z,
+                    y: size.h / 2 - point.y * c.z
+                  }))
+                }
+              />
+            )}
+            <div className="floating zoom" role="toolbar" aria-label="Zoom">
+              <button
+                className="icon-button zoom-step"
+                {...tip('Zoom out', '−')}
+                onClick={() => zoomTo(cam.z / ZOOM_STEP)}
+              >
+                <MinusIcon />
+              </button>
+              <button
+                className="zoom-level"
+                {...tip('Reset to 100%', '0')}
+                aria-label={`Zoom ${Math.round(cam.z * 100)}%, reset to 100%`}
+                onClick={() => zoomTo(1)}
+              >
+                {Math.round(cam.z * 100)}%
+              </button>
+              <button
+                className="icon-button zoom-step"
+                {...tip('Zoom in', '+')}
+                onClick={() => zoomTo(cam.z * ZOOM_STEP)}
+              >
+                <PlusIcon />
+              </button>
+              <span className="dock-divider zoom-step" />
+              <button
+                className="icon-button"
+                {...tip('Fit everything on screen', '1')}
+                onClick={zoomToFit}
+              >
+                <FitIcon />
+              </button>
+              <button
+                className={minimap ? 'icon-button active' : 'icon-button'}
+                {...tip('Minimap', 'M')}
+                aria-pressed={minimap}
+                onClick={() => setMinimap((open) => !open)}
+              >
+                <MapIcon />
+              </button>
+            </div>
+          </div>
         </div>
-        <ToolButton tool={tool} name="text" label="Text" keys="W" onTool={setTool}>
-          <TextIcon />
-        </ToolButton>
-        <ToolButton tool={tool} name="erase" label="Erase" keys="E" onTool={setTool}>
-          <EraserIcon />
-        </ToolButton>
       </div>
 
       {/* The shapes menu and the style bar share the room above the dock: one at a time. */}
-      {board.showStyle && !draft && !shapeMenu && (
+      {!offCanvas && !frame && board.showStyle && !draft && !shapeMenu && (
         <StyleBar
           style={board.style}
           keys={board.keys}
@@ -896,63 +1383,6 @@ export default function Workspace({
           actions={board.actions}
         />
       )}
-
-      <div className="zoom-area">
-        {minimap && (
-          <Minimap
-            nodes={nodes}
-            links={links}
-            cam={cam}
-            size={size}
-            onLook={(point) =>
-              setCam((c) => ({
-                ...c,
-                x: size.w / 2 - point.x * c.z,
-                y: size.h / 2 - point.y * c.z
-              }))
-            }
-          />
-        )}
-        <div className="floating zoom" role="toolbar" aria-label="Zoom">
-          <button
-            className="icon-button"
-            data-tip="Zoom out · −"
-            aria-label="Zoom out"
-            onClick={() => zoomTo(cam.z / ZOOM_STEP)}
-          >
-            <MinusIcon />
-          </button>
-          <button className="zoom-level" data-tip="Reset to 100% · 0" onClick={() => zoomTo(1)}>
-            {Math.round(cam.z * 100)}%
-          </button>
-          <button
-            className="icon-button"
-            data-tip="Zoom in · +"
-            aria-label="Zoom in"
-            onClick={() => zoomTo(cam.z * ZOOM_STEP)}
-          >
-            <PlusIcon />
-          </button>
-          <span className="dock-divider" />
-          <button
-            className="icon-button"
-            data-tip="Fit everything · 1"
-            aria-label="Fit everything on screen"
-            onClick={zoomToFit}
-          >
-            <FitIcon />
-          </button>
-          <button
-            className={minimap ? 'icon-button active' : 'icon-button'}
-            data-tip="Minimap · M"
-            aria-label="Minimap"
-            aria-pressed={minimap}
-            onClick={() => setMinimap((open) => !open)}
-          >
-            <MapIcon />
-          </button>
-        </div>
-      </div>
 
       {launcher && (
         <Launcher
@@ -967,7 +1397,7 @@ export default function Workspace({
         />
       )}
 
-      {nodes.length === 0 && board.shapes.length === 0 && (
+      {!offCanvas && nodes.length === 0 && board.shapes.length === 0 && (
         <div className="canvas-empty">
           <div className="empty-state">
             <h2 className="empty-title">A blank canvas</h2>
@@ -984,6 +1414,10 @@ export default function Workspace({
                 <NoteIcon />
                 Note
               </button>
+              <button className="button" onClick={newBrowser}>
+                <GlobeIcon />
+                Browser
+              </button>
             </div>
             <div className="empty-hints">
               <span>
@@ -996,7 +1430,7 @@ export default function Workspace({
                 <kbd>Ctrl</kbd> + <kbd>Scroll</kbd> to zoom
               </span>
               <span>
-                <kbd>T</kbd> <kbd>N</kbd> <kbd>C</kbd> <kbd>D</kbd> <kbd>R</kbd> tools
+                <kbd>T</kbd> <kbd>N</kbd> <kbd>B</kbd> <kbd>C</kbd> <kbd>D</kbd> <kbd>R</kbd> tools
               </span>
             </div>
           </div>
@@ -1004,6 +1438,18 @@ export default function Workspace({
       )}
     </div>
   )
+}
+
+// The box moved inside the room and, if it's bigger, cut down to it.
+function fitIn(box, room) {
+  const w = Math.min(box.w, room.w)
+  const h = Math.min(box.h, room.h)
+  return {
+    x: Math.min(Math.max(box.x, room.x), room.x + room.w - w),
+    y: Math.min(Math.max(box.y, room.y), room.y + room.h - h),
+    w,
+    h
+  }
 }
 
 // Stops the click that follows a pointerdown from reaching anything. If no click comes (the
@@ -1040,8 +1486,7 @@ function ToolButton({ tool, name, label, keys, onTool, menu, onMenu, children })
     <span className={onMenu ? 'dock-split' : undefined}>
       <button
         className={on ? 'dock-button tool active' : 'dock-button tool'}
-        data-tip={keys ? `${label} · ${keys}` : label}
-        aria-label={label}
+        {...tip(label, keys)}
         aria-pressed={on}
         onClick={() => onTool((current) => (current === name ? null : name))}
       >
