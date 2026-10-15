@@ -3,26 +3,40 @@ import { closeSync, existsSync, openSync, readSync, readdirSync, statSync } from
 import { homedir } from 'os'
 import { join } from 'path'
 import { readJson, writeAtomic } from './files'
+import { claudeHome } from './agents'
 
 // How much of their plan's limits the agents have used: the share of the 5-hour window and of
-// the week, and when each resets. Claude Code hands its own to the status line command, which
-// Nara sets for the agents it opens (`nara statusline`, see agents.js); Codex writes its own into
-// its rollouts. The latest of each is kept in usage.json, so the top bar has them from the start;
-// a window whose reset has passed is dropped.
+// the week, and when each resets. Claude's come from the same place Claude Code's /usage reads
+// them, with the login Claude Code keeps on this computer, every few minutes: that counts what
+// the user spent anywhere, not only in Nara. Claude Code also hands them to the status line
+// command Nara sets for its agents (`nara statusline`, see agents.js), which fills in between
+// reads. Codex writes its own into its rollouts. The latest of each is kept in usage.json, so the
+// top bar has them from the start; a window whose reset has passed is dropped.
 //
 // A provider's report is { fiveHour: { used, resetsAt }, sevenDay: { used, resetsAt }, updated },
 // `used` from 0 to 100 and times in ms.
 const CODEX_EVERY = 60000
+const CLAUDE_EVERY = 3 * 60000
+// A read asked for by the top bar goes out only if the last one is older than this.
+const CLAUDE_FRESH = 45000
+const CLAUDE_USAGE = 'https://api.anthropic.com/api/oauth/usage'
+let claudeRead = 0
 
 let limits = {}
 
 export function registerUsage(main) {
   limits = readJson(usagePath()) ?? {}
-  ipcMain.handle('usage:get', () => current())
+  ipcMain.handle('usage:get', () => {
+    if (Date.now() - claudeRead > CLAUDE_FRESH) readClaude()
+    return current()
+  })
   readCodex()
+  readClaude()
   const timer = setInterval(readCodex, CODEX_EVERY)
+  const claudeTimer = setInterval(readClaude, CLAUDE_EVERY)
   main.on('closed', () => {
     clearInterval(timer)
+    clearInterval(claudeTimer)
     ipcMain.removeHandler('usage:get')
   })
 }
@@ -57,13 +71,49 @@ export function reportCodex(rateLimits, at = Date.now()) {
   update('codex', { fiveHour: window(rateLimits.primary), sevenDay: window(rateLimits.secondary) })
 }
 
-function update(provider, { fiveHour, sevenDay }) {
+// Claude's limits as its usage endpoint has them, for the account Claude Code is logged in with.
+// The token is only read, never refreshed: Claude Code refreshes it, and a refresh from here would
+// race it. A login in the system's keychain (macOS) isn't reachable; the status line covers it.
+async function readClaude() {
+  claudeRead = Date.now()
+  const login = readJson(join(claudeHome(), '.credentials.json'))?.claudeAiOauth
+  if (!login?.accessToken || (login.expiresAt && login.expiresAt < Date.now())) return
+  try {
+    const response = await fetch(CLAUDE_USAGE, {
+      headers: {
+        Authorization: `Bearer ${login.accessToken}`,
+        'anthropic-beta': 'oauth-2025-04-20',
+        'Content-Type': 'application/json'
+      },
+      signal: AbortSignal.timeout(15000)
+    })
+    if (!response.ok) return
+    const usage = await response.json()
+    // A window with nothing used in it yet comes as null: that's 0%, not "unknown".
+    const window = (w) =>
+      w && Number.isFinite(w.utilization)
+        ? { used: w.utilization, resetsAt: Date.parse(w.resets_at) || 0 }
+        : { used: 0, resetsAt: 0 }
+    update(
+      'claude',
+      { fiveHour: window(usage.five_hour), sevenDay: window(usage.seven_day) },
+      { replace: true }
+    )
+  } catch {
+    // Offline, or the endpoint changed: the status line still reports.
+  }
+}
+
+// `replace` takes the report as it is; otherwise a window it leaves out keeps the last value.
+function update(provider, { fiveHour, sevenDay }, { replace = false } = {}) {
   if (!fiveHour && !sevenDay) return
   const previous = limits[provider]
-  const next = {
-    fiveHour: fiveHour ?? previous?.fiveHour ?? null,
-    sevenDay: sevenDay ?? previous?.sevenDay ?? null
-  }
+  const next = replace
+    ? { fiveHour: fiveHour ?? null, sevenDay: sevenDay ?? null }
+    : {
+        fiveHour: fiveHour ?? previous?.fiveHour ?? null,
+        sevenDay: sevenDay ?? previous?.sevenDay ?? null
+      }
   // The status line runs after every message: only a change is saved and sent.
   const same =
     JSON.stringify(next) ===
