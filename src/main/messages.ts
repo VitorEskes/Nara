@@ -5,7 +5,15 @@ import { tmpdir } from 'os'
 import { basename, delimiter, dirname, join } from 'path'
 import nara from '../../resources/bin/nara?asset'
 import { browse, pageUrl } from './browser'
-import { HOOKS, currentCwd, endAgent, findTerminal, startAgent, terminals } from './pty'
+import {
+  HOOKS,
+  currentCwd,
+  endAgent,
+  findTerminal,
+  startAgent,
+  startContext,
+  terminals
+} from './pty'
 import { agentRun } from './agents'
 import { AGENTS, agentForCommand } from '../shared/agents'
 import { agentHook } from './status'
@@ -95,10 +103,19 @@ async function handle(
   // opened with it. `agent` is the command typed; `args` are the user's own arguments.
   if (command === 'run') {
     const key = agentForCommand(agent)
-    if (!key) throw new Error(`${agent} isn't an agent Nara knows`)
     if (sender.agent) throw new Error(`an agent is already running in this terminal`)
     const node = workspaces.get(workspaceId)?.nodes.find((n) => n.id === nodeId)
     const cwd = currentCwd(workspaceId, nodeId) ?? node?.cwd
+    // Any other CLI, started by hand with `nara run <cli>`: Nara doesn't know its flags or follow
+    // what it does, so its context and role go in as its first message once it's up. A shell
+    // would run that message as commands.
+    if (!key) {
+      const name = basename(String(agent ?? ''))
+      if (!name || SHELLS.has(name)) throw new Error(`${name || 'that'} isn't an agent CLI`)
+      const launch = agentRun({ agent: name, role: node?.role, nodeId, worktree: node?.worktree })
+      startContext(Number(from), launch.message)
+      return { command: agent, args: [], env: launch.env }
+    }
     const launch = agentRun({
       agent: key,
       args: Array.isArray(args) ? args.map(String) : [],

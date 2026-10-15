@@ -213,12 +213,19 @@ export function startAgent(
   if (message) contexts.set(id, { text: message, started: Date.now(), last: 0 })
 }
 
-// An agent typed in a plain terminal quit, and the shell is back.
+// A CLI Nara doesn't know, started with `nara run`: it only gets its context, as a message.
+export function startContext(id: number, message: string | null): void {
+  if (terminals.has(id) && message)
+    contexts.set(id, { text: message, started: Date.now(), last: 0 })
+}
+
+// An agent typed in a plain terminal quit, and the shell is back. A context still waiting goes
+// too: pasted into the shell, it would run as commands.
 export function endAgent(id: number): void {
+  contexts.delete(id)
   const terminal = terminals.get(id)
   if (!terminal?.agent) return
   terminal.agent = undefined
-  contexts.delete(id)
   untrackAgent(id)
   unwatchAgent(id)
 }

@@ -44,6 +44,7 @@ const HELP = `usage:
   nara browser read <browser>       print the page's address, title and text
   nara browser shot <browser>       save a screenshot of the page and print its path
   nara browser reload <browser>     load the page again
+  nara run <cli> [args]             start an agent CLI here with Nara's context and the role
 
 Without <text>, send, write and append read it from stdin.
 
