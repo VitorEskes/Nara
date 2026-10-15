@@ -9,6 +9,9 @@
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "build": "node --max-old-space-size=4096 node_modules/electron-vite/bin/electron-vite.js build",
