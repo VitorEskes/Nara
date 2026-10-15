@@ -5388,157 +5388,153 @@ kbd {
   }
 }
 
-/* Shika's moods: it breathes and blinks when idle, bobs while an agent works, tilts its head
-   when one waits on the user, hops when one is done, droops when one failed, and hops once when
+/* Shika's moods, moving by whole pixels of its grid (Shika.tsx) and in steps, like a sprite: it
+   breathes and blinks when idle, bobs while an agent works, looks around when one waits on the
+   user, hops when one is done, hangs its head and sweats when one failed, and hops once when
    clicked. */
 .shika {
   overflow: visible;
 }
 
-.shika-shadow {
-  fill: rgb(var(--shade) / 14%);
-}
-
-.shika-body,
-.shika-head,
-.shika-antlers,
-.shika-eyes {
-  transform-box: fill-box;
-}
-
-.shika-body {
-  transform-origin: 50% 100%;
-  animation: shika-breathe 3.2s ease-in-out infinite;
-}
-
 .shika-head {
-  transform-origin: 50% 90%;
-}
-
-.shika-antlers {
-  transform-origin: 50% 100%;
+  animation: shika-breathe 3.2s steps(1, end) infinite;
 }
 
 .shika-eyes {
-  transform-origin: 50% 50%;
-  animation: shika-blink 4.6s infinite;
+  animation: shika-blink 4.6s steps(1, end) infinite;
+}
+
+.shika-eyes-closed {
+  opacity: 0;
+  animation: shika-blink-closed 4.6s steps(1, end) infinite;
 }
 
 .shika-drop {
-  fill: #8aa7d6;
   opacity: 0;
 }
 
-.shika[data-mood='working'] {
-  animation: shika-bob 0.5s ease-in-out infinite alternate;
+.shika[data-mood='working'] .shika-sprite {
+  animation: shika-bob 0.5s steps(1, end) infinite;
 }
 
 .shika[data-mood='working'] .shika-antlers {
-  animation: shika-wiggle 0.5s ease-in-out infinite alternate;
+  animation: shika-bob 0.5s steps(1, end) 0.125s infinite;
 }
 
 .shika[data-mood='waiting'] .shika-head {
-  animation: shika-tilt 1.6s ease-in-out infinite alternate;
+  animation: shika-look 1.6s steps(1, end) infinite;
 }
 
-.shika[data-mood='review'] {
-  animation: shika-hop 1.6s var(--ease-out) infinite;
+.shika[data-mood='review'] .shika-sprite {
+  animation: shika-hop 1.6s steps(1, end) infinite;
 }
 
-.shika[data-mood='jump'] {
-  animation: shika-hop 0.7s var(--ease-out);
+.shika[data-mood='jump'] .shika-sprite {
+  animation: shika-hop 0.7s steps(1, end);
 }
 
 .shika[data-mood='failed'] .shika-head {
-  transform: rotate(8deg) translateY(2px);
+  animation: none;
+  transform: translateY(1px);
 }
 
 .shika[data-mood='failed'] .shika-drop {
-  opacity: 1;
-  animation: shika-drip 1.8s ease-in infinite;
+  animation: shika-drip 1.8s steps(1, end) infinite;
 }
 
-.shika[data-mood='failed'] .shika-body {
-  animation-duration: 5s;
-}
-
-.shika[data-dragging] {
-  animation: shika-bob 0.25s ease-in-out infinite alternate;
+.shika[data-dragging] .shika-sprite {
+  animation: shika-bob 0.25s steps(1, end) infinite;
 }
 
 @keyframes shika-breathe {
   50% {
-    transform: scaleY(1.035);
+    transform: translateY(1px);
   }
 }
 
 @keyframes shika-blink {
-  0%,
-  92%,
-  100% {
-    transform: scaleY(1);
+  94% {
+    opacity: 0;
   }
 
-  95% {
-    transform: scaleY(0.1);
+  97% {
+    opacity: 1;
+  }
+}
+
+@keyframes shika-blink-closed {
+  94% {
+    opacity: 1;
+  }
+
+  97% {
+    opacity: 0;
   }
 }
 
 @keyframes shika-bob {
-  to {
-    transform: translateY(-3px);
+  50% {
+    transform: translateY(-1px);
   }
 }
 
-@keyframes shika-wiggle {
-  from {
-    transform: rotate(-4deg);
+@keyframes shika-look {
+  0%,
+  100% {
+    transform: translateX(-1px);
   }
 
-  to {
-    transform: rotate(4deg);
-  }
-}
-
-@keyframes shika-tilt {
-  from {
-    transform: rotate(-9deg);
-  }
-
-  to {
-    transform: rotate(9deg);
+  50% {
+    transform: translateX(1px);
   }
 }
 
 @keyframes shika-hop {
   0%,
-  60%,
+  45%,
   100% {
-    transform: translateY(0) scale(1, 1);
+    transform: translateY(0);
   }
 
   10% {
-    transform: translateY(0) scale(1.06, 0.94);
+    transform: translateY(-1px);
   }
 
-  30% {
-    transform: translateY(-12px) scale(0.96, 1.05);
+  18% {
+    transform: translateY(-2px);
   }
 
-  50% {
-    transform: translateY(0) scale(1.04, 0.96);
+  26% {
+    transform: translateY(-3px);
+  }
+
+  34% {
+    transform: translateY(-2px);
+  }
+
+  40% {
+    transform: translateY(-1px);
   }
 }
 
 @keyframes shika-drip {
-  from {
-    transform: translateY(0);
+  0% {
     opacity: 1;
+    transform: translateY(0);
   }
 
-  to {
-    transform: translateY(6px);
+  30% {
+    transform: translateY(1px);
+  }
+
+  60% {
+    transform: translateY(2px);
+  }
+
+  90%,
+  100% {
     opacity: 0;
+    transform: translateY(3px);
   }
 }
 

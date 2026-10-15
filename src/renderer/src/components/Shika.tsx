@@ -1,8 +1,95 @@
 import type { JSX } from 'react'
 
-// Shika, the Nara deer from the app's icon, as the built-in pet. Drawn here instead of a sprite
-// sheet so it stays sharp at any size; main.css moves its parts for each `mood` (idle, working,
-// waiting, review, failed, jump) and while it's `dragging`.
+// Shika, the Nara deer from the app's icon, as the built-in pet, in pixel art: a 24x26 grid,
+// drawn as SVG rects so it stays crisp at any size. Each part is its own layer on the same grid,
+// so main.css can move it on its own for each `mood` (idle, working, waiting, review, failed,
+// jump) and while it's `dragging`, always by whole pixels.
+
+const WIDTH = 24
+const HEIGHT = 26
+
+// What each letter in the grids paints; a dot is see-through.
+const PALETTE: Record<string, string> = {
+  K: '#2b2d2b', // antlers and hooves
+  G: '#474a46', // antlers in the light
+  D: '#24503d', // outline and legs
+  F: '#3f8462', // fur
+  H: '#5a9e7b', // fur in the light
+  M: '#2d6249', // ears
+  L: '#7ab893', // spots
+  E: '#1d201e', // eyes and nose
+  B: '#8aa7d6' // a drop of sweat
+}
+
+// Each grid lists the rows it paints from `top` down.
+interface Layer {
+  top: number
+  rows: string[]
+}
+
+const ANTLERS: Layer = {
+  top: 0,
+  rows: [
+    '.GK..GK..........GK..GK.',
+    '.KK..KK..G....G..KK..KK.',
+    '.KKKKKK.KK....KK.KKKKKK.',
+    '..KKKKKKKK....KKKKKKKK..',
+    '....KKKKK......KKKKK....',
+    '......KK........KK......',
+    '.......KK......KK.......'
+  ]
+}
+
+// The head and the ears, with fur where the eyes go, for when they're closed.
+const HEAD: Layer = {
+  top: 7,
+  rows: [
+    '.........DDDDDD.........',
+    '.DDD...DDHHFFFFDD...DDD.',
+    '.DMMMDDFDDFFFFDDFDDMMMD.',
+    '..DMMMDFHFFFFFFFFDMMMD..',
+    '...DDDDFFFFFFFFFFDDDD...',
+    '......DFFFFFFFFFFD......',
+    '......DFFFFFFFFFFD......',
+    '.......DFFFEEFFFD.......',
+    '........DFFFFFFD........',
+    '.........DDDDDD.........'
+  ]
+}
+
+const EYES_OPEN: Layer = {
+  top: 10,
+  rows: ['.........E....E.........', '.........E....E.........']
+}
+
+const EYES_CLOSED: Layer = {
+  top: 11,
+  rows: ['.........E....E.........']
+}
+
+// Only shown when an agent failed.
+const DROP: Layer = {
+  top: 4,
+  rows: ['......................B.', '.....................BB.', '.....................BB.']
+}
+
+// The body, the tail and the legs; the head covers its top row.
+const BODY: Layer = {
+  top: 16,
+  rows: [
+    '........DDDDDDDD........',
+    '.......DHHFFFFFFD.......',
+    '......DHFFFFFFLFFD......',
+    '......DFFFFFFFFFLFDD....',
+    '.....DFFFFFFFLFFFFDDD...',
+    '.....DFFFFFFFFFFFFD.....',
+    '.....DFFMFFFFFFMFFD.....',
+    '.....DFFMFFMMFFMFFD.....',
+    '......DDDFFMMFFDDD......',
+    '........DKKDDKKD........'
+  ]
+}
+
 export default function Shika({
   mood = 'idle',
   dragging
@@ -15,56 +102,39 @@ export default function Shika({
       className="shika"
       data-mood={mood}
       data-dragging={dragging || undefined}
-      viewBox="0 0 96 104"
+      viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+      shapeRendering="crispEdges"
       aria-hidden="true"
     >
-      <defs>
-        <radialGradient id="shika-fur" cx="0.38" cy="0.32" r="0.8">
-          <stop offset="0" stopColor="#3f8462" />
-          <stop offset="1" stopColor="#24503d" />
-        </radialGradient>
-      </defs>
-      <ellipse className="shika-shadow" cx="50" cy="100" rx="24" ry="3" />
-      <g className="shika-body">
-        <circle cx="70" cy="85" r="5" fill="#24503d" />
-        <ellipse cx="50" cy="80" rx="21" ry="19" fill="url(#shika-fur)" />
-        <circle cx="58" cy="73" r="2.2" fill="#6aa585" opacity="0.55" />
-        <circle cx="63.5" cy="79" r="1.8" fill="#6aa585" opacity="0.55" />
-        <circle cx="56" cy="82" r="1.5" fill="#6aa585" opacity="0.55" />
-        <rect x="38" y="86" width="8" height="14" rx="4" fill="#24503d" />
-        <rect x="52" y="86" width="8" height="14" rx="4" fill="#24503d" />
-      </g>
-      <g className="shika-head">
-        <g
-          className="shika-antlers"
-          fill="none"
-          stroke="#2b2d2b"
-          strokeWidth="5"
-          strokeLinecap="round"
-        >
-          <path d="M39 31C37 23 31 18 27 11M33 22C29 22 25 24 21 22M30 16C30 12 32 9 34 6" />
-          <path d="M57 31C59 23 65 18 69 11M63 22C67 22 71 24 75 22M66 16C66 12 64 9 62 6" />
+      <g className="shika-sprite">
+        <Pixels className="shika-body" layer={BODY} />
+        <g className="shika-head">
+          <Pixels className="shika-antlers" layer={ANTLERS} />
+          <Pixels layer={HEAD} />
+          <Pixels className="shika-eyes" layer={EYES_OPEN} />
+          <Pixels className="shika-eyes-closed" layer={EYES_CLOSED} />
+          <Pixels className="shika-drop" layer={DROP} />
         </g>
-        <ellipse cx="27" cy="40" rx="9" ry="4.5" fill="#2d6249" transform="rotate(-25 27 40)" />
-        <ellipse cx="69" cy="40" rx="9" ry="4.5" fill="#2d6249" transform="rotate(25 69 40)" />
-        <ellipse cx="48" cy="46" rx="20" ry="17" fill="url(#shika-fur)" />
-        <ellipse cx="48" cy="53.5" rx="7" ry="4.5" fill="#3d7a5c" />
-        <circle cx="36" cy="51" r="2.6" fill="#e2756a" opacity="0.3" />
-        <circle cx="60" cy="51" r="2.6" fill="#e2756a" opacity="0.3" />
-        <g className="shika-eyes" fill="#1d201e">
-          <circle cx="41" cy="45" r="2.6" />
-          <circle cx="55" cy="45" r="2.6" />
-        </g>
-        <path
-          d="M45.5 52.5q2.5 2 5 0"
-          fill="none"
-          stroke="#1d201e"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-        />
-        {/* A drop of sweat, only shown when an agent failed. */}
-        <path className="shika-drop" d="M68 30c2 3 3 4.5 3 6a3 3 0 0 1-6 0c0-1.5 1-3 3-6z" />
       </g>
     </svg>
   )
+}
+
+// A layer as rects, one for each run of the same color in a row.
+function Pixels({ layer, className }: { layer: Layer; className?: string }): JSX.Element {
+  const rects: JSX.Element[] = []
+  layer.rows.forEach((row, i) => {
+    const y = layer.top + i
+    let x = 0
+    while (x < row.length) {
+      const color = PALETTE[row[x]]
+      let end = x + 1
+      while (end < row.length && row[end] === row[x]) end++
+      if (color) {
+        rects.push(<rect key={`${x},${y}`} x={x} y={y} width={end - x} height={1} fill={color} />)
+      }
+      x = end
+    }
+  })
+  return <g className={className}>{rects}</g>
 }
