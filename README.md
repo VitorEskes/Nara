@@ -20,7 +20,6 @@ Give each one a role, link the ones that should work together, and review every 
 <p>
   <a href="#install"><strong>Install</strong></a> &nbsp;·&nbsp;
   <a href="#features">Features</a> &nbsp;·&nbsp;
-  <a href="#getting-started">Getting started</a> &nbsp;·&nbsp;
   <a href="#supported-agents">Agents</a> &nbsp;·&nbsp;
   <a href="#the-nara-command">The <code>nara</code> command</a> &nbsp;·&nbsp;
   <a href="#contributing">Contributing</a>
