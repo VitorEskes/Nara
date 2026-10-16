@@ -56,7 +56,7 @@ export function registerHud(main: BrowserWindow): void {
       Math.round(workArea.x + workArea.width - SIZE.width - MARGIN),
       Math.round(workArea.y + MARGIN)
     )
-    const reveal = () => {
+    const reveal = (): void => {
       hud.show()
       hud.focus()
     }

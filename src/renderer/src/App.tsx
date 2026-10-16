@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type JSX } from 'react'
 import Workspace, { type Jump } from './components/Workspace'
 import Sidebar from './components/Sidebar'
 import Overview from './components/Overview'
@@ -50,7 +50,7 @@ const PREF_DEFAULTS: Prefs = {
 // Stands in for a workspace with no agents yet, so it keeps the same empty map between renders.
 const NO_AGENTS = new Map()
 
-export default function App() {
+export default function App(): JSX.Element | null {
   // Every project as { id, name, folder }, and every saved workspace as { id, name, project,
   // folder, terminals, notes }; `open` holds the ids of the open workspaces, in the order they
   // were opened.
@@ -112,7 +112,7 @@ export default function App() {
     window.api.agents.status().then(setStatuses)
     const offStatus = window.api.agents.onStatus(setStatuses)
     // Each update carries only the agents that changed; the maps are copied so React sees them.
-    const mergeTelemetry = (reports: (AgentReport | RemovedReport)[]) =>
+    const mergeTelemetry = (reports: (AgentReport | RemovedReport)[]): void =>
       setTelemetry((current) => {
         const next = new Map(current)
         for (const report of reports) {
@@ -147,7 +147,9 @@ export default function App() {
 
   useEffect(() => {
     const narrow = matchMedia(`(max-width: ${NARROW}px)`)
-    const onChange = (e: MediaQueryListEvent) => e.matches && setSidebar('closed')
+    const onChange = (e: MediaQueryListEvent): void => {
+      if (e.matches) setSidebar('closed')
+    }
     narrow.addEventListener('change', onChange)
     return () => narrow.removeEventListener('change', onChange)
   }, [])
@@ -163,7 +165,7 @@ export default function App() {
   // ones and fades between them. The new colors arrive once main has changed the theme, which
   // the media query reports; when they don't change (say, from dark to a system that's dark too)
   // there's no report, and the timeout ends the wait.
-  function changeTheme(next: Theme) {
+  function changeTheme(next: Theme): void {
     setTheme(next)
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
     if (reduced || !document.startViewTransition) return window.api.theme.set(next)
@@ -179,16 +181,16 @@ export default function App() {
     )
   }
 
-  function toggleTheme() {
+  function toggleTheme(): void {
     changeTheme(matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark')
   }
 
-  function toggleSidebar() {
+  function toggleSidebar(): void {
     setSidebar((current) => (current === 'open' ? 'closed' : 'open'))
   }
 
   useEffect(() => {
-    async function start() {
+    async function start(): Promise<void> {
       const session = await window.api.workspace.session()
       setProjects(await window.api.project.list())
       setAll(await window.api.workspace.list())
@@ -223,7 +225,7 @@ export default function App() {
       theme: toggleTheme,
       settings: () => setSettings('appearance')
     }
-    function onKeyDown(e: KeyboardEvent) {
+    function onKeyDown(e: KeyboardEvent): void {
       const name = shortcutFor(e)
       if (!name) return
       e.preventDefault()
@@ -246,7 +248,7 @@ export default function App() {
     []
   )
 
-  function openWorkspace(id: string) {
+  function openWorkspace(id: string): void {
     setOpen((current) => (current.includes(id) ? current : [...current, id]))
     setActive(id)
     setOverview(false)
@@ -254,7 +256,7 @@ export default function App() {
 
   // Opens the project's workspace opened last, or its first one if none is open. A project with
   // no workspaces gets a new one.
-  function openProject(id: string) {
+  function openProject(id: string): void {
     const members = all.filter((w) => w.project === id)
     const latest = open.findLast((other) => members.some((w) => w.id === other))
     const chosen = latest ?? byName(members)[0]?.id
@@ -263,20 +265,20 @@ export default function App() {
   }
 
   // The list is read again for the counts on the cards: the canvases have changed since.
-  async function showOverview() {
+  async function showOverview(): Promise<void> {
     setOverview(true)
     setAll(await window.api.workspace.list())
   }
 
   // Both ask for a folder first, and return nothing if that's canceled.
-  async function createWorkspace(projectId?: string) {
+  async function createWorkspace(projectId?: string): Promise<void> {
     const workspace = await window.api.workspace.create(projectId)
     if (!workspace) return
     setAll((current) => [...current, workspace])
     openWorkspace(workspace.id)
   }
 
-  async function createProject() {
+  async function createProject(): Promise<void> {
     const created = await window.api.project.create()
     if (!created) return
     setProjects((current) => [...current, created.project])
@@ -284,7 +286,7 @@ export default function App() {
     openWorkspace(created.workspace.id)
   }
 
-  async function closeWorkspace(id: string) {
+  async function closeWorkspace(id: string): Promise<void> {
     // Main saves it before the workspace unmounts and takes its terminals down.
     await window.api.workspace.close(id)
     const index = open.indexOf(id)
@@ -299,12 +301,12 @@ export default function App() {
     if (rest.length === 0) setOverview(true)
   }
 
-  function renameWorkspace(id: string, name: string) {
+  function renameWorkspace(id: string, name: string): void {
     setAll((current) => current.map((w) => (w.id === id ? { ...w, name } : w)))
     window.api.workspace.rename(id, name)
   }
 
-  async function removeWorkspace(id: string) {
+  async function removeWorkspace(id: string): Promise<void> {
     const name = all.find((w) => w.id === id)?.name
     const sure = await ask({
       title: `Delete workspace “${name}”?`,
@@ -319,14 +321,14 @@ export default function App() {
   }
 
   // A workspace from before folders existed picks one the first time an agent opens in it.
-  async function pickFolder(id: string) {
+  async function pickFolder(id: string): Promise<string | null> {
     const folder = await window.api.workspace.pickFolder(id)
     if (folder) setAll((current) => current.map((w) => (w.id === id ? { ...w, folder } : w)))
     return folder
   }
 
   // Returns the role as saved, with its key, or null if main turned it down.
-  async function saveRole(role: Role) {
+  async function saveRole(role: Role): Promise<SavedRole | null> {
     const saved = await window.api.roles.save(role)
     if (!saved) return null
     setCustomRoles((current) =>
@@ -337,26 +339,26 @@ export default function App() {
     return saved
   }
 
-  async function removeRole(key: string) {
+  async function removeRole(key: string): Promise<void> {
     if (await window.api.roles.remove(key)) {
       setCustomRoles((current) => current.filter((r) => r.key !== key))
     }
   }
 
   // The pet's click: to the agent's workspace and onto the agent. Its news has been seen.
-  function jumpTo({ workspaceId, nodeId, state }: AgentStatus) {
+  function jumpTo({ workspaceId, nodeId, state }: AgentStatus): void {
     if (!all.some((w) => w.id === workspaceId)) return
     openWorkspace(workspaceId)
     setJump({ workspaceId, nodeId, at: Date.now() })
     if (state !== 'working') window.api.agents.seen(workspaceId, nodeId)
   }
 
-  function renameProject(id: string, name: string) {
+  function renameProject(id: string, name: string): void {
     setProjects((current) => current.map((p) => (p.id === id ? { ...p, name } : p)))
     window.api.project.rename(id, name)
   }
 
-  async function removeProject(id: string) {
+  async function removeProject(id: string): Promise<void> {
     const project = projects.find((p) => p.id === id)
     const count = all.filter((w) => w.project === id).length
     const sure = await ask({
@@ -506,7 +508,7 @@ function SidebarPeek({
   workspace?: WorkspaceSummary | null
   projects: Project[]
   onShow: () => void
-}) {
+}): JSX.Element {
   const project = workspace && projects.find((p) => p.id === workspace.project)
   return (
     <div className="sidebar-peek">

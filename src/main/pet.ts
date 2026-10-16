@@ -34,7 +34,7 @@ export function registerDesktopPet(main: BrowserWindow): void {
   let peer: Socket | null = null
   let respawns = 0
   let stopping = false
-  let stopStatuses = () => {}
+  let stopStatuses = (): void => {}
 
   function message(data: object): void {
     if (peer && !peer.destroyed) peer.write(`${JSON.stringify(data)}\n`)

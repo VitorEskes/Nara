@@ -116,7 +116,7 @@ function agentParts({
   const { model, mode, access, kickoff } = roleProfile(role)
   const args: Arg[] = []
   const env: Env = { NARA_PROMPT: agentPrompt(nodeId, role, worktree) }
-  let message: string | null = null
+  const message: string | null = null
 
   if (agent === 'claude') {
     // The id ends up in a shell command line: anything but a UUID could smuggle in a command.

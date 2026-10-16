@@ -41,7 +41,7 @@ export function registerTheme(win: BrowserWindow): void {
   })
 
   // Also fires when the system switches while following it.
-  const onUpdated = () => win.setBackgroundColor(windowBackground())
+  const onUpdated = (): void => win.setBackgroundColor(windowBackground())
   nativeTheme.on('updated', onUpdated)
 
   win.on('closed', () => {

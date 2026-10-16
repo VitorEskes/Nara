@@ -444,7 +444,8 @@ export function resizeShape<S extends DraftShape>(
   keepRatio: boolean
 ): S {
   const local = toLocal(s, p)
-  let { x, y, w, h } = s
+  const { x, y } = s
+  let { w, h } = s
   let left = x
   let right = x + w
   let top = y
