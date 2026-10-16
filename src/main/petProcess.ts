@@ -10,12 +10,15 @@ import type { AgentReply, AgentStatus, NodeId, PetConfig } from '../shared/types
 // The desktop pet's process (pet.ts starts it with --nara-pet): one small transparent window over
 // every other, with the pet in its bottom right corner and room for its bubble and command center.
 // The window's shape follows what the renderer draws, so clicks elsewhere go through to whatever is
-// under it. It keeps none of the app's state: everything comes and goes over NARA_PET_SOCK.
+// under it. macOS has no window shapes: there the window lets the pointer through until it's over
+// the shape. It keeps none of the app's state: everything comes and goes over NARA_PET_SOCK.
 const SIZE = { width: 380, height: 540 }
 // Room left between the window and the edge of the screen at first.
 const MARGIN = 8
 // How often the window follows the pointer while the pet is dragged, in ms.
 const DRAG_EVERY = 16
+// How often macOS checks whether the pointer is over the shape, in ms.
+const POINTER_EVERY = 50
 
 export function runPetProcess(): void {
   // Its own browser session: the app's is in use by the app's process.
@@ -121,20 +124,20 @@ function start(): void {
   // Where the window takes the pointer: the rectangles the renderer draws in, in its pixels. Each
   // edge is rounded outward on its own, so a part that sits between pixels keeps its last row and
   // column (rounding the start down and the size up loses them).
+  let shape: Electron.Rectangle[] = []
   ipcMain.on('pet:shape', (_ev, rects: Electron.Rectangle[]) => {
     if (!Array.isArray(rects) || win.isDestroyed()) return
-    win.setShape(
-      rects.map(({ x, y, width, height }) => {
-        const left = Math.max(0, Math.floor(x))
-        const top = Math.max(0, Math.floor(y))
-        return {
-          x: left,
-          y: top,
-          width: Math.ceil(x + width) - left,
-          height: Math.ceil(y + height) - top
-        }
-      })
-    )
+    shape = rects.map(({ x, y, width, height }) => {
+      const left = Math.max(0, Math.floor(x))
+      const top = Math.max(0, Math.floor(y))
+      return {
+        x: left,
+        y: top,
+        width: Math.ceil(x + width) - left,
+        height: Math.ceil(y + height) - top
+      }
+    })
+    if (process.platform !== 'darwin') win.setShape(shape)
   })
 
   // Dragging: the window follows the pointer, kept where the press was on it, until let go.
@@ -156,4 +159,38 @@ function start(): void {
     const [x, y] = win.getPosition()
     writeAtomic(place, JSON.stringify({ x, y }))
   })
+
+  if (process.platform === 'darwin') {
+    passThroughOutside(
+      win,
+      () => shape,
+      () => Boolean(drag)
+    )
+  }
+}
+
+// On macOS the whole window would take the pointer, transparent parts and all, and the clicks
+// meant for what's under them (a file on the desktop) would never get there. So the window ignores
+// the mouse except while the pointer is over `shape` or the pet is being dragged. The pointer's
+// moves still reach the page, so hovering works as before.
+function passThroughOutside(
+  win: BrowserWindow,
+  shape: () => Electron.Rectangle[],
+  dragging: () => boolean
+): void {
+  let through = true
+  win.setIgnoreMouseEvents(true, { forward: true })
+  const timer = setInterval(() => {
+    if (win.isDestroyed()) return clearInterval(timer)
+    const point = screen.getCursorScreenPoint()
+    const bounds = win.getBounds()
+    const x = point.x - bounds.x
+    const y = point.y - bounds.y
+    const over = shape().some(
+      (rect) => x >= rect.x && x < rect.x + rect.width && y >= rect.y && y < rect.y + rect.height
+    )
+    if (through === !(over || dragging())) return
+    through = !through
+    win.setIgnoreMouseEvents(through, { forward: true })
+  }, POINTER_EVERY)
 }
