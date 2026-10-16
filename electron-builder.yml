@@ -1,28 +1,51 @@
 appId: dev.vitor.nara
 productName: Nara
+copyright: Copyright © 2026 Vitor
 directories:
   buildResources: build
+  output: dist
+# Only the build and the files it reads at runtime; electron-builder adds the production
+# dependencies from node_modules on its own.
 files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - out/**
+  - resources/**
 asarUnpack:
   - resources/**
   - node_modules/node-pty/**
+# node-pty ships N-API prebuilds for macOS and Windows and is compiled on install for Linux, so
+# nothing needs rebuilding for Electron.
+npmRebuild: false
+publish:
+  provider: github
+  owner: VitorEskes
+  repo: Nara
+
+mac:
+  category: public.app-category.developer-tools
+  entitlementsInherit: build/entitlements.mac.plist
+  # Not signed with a Developer ID yet: an ad-hoc signature is what lets the app run on Apple
+  # silicon. The hardened runtime only matters for notarization, and would reject the ad-hoc
+  # signed frameworks.
+  identity: '-'
+  hardenedRuntime: false
+  notarize: false
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+dmg:
+  artifactName: ${name}-${version}-${arch}.${ext}
+
 win:
   executableName: nara
+  target:
+    - target: nsis
+      arch: [x64]
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
-mac:
-  entitlementsInherit: build/entitlements.mac.plist
-  notarize: false
-dmg:
-  artifactName: ${name}-${version}.${ext}
+
 linux:
   # Matches the window's app id (package.json's desktopName), so the desktop shows Nara's icon for
   # the app and for the pet, which runs in a process of its own.
@@ -32,6 +55,8 @@ linux:
     - deb
   maintainer: Vitor
   category: Development
+  synopsis: A canvas for teams of coding agents
 appImage:
-  artifactName: ${name}-${version}.${ext}
-npmRebuild: false
+  artifactName: ${name}-${version}-${arch}.${ext}
+deb:
+  artifactName: ${name}_${version}_${arch}.${ext}

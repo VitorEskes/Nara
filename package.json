@@ -1,48 +1,53 @@
 {
   "name": "nara",
-  "version": "0.0.0",
-  "description": "AI coding agents on an infinite canvas",
+  "version": "0.1.0",
+  "description": "A desktop canvas for running teams of coding agents",
   "main": "./out/main/index.js",
   "desktopName": "nara.desktop",
   "author": "Vitor",
   "license": "MIT",
+  "homepage": "https://github.com/VitorEskes/Nara#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VitorEskes/Nara.git"
+  },
+  "bugs": {
+    "url": "https://github.com/VitorEskes/Nara/issues"
+  },
   "private": true,
   "scripts": {
-    "format": "prettier --write .",
-    "lint": "eslint --cache .",
+    "dev": "electron-vite dev",
+    "start": "electron-vite preview",
+    "build": "node --max-old-space-size=4096 node_modules/electron-vite/bin/electron-vite.js build",
+    "build:unpack": "npm run build && electron-builder --dir",
+    "build:mac": "npm run build && electron-builder --mac --publish never",
+    "build:win": "npm run build && electron-builder --win --publish never",
+    "build:linux": "npm run build && electron-builder --linux --publish never",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web",
-    "start": "electron-vite preview",
-    "dev": "electron-vite dev",
-    "build": "node --max-old-space-size=4096 node_modules/electron-vite/bin/electron-vite.js build",
-    "postinstall": "electron-builder install-app-deps",
-    "build:unpack": "npm run build && electron-builder --dir",
-    "build:win": "npm run build && electron-builder --win",
-    "build:mac": "npm run build && electron-builder --mac",
-    "build:linux": "npm run build && electron-builder --linux"
+    "lint": "eslint --cache .",
+    "format": "prettier --write .",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "@electron-toolkit/utils": "^4.0.0",
-    "@fontsource/geist-mono": "^5.3.0",
-    "@fontsource/open-runde": "^5.3.0",
-    "@fontsource/shippori-mincho-b1": "^5.3.0",
-    "@xterm/addon-fit": "^0.11.0",
-    "@xterm/xterm": "6.0.0",
-    "monaco-editor": "^0.57.0",
-    "node-pty": "^1.1.0",
-    "perfect-freehand": "^1.2.3",
-    "roughjs": "^4.6.6"
+    "node-pty": "^1.1.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^2.1.0",
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@electron-toolkit/eslint-config-ts": "^4.0.0",
     "@electron-toolkit/tsconfig": "^2.0.0",
+    "@fontsource/geist-mono": "^5.3.0",
+    "@fontsource/open-runde": "^5.3.0",
+    "@fontsource/shippori-mincho-b1": "^5.3.0",
     "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^5.1.1",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "6.0.0",
     "electron": "^39.2.6",
     "electron-builder": "^26.0.12",
     "electron-vite": "^5.0.0",
@@ -50,10 +55,16 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
+    "monaco-editor": "^0.57.0",
+    "perfect-freehand": "^1.2.3",
     "prettier": "^3.7.4",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
+    "roughjs": "^4.6.6",
     "typescript": "^6.0.3",
     "vite": "^7.2.6"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
