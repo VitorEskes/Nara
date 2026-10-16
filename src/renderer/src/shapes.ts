@@ -28,7 +28,7 @@ export type StyleKey = keyof FullShapeStyle
 export type DraftShape = Omit<Shape, 'id'> & { id: number | 'draft' }
 
 // The whiteboard on the canvas: shapes, lines, arrows, freehand strokes and text, all in world
-// coordinates, drawn over the nodes (Shapes.jsx). A shape is
+// coordinates, drawn over the nodes (Shapes.tsx). A shape is
 //
 //   { id, type, x, y, w, h, angle, style, text, points, seed }
 //

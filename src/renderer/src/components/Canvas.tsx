@@ -20,21 +20,14 @@ const GRID = 24
 // Every MAJOR-th dot is a brighter one, which keeps a sense of scale when zoomed far out.
 const MAJOR = 5
 
-// `children` live in the world, `overlay` too but drawn above them (and never taking the pointer).
+// `children` live in the world, `overlay` too but drawn above them, never taking the pointer.
 //
-// The pointer, as on a desktop:
-// - A left-button drag on empty canvas draws a selection box; onSelectBox gets the box in world
-//   coordinates as it changes, and whether it adds to the selection (with Shift or Ctrl held; a
-//   plain press on the canvas has already cleared it).
-// - The camera also pans from anywhere, over nodes too: dragging with the right button, with the
-//   middle one (except over a terminal's text, where it pastes), with Space held (`grab`), or
-//   with the hand tool. The wheel (two fingers on a touchpad) pans too, over nodes as well, except
-//   over the node that has the keyboard when it scrolls itself: a terminal clicked into, or a note
-//   being written with more text than fits. Ctrl+wheel (a pinch) zooms anywhere.
-// - With a drawing `tool` on (the whiteboard's, or the eraser), the nodes ignore the pointer and a
-//   left-button drag anywhere goes to onToolStart/Move/End, in world coordinates, with the event
-//   for its modifier keys.
-// - While `locked` (a browser fills the screen), the camera stays put: no pan, no zoom, no box.
+// - A left-button drag on empty canvas draws a selection box (onSelectBox, in world coordinates;
+//   Shift or Ctrl adds to the selection).
+// - The camera pans from anywhere: right or middle button, Space held (`grab`), the hand tool, or
+//   the wheel, except over the node that has the keyboard and scrolls itself. Ctrl+wheel zooms.
+// - With a drawing `tool` on, nodes ignore the pointer and drags go to onToolStart/Move/End.
+// - While `locked` (a browser fills the screen), the camera stays put.
 export default function Canvas({
   cam,
   setCam,

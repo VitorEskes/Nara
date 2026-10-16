@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
 // The app's own confirmations and notices, in place of the system's confirm() and alert(): a
-// small modal (DialogHost.jsx) that reads like the rest of the app and that a screen reader
+// small modal (DialogHost.tsx) that reads like the rest of the app and that a screen reader
 // announces as a dialog. One shows at a time; the rest wait their turn.
 
 export interface DialogOptions {

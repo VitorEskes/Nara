@@ -1,10 +1,10 @@
 import type { Role } from './types'
 
 // The roles an agent node can open with. Every agent learns how the canvas works; a role says who
-// it is on the team, and its settings (shared/prompt.js) hold it there: a model, how much it asks
+// it is on the team, and its settings (shared/prompt.ts) hold it there: a model, how much it asks
 // before acting, whether it can edit files, and a first message to start on. The renderer shows
 // `label` and `description` in the dialog and `label` on the node, in `tone` (one of the tones in
-// the renderer's nodeStyle.js). The user can add their own (main/roles.js).
+// the renderer's nodeStyle.ts). The user can add their own (main/roles.ts).
 //
 // The instructions work for an agent alone as well as in a team: with nobody linked, a reviewer
 // still reviews, it just reports to the user.

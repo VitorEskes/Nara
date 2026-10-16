@@ -25,7 +25,7 @@ interface TextHandlers {
   onTextDone?: (id: number) => void
 }
 
-// The whiteboard (shapes.js), in an <svg> drawn over the nodes in world coordinates; the camera
+// The whiteboard (shapes.ts), in an <svg> drawn over the nodes in world coordinates; the camera
 // transform handles pan and zoom. The svg ignores the pointer and each shape takes it only where
 // it's drawn (or filled), so the space between shapes still reaches the nodes underneath.
 // `selected` is a Set of shape ids; `editing` the id of the one whose text is being written.

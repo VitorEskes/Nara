@@ -56,8 +56,8 @@ const SECTIONS = {
 }
 
 // The sections each kind of node has, in order. What an agent is doing and has spent is in the
-// sidebar, by its name (WorkspaceNav.jsx); its changes are in the review. A plain terminal has a
-// role too, for the agent CLIs typed in it (main/shell.js); `running` is the one there now.
+// sidebar, by its name (WorkspaceNav.tsx); its changes are in the review. A plain terminal has a
+// role too, for the agent CLIs typed in it (main/shell.ts); `running` is the one there now.
 function sectionsFor(node: CanvasNode, running: string | null | undefined): Section[] {
   if (node.type === 'note') return ['format', 'settings']
   if (node.type === 'browser') return ['settings']
@@ -65,14 +65,10 @@ function sectionsFor(node: CanvasNode, running: string | null | undefined): Sect
   return ['changes', 'role', 'settings']
 }
 
-// The inspector on the right of the canvas, for the selected node: its name and state at the top,
-// its sections in tabs under them. With nothing selected, the notes and terminals on the canvas
-// (its agents are in the sidebar). `views` goes at its top: the workspace's views. `section` is the one picked, kept from node to node; onSection
-// changes it.
-// `nodes` and `links` are the whole canvas, for the connections; `roles` every role by key.
-// `statuses` and `telemetry` are what main reports about the agents, by node id. onChange gets the
-// node's fields that changed; onRestart starts its agent again. onNoteCommand sends a note an
-// edit from the Format section.
+// The inspector on the right of the canvas, for the selected node: its name and state at the top
+// and its sections in tabs below. With nothing selected it lists the notes and terminals on the
+// canvas. `section` is kept from node to node; onRestart starts the node's agent again and
+// onNoteCommand sends a note a block from the Format section.
 export default function Inspector({
   workspaceId,
   node,

@@ -6,10 +6,10 @@ import { roleProfile } from '../shared/prompt'
 import { readJson, writeAtomic } from './files'
 import type { Role, SavedRole } from '../shared/types'
 
-// The roles the user made, offered next to the built-in ones (shared/roles.js). They belong to the
+// The roles the user made, offered next to the built-in ones (shared/roles.ts). They belong to the
 // user, not to a workspace: they're saved in roles.json and every canvas sees them. Each is
 // { key, label, description, instructions, tone, model, mode, access, kickoff } (the last four
-// are its settings, shared/prompt.js). The key is made here and never changes, so a role that's
+// are its settings, shared/prompt.ts). The key is made here and never changes, so a role that's
 // renamed or rewritten stays on the nodes that use it.
 const VERSION = 1
 const custom = new Map<string, SavedRole>()

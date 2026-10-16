@@ -1,5 +1,5 @@
 // A note's text is Markdown, so agents read and write it as they would any file (`nara note`).
-// The editor (Note.jsx) works on blocks: one per line, each with a type and its text without the
+// The editor (Note.tsx) works on blocks: one per line, each with a type and its text without the
 // Markdown that makes it that type. A block is
 //
 //   { id, type, text, indent, checked }

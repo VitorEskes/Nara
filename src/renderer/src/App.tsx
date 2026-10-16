@@ -71,12 +71,12 @@ export default function App(): JSX.Element | null {
   const [prefs, setPrefs] = useState(recallPrefs)
   // The section the settings are open on, or false while they're closed.
   const [settings, setSettings] = useState<string | false>(false)
-  // What every agent is doing, for the pet (main's status.js).
+  // What every agent is doing, for the pet (main's status.ts).
   const [statuses, setStatuses] = useState<AgentStatus[]>([])
-  // What every agent has spent and is working on (main's telemetry.js): workspace id -> node id
+  // What every agent has spent and is working on (main's telemetry.ts): workspace id -> node id
   // -> its report.
   const [telemetry, setTelemetry] = useState(new Map<string, Map<NodeId, AgentReport>>())
-  // How much of their plans the agents have used (main's usage.js).
+  // How much of their plans the agents have used (main's usage.ts).
   const [limits, setLimits] = useState<Limits>({})
   // The node the pet sent the user to: the workspace it's in glides there once it's on screen.
   const [jump, setJump] = useState<Jump | null>(null)
@@ -84,7 +84,7 @@ export default function App(): JSX.Element | null {
   const [hudBound, setHudBound] = useState<boolean | null>(null)
   // The side panel on the right, open or not, the same on every workspace.
   const [inspector, setInspector] = useState(() => localStorage.getItem('inspector') !== 'closed')
-  // Where in the sidebar the workspace on screen puts its views and agents (WorkspaceNav.jsx).
+  // Where in the sidebar the workspace on screen puts its views and agents (WorkspaceNav.tsx).
   const [navSlot, setNavSlot] = useState<HTMLElement | null>(null)
   useEffect(() => {
     localStorage.setItem('inspector', inspector ? 'open' : 'closed')
@@ -103,7 +103,7 @@ export default function App(): JSX.Element | null {
     window.api.hud.enable(prefs.hud).then(setHudBound)
   }, [prefs.hud])
 
-  // The pet lives on the desktop, outside this window, over every app (main/pet.js).
+  // The pet lives on the desktop, outside this window, over every app (main/pet.ts).
   useEffect(() => {
     window.api.pet.configure({ pet: prefs.pet, size: prefs.petSize })
   }, [prefs.pet, prefs.petSize])
@@ -154,7 +154,7 @@ export default function App(): JSX.Element | null {
     return () => narrow.removeEventListener('change', onChange)
   }, [])
 
-  // 'light', 'dark' or 'system'; main applies it (see main/theme.js) and the CSS follows.
+  // 'light', 'dark' or 'system'; main applies it (see main/theme.ts) and the CSS follows.
   const [theme, setTheme] = useState<Theme>('dark')
 
   useEffect(() => {
@@ -320,7 +320,7 @@ export default function App(): JSX.Element | null {
     }
   }
 
-  // A workspace from before folders existed picks one the first time an agent opens in it.
+  // A workspace without a folder picks one the first time an agent opens in it.
   async function pickFolder(id: string): Promise<string | null> {
     const folder = await window.api.workspace.pickFolder(id)
     if (folder) setAll((current) => current.map((w) => (w.id === id ? { ...w, folder } : w)))

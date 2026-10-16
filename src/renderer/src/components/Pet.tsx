@@ -25,14 +25,12 @@ const SLOP = 4
 // How far around the pet its part of the window's shape reaches: it hops out of its box.
 const HOP = 16
 
-// The desktop pet (main/petProcess.js): alone on a transparent window over every app, in its
-// bottom right corner. It shows, in its bubble and its animation, what the agents in every open
-// workspace are doing. Clicking it opens the command center above it, where each agent can be
-// answered or visited (Nara comes to the front, on it); dragging it moves the window, which stays
-// where it's left. The pet and its size come from the settings, through the app.
+// The desktop pet (main/petProcess.ts), alone on a transparent window over every app. Its bubble
+// and animation show what the agents in every open workspace are doing; a click opens the command
+// center, where each agent can be answered or visited, and a drag moves the window.
 //
-// Only what's drawn takes the pointer: after every change the pet tells main the rectangles it
-// draws in, and the window lets clicks through everywhere else.
+// After every change it tells main the rectangles it draws in, and the window lets clicks through
+// everywhere else.
 export default function Pet(): JSX.Element | null {
   const [prefs, setPrefs] = useState<PetConfig | null>(null)
   const [statuses, setStatuses] = useState<AgentStatus[]>([])

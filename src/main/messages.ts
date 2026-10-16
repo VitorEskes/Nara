@@ -35,11 +35,9 @@ interface Request {
   args?: unknown
 }
 
-// Agents talk by running the `nara` command in their own terminal. The command talks to this
-// server over a socket, and the server pastes the message into the terminal on the other end of
-// the link as if someone had typed it. The agent there replies the same way.
-// A note on the other end of a link works as a shared scratchpad: the agent reads and writes it.
-// The pid in the name lets two Nara instances run at once without one stealing the other's socket.
+// Agents talk by running `nara` in their terminal. The command reaches this server over a socket,
+// and the server pastes the message into the terminal on the other end of the link as if someone
+// had typed it. The pid in the name keeps two running instances from sharing a socket.
 const SOCKET = join(tmpdir(), `nara-${process.pid}.sock`)
 
 // A terminal with only the shell in the foreground doesn't get messages: the Enter at the end
@@ -76,7 +74,7 @@ export function registerMessages(win: BrowserWindow): Record<string, string> {
     NARA_SOCK: SOCKET,
     NARA_ELECTRON: process.execPath,
     NARA_CLI: join(__dirname, 'cli.js'),
-    // The shell integration's functions run `nara run` by its full path (shell.js).
+    // The shell integration's functions run `nara run` by its full path (shell.ts).
     NARA_BIN: nara
   }
 }
@@ -99,7 +97,7 @@ async function handle(
   }
   const { workspaceId, nodeId } = sender
 
-  // An agent CLI typed in a plain terminal (shell.js): what to start it with, as if the node had
+  // An agent CLI typed in a plain terminal (shell.ts): what to start it with, as if the node had
   // opened with it. `agent` is the command typed; `args` are the user's own arguments.
   if (command === 'run') {
     const key = agentForCommand(agent)

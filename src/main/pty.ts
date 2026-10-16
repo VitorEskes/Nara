@@ -25,7 +25,7 @@ interface Terminal {
 export const terminals = new Map<number, Terminal>()
 let nextId = 1
 // Claude Code's hooks that tell Nara, through the `nara` command, when the agent takes a prompt,
-// ends its turn and asks for something (status.js), more reliably than its output can.
+// ends its turn and asks for something (status.ts), more reliably than its output can.
 export const HOOKS: Hooks = Object.fromEntries(
   [
     ['UserPromptSubmit', 'prompt'],
@@ -40,7 +40,7 @@ export const HOOKS: Hooks = Object.fromEntries(
 const KILL_GRACE = 2000
 // Exits still pending from kill().
 const exiting = new Set<Promise<unknown>>()
-// The context an agent gets as its first message (agents.js), by pty id, until it's delivered:
+// The context an agent gets as its first message (agents.ts), by pty id, until it's delivered:
 // { text, started, last }. It goes once the agent's start-up output has gone quiet, or after
 // CONTEXT_WAIT whatever it's doing.
 const contexts = new Map<number, { text: string; started: number; last: number }>()
@@ -79,7 +79,7 @@ export function registerPty(win: BrowserWindow, extraEnv: Record<string, string>
         ? startupLaunch(command, shell)
         : null
     // A plain terminal, or one that runs a command first, loads the shell integration
-    // (shell.js): an agent typed in it starts through Nara. An agent node's shell only runs the
+    // (shell.ts): an agent typed in it starts through Nara. An agent node's shell only runs the
     // agent, as it is.
     const integration = known ? { args: [], env: {} } : shellIntegration(shell)
     const args = [...integration.args, ...(launch ? ['-ic', launch.command] : [])]
@@ -283,7 +283,7 @@ export function currentCwd(workspaceId: string, nodeId: NodeId): string | undefi
 }
 
 // Resolves once every killed terminal is gone. Electron can't quit while a PTY's process is
-// alive (node-pty waits for it), so index.js holds the quit until then.
+// alive (node-pty waits for it), so index.ts holds the quit until then.
 export function terminalsExited(): Promise<unknown[]> {
   return Promise.all(exiting)
 }

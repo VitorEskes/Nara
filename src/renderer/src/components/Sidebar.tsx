@@ -20,14 +20,11 @@ import { SHORTCUTS, keysLabel, type Shortcut } from '../shortcuts'
 import type { Project } from '../../../shared/types'
 import { ariaKeys, tip } from '../tip'
 
-// Column on the left: the app's actions, then every project with its workspaces, then the loose
-// workspaces. Clicking a workspace opens it, and clicking a project opens one of its workspaces;
-// an open one stays mounted, with its terminals running, until it's closed here. Only a closed workspace can be deleted, and only a project with none open. `active` is
-// the workspace on screen, if any: with the overview showing there is none. It opens into a card
-// whose slot (onSlot) the workspace fills with its branch and agents (WorkspaceNav.jsx). The other
-// open ones show how their agents are doing: `summaries` has each one's most urgent state and
-// its count of agents. While `hidden`, the sidebar slides shut and nothing in it can take focus.
-// At the bottom, the way to the settings.
+// The column on the left: the app's actions, the projects with their workspaces, then the loose
+// workspaces. An open workspace stays mounted, with its terminals running, until it's closed here;
+// only closed workspaces can be deleted. The active one opens into a card that the workspace fills
+// with its branch and agents (onSlot, WorkspaceNav.tsx); the others show their most urgent state.
+// While `hidden`, it slides shut and nothing in it can take focus.
 export default function Sidebar({
   projects,
   workspaces,

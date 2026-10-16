@@ -121,18 +121,15 @@ const FLY_TIME = 260
 // clears the dock.
 const FIT_PADDING = { side: 64, top: 64, bottom: 110 }
 
-// One canvas with its camera, nodes, links and whiteboard. `saved` is what was loaded from disk: from then on
-// this component owns the state, and main keeps a copy that it saves.
-// An inactive workspace is hidden, not unmounted, so its terminals keep running. New terminals
-// and agents open in `folder`; a workspace from before folders existed has none, and onPickFolder
-// asks for one. `roles` has every role an agent can take, built-in and custom, by key; onSaveRole
-// and onRemoveRole change the custom ones. `commands` are the agents' commands from the settings,
-// for the new terminal dialog. `jump` ({ nodeId, at }) is the pet sending the user to one of this
-// workspace's agents. `meta` and `project` are the workspace's name and project, for the top bar;
-// `statuses` and `telemetry` what main reports about its agents, by node id. `inspector` says
-// whether the side panel is open, and onInspector opens or closes it. `navSlot` is where in the sidebar its views and
-// agents go while it's on screen, or null while the sidebar is hidden. onShortcuts opens the list
-// of shortcuts (the ? key).
+// One canvas with its camera, nodes, links and whiteboard. `saved` is what was loaded from disk;
+// from then on this component owns the state, and main keeps a copy that it saves. An inactive
+// workspace is hidden, not unmounted, so its terminals keep running.
+//
+// New terminals open in `folder`; without one, onPickFolder asks for it. `roles` has every role,
+// built-in and custom, by key. `jump` ({ nodeId, at }) is the pet sending the user to one of this
+// workspace's agents. `statuses` and `telemetry` are what main reports about its agents, by node
+// id. `navSlot` is where in the sidebar its views and agents go, or null while the sidebar is
+// hidden.
 export default function Workspace({
   workspaceId,
   saved,
@@ -186,7 +183,7 @@ export default function Workspace({
   // Link being dragged: source node, tip in world coordinates and the valid node under the
   // cursor (or null).
   const [draft, setDraft] = useState<LinkDraft | null>(null)
-  // 'hand', 'erase', a whiteboard tool (whiteboard.js) or null: the pointer works on the nodes
+  // 'hand', 'erase', a whiteboard tool (whiteboard.ts) or null: the pointer works on the nodes
   // and shapes as usual.
   const [tool, setTool] = useState<Tool>(null)
   // The shape the dock's shapes button draws: the last one picked from its menu.
@@ -237,7 +234,7 @@ export default function Workspace({
   const [listingSeq, setListingSeq] = useState(0)
   // Folders made in the explorer that have no files yet: git doesn't list those.
   const [madeFolders, setMadeFolders] = useState<string[]>([])
-  // The review view (ReviewView.jsx): the item showing, split or inline, and by repository what's
+  // The review view (ReviewView.tsx): the item showing, split or inline, and by repository what's
   // been viewed and the comments not sent yet. Saved with the workspace.
   const [review, setReview] = useState<ReviewState>(() => ({
     folder: null,
@@ -246,7 +243,7 @@ export default function Workspace({
     ...saved.review
   }))
   const [reviewMounted, setReviewMounted] = useState(code.mode === 'review')
-  // What the agents changed (main/review.js), or null until it's first read.
+  // What the agents changed (main/review.ts), or null until it's first read.
   const [queue, setQueue] = useState<ReviewItem[] | null>(null)
   const [queueSeq, setQueueSeq] = useState(0)
   // The browser node filling the room between the panels, or null, and the box it was resized
@@ -1002,7 +999,7 @@ export default function Workspace({
     Boolean(draft && node.id !== draft.from && !canLink(draft.from, node.id))
   const linkSource = draft ? nodes.find((n) => n.id === draft.from) : undefined
   const hasTargets = draft ? nodes.some((n) => canLink(draft.from, n.id)) : false
-  // The agent in a terminal: the one it opened with, or one typed in it (main/shell.js).
+  // The agent in a terminal: the one it opened with, or one typed in it (main/shell.ts).
   const agentOf = (n: NodeData): string | null =>
     n.agent && AGENTS[n.agent] ? n.agent : (statuses.get(n.id)?.agent ?? null)
   const agentNodes = nodes

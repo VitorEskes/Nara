@@ -123,7 +123,7 @@ function AgentRow({
           )}
         </span>
         <div className="command-actions">
-          {/* Only for agents whose keys for yes and no Nara knows (shared/agents.js). */}
+          {/* Only for agents whose keys for yes and no Nara knows (shared/agents.ts). */}
           {status.state === 'waiting' && AGENTS[status.agent]?.answers && (
             <>
               <button className="command-answer yes" onClick={() => reply({ kind: 'yes' })}>

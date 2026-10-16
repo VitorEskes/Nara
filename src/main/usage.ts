@@ -19,15 +19,13 @@ interface CodexWindow {
   window_minutes?: number
 }
 
-// How much of their plan's limits the agents have used: the share of the 5-hour window and of
-// the week, and when each resets. Claude's come from the same place Claude Code's /usage reads
-// them, with the login Claude Code keeps on this computer, every few minutes: that counts what
-// the user spent anywhere, not only in Nara. Claude Code also hands them to the status line
-// command Nara sets for its agents (`nara statusline`, see agents.js), which fills in between
-// reads. Codex writes its own into its rollouts. The latest of each is kept in usage.json, so the
-// top bar has them from the start; a window whose reset has passed is dropped.
+// How much of their plans the agents have used: the share of the 5-hour window and of the week,
+// and when each resets. Claude's limits are read every few minutes from the endpoint Claude Code's
+// /usage uses, with Claude Code's login, and between reads from the status line Nara sets for its
+// agents (`nara statusline`). Codex writes its own into its rollouts. The latest of each is kept
+// in usage.json so the top bar has them at startup.
 //
-// A provider's report is { fiveHour: { used, resetsAt }, sevenDay: { used, resetsAt }, updated },
+// A report is { fiveHour: { used, resetsAt }, sevenDay: { used, resetsAt }, updated }, with
 // `used` from 0 to 100 and times in ms.
 const CODEX_EVERY = 60000
 const CLAUDE_EVERY = 3 * 60000

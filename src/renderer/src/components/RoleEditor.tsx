@@ -44,7 +44,7 @@ const IDEAS: Role[] = [
 ]
 
 // Writing a role: its name and tone, a line about it, the instructions, and the settings that hold
-// the agent to it (shared/prompt.js). A new, empty role offers a few to start from. `draft` is the
+// the agent to it (shared/prompt.ts). A new, empty role offers a few to start from. `draft` is the
 // role as written so far; onChange gets the fields that changed. The new terminal dialog, the side
 // panel and the settings all use it.
 export default function RoleEditor({
@@ -269,8 +269,8 @@ export function RoleBadges({ role }: { role: Role }): JSX.Element | null {
   )
 }
 
-// What the chosen role tells the agent, and the settings it comes with. Built-in roles can only be read; custom ones can be
-// edited and deleted, the deletion after a second click.
+// What the chosen role tells the agent, and the settings it comes with. Built-in roles are
+// read-only; custom ones can be edited, and deleted with a second click.
 export function RoleDetail({
   role,
   custom,

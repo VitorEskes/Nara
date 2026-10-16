@@ -46,7 +46,7 @@
   --state-failed: var(--danger);
   --state-idle: var(--text-4);
 
-  /* The terminals: dark islands in both themes, since xterm's own colors (Terminal.jsx) don't
+  /* The terminals: dark islands in both themes, since xterm's own colors (Terminal.tsx) don't
      follow the theme. */
   --terminal: #19191c;
   --terminal-bar: #1f1f23;
@@ -111,7 +111,7 @@
 }
 
 /* The light theme: near-white surfaces with the same steps, charcoal text, and the green deeper so
-   it reads on white. Electron's nativeTheme decides which applies (see main/theme.js): light,
+   it reads on white. Electron's nativeTheme decides which applies (see main/theme.ts): light,
    dark, or whatever the system uses. */
 @media (prefers-color-scheme: light) {
   :root {
@@ -182,7 +182,7 @@
   }
 }
 
-/* The theme switch crossfades the whole window (App.jsx). */
+/* The theme switch crossfades the whole window (App.tsx). */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: var(--slow);
@@ -390,7 +390,7 @@ kbd {
 }
 
 /* The text is only seen: the button's name is its aria-label, and its shortcut is in
-   aria-keyshortcuts (tip.js). Both are left out of what a screen reader reads here (the "/ ''"). */
+   aria-keyshortcuts (tip.ts). Both are left out of what a screen reader reads here (the "/ ''"). */
 [data-tip]::after {
   content: attr(data-tip) / '';
   position: absolute;
@@ -523,7 +523,7 @@ kbd {
 
 /* Canvas */
 
-/* Canvas.jsx scales and moves the dots with the camera, and fades the small ones out when zoomed
+/* Canvas.tsx scales and moves the dots with the camera, and fades the small ones out when zoomed
    far out, where they would turn into noise. */
 .viewport {
   position: relative;
@@ -648,7 +648,7 @@ kbd {
   }
 }
 
-/* A terminal is an island in its own colors (terminalThemes.js), which CanvasNode sets as
+/* A terminal is an island in its own colors (terminalThemes.ts), which CanvasNode sets as
    --terminal and --terminal-bar. Inside it the tokens switch to their dark values, so the bar, its
    buttons and its text read on charcoal; a light theme (data-scheme) switches them back. The
    preview in the new terminal dialog is an island too. */
@@ -847,7 +847,7 @@ kbd {
   background: color-mix(in srgb, var(--tone) 14%, transparent);
 }
 
-/* A tone by name, for roles and terminals (nodeStyle.js). On an island the names point to the
+/* A tone by name, for roles and terminals (nodeStyle.ts). On an island the names point to the
    island's own versions, lighter on a dark terminal. */
 [data-tone='green'] {
   --tone: var(--tone-green);
@@ -1079,7 +1079,7 @@ kbd {
   border-color: rgb(var(--shade) / 22%);
 }
 
-/* A note's blocks (Note.jsx), scrolling when they run past the card. */
+/* A note's blocks (Note.tsx), scrolling when they run past the card. */
 .note-text {
   user-select: text;
   position: absolute;
@@ -1445,7 +1445,7 @@ kbd {
     var(--shadow-node);
 }
 
-/* Links: a rope pinned between two nodes (Links.jsx). Four strokes of the same path make it: a
+/* Links: a rope pinned between two nodes (Links.tsx). Four strokes of the same path make it: a
    soft shadow under it, the body, a twisted strand of light along it and, while an agent on
    either end is at work, a pulse running down it. Every stroke is non-scaling: the rope keeps
    its weight on screen at any zoom. */
@@ -2124,7 +2124,7 @@ kbd {
   flex-shrink: 0;
 }
 
-/* See Path in Overview.jsx: rtl puts the ellipsis at the start of the path. */
+/* See Path in Overview.tsx: rtl puts the ellipsis at the start of the path. */
 .path {
   min-width: 0;
   overflow: hidden;
@@ -3060,7 +3060,7 @@ kbd {
   background: var(--hover-soft);
 }
 
-/* See Path in Overview.jsx: rtl puts the ellipsis at the start of the path. */
+/* See Path in Overview.tsx: rtl puts the ellipsis at the start of the path. */
 .inspector-row-text {
   flex: 1;
   min-width: 0;
@@ -3708,7 +3708,7 @@ kbd {
   outline-offset: -2px;
 }
 
-/* The new terminal dialog (Launcher.jsx): a title, three tabs and the actions, at a fixed size
+/* The new terminal dialog (Launcher.tsx): a title, three tabs and the actions, at a fixed size
    so it doesn't jump between tabs. A native modal <dialog>, so it sits over everything, keeps the
    focus inside and closes on Escape. */
 
@@ -4565,7 +4565,7 @@ kbd {
   }
 }
 
-/* A terminal's look (TerminalLook.jsx), in the dialog and in the side panel. */
+/* A terminal's look (TerminalLook.tsx), in the dialog and in the side panel. */
 
 .themes {
   display: grid;
@@ -4779,7 +4779,7 @@ kbd {
   box-shadow: inset 0 -2px 0 currentColor;
 }
 
-/* The settings (Settings.jsx): a dialog with the sections down the left, on the sidebar's color,
+/* The settings (Settings.tsx): a dialog with the sections down the left, on the sidebar's color,
    and the chosen one on the right. It opens and closes like the new terminal dialog. */
 
 .settings {
@@ -5275,7 +5275,7 @@ kbd {
   background: var(--bg);
 }
 
-/* The pet (Pet.jsx), in the corner of the window over everything but the dialogs, with its
+/* The pet (Pet.tsx), in the corner of the window over everything but the dialogs, with its
    bubble above it. */
 
 .pet {
@@ -5553,7 +5553,7 @@ kbd {
   }
 }
 
-/* The desktop pet (Pet.jsx), in the bottom right corner of its own window, its bubble and its
+/* The desktop pet (Pet.tsx), in the bottom right corner of its own window, its bubble and its
    command center opening up and to the left inside it. */
 .desktop-pet {
   right: 8px;
@@ -5566,7 +5566,7 @@ kbd {
   box-shadow: none;
 }
 
-/* The command center (CommandCenter.jsx): a summary, then the agents by workspace, the most
+/* The command center (CommandCenter.tsx): a summary, then the agents by workspace, the most
    urgent first. The pet opens it in a panel; the HUD is made of it. */
 
 .pet-panel {
@@ -5816,7 +5816,7 @@ kbd {
   font-size: 12.5px;
 }
 
-/* The floating HUD (Hud.jsx): a card on a transparent window, dragged by its header. */
+/* The floating HUD (Hud.tsx): a card on a transparent window, dragged by its header. */
 
 html.hud,
 html.hud body,
@@ -5879,7 +5879,7 @@ html.hud #root {
   overflow-y: auto;
 }
 
-/* On/off settings (fields.jsx's Switch). */
+/* On/off settings (fields.tsx's Switch). */
 
 .settings-toggles {
   display: flex;
@@ -5981,7 +5981,7 @@ html.hud #root {
   color: inherit;
 }
 
-/* The whiteboard (Shapes.jsx): shapes over the nodes, taking the pointer only where drawn. */
+/* The whiteboard (Shapes.tsx): shapes over the nodes, taking the pointer only where drawn. */
 .shapes {
   position: absolute;
   top: 0;
@@ -6824,7 +6824,7 @@ html.hud #root {
   }
 }
 
-/* The code view (CodeView.jsx): the open files as tabs over a Monaco editor, in the room the
+/* The code view (CodeView.tsx): the open files as tabs over a Monaco editor, in the room the
    canvas had, between the top bar and the explorer on the right. Opaque: the canvas keeps running
    under it, out of sight. */
 
@@ -7208,7 +7208,7 @@ html.hud #root {
   cursor: default;
 }
 
-/* The explorer (Explorer.jsx): the inspector's panel, holding the folder's tree. */
+/* The explorer (Explorer.tsx): the inspector's panel, holding the folder's tree. */
 .explorer-actions {
   display: flex;
   gap: 1px;
@@ -7430,7 +7430,7 @@ html.hud #root {
   background: var(--edge);
 }
 
-/* The review view (ReviewView.jsx): the agents' changes as tabs over a diff, the files and the
+/* The review view (ReviewView.tsx): the agents' changes as tabs over a diff, the files and the
    actions in the panel on the right. */
 .review-tab {
   max-width: 300px;
@@ -8155,7 +8155,7 @@ html.hud #root {
   color: var(--danger);
 }
 
-/* An agent's state as a mark (StateGlyph.jsx). */
+/* An agent's state as a mark (StateGlyph.tsx). */
 .state-glyph {
   flex-shrink: 0;
   color: var(--state-idle);
@@ -8188,7 +8188,7 @@ html.hud #root {
   }
 }
 
-/* The workspace's views as icons (ViewSwitch.jsx): at the top of the side panel, and in the top
+/* The workspace's views as icons (ViewSwitch.tsx): at the top of the side panel, and in the top
    bar while the panel is closed. */
 .view-switch {
   display: flex;
@@ -8298,7 +8298,7 @@ html.hud #root {
   background: var(--accent-fill);
 }
 
-/* A small modal (Modal.jsx): a title, a field or two, and its buttons. A native <dialog>, over
+/* A small modal (Modal.tsx): a title, a field or two, and its buttons. A native <dialog>, over
    everything, like the new terminal dialog. */
 .modal {
   width: min(440px, calc(100vw - 48px));
@@ -8415,7 +8415,7 @@ html.hud #root {
   background: color-mix(in srgb, var(--danger) 58%, black);
 }
 
-/* Browser nodes (BrowserNode.jsx): an address bar over the page. */
+/* Browser nodes (BrowserNode.tsx): an address bar over the page. */
 .node[data-type='browser'] {
   background: var(--stone);
 }
@@ -8597,7 +8597,7 @@ html.hud #root {
 }
 
 /* A browser filling the room between the panels. Its box is in world coordinates scaled back by
-   the zoom (Workspace.jsx); it glides there from its place. Everything else on the canvas stays
+   the zoom (Workspace.tsx); it glides there from its place. Everything else on the canvas stays
    under it, and what's drawn above the nodes steps aside. */
 .node.expanded {
   z-index: 100000 !important;

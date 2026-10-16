@@ -40,7 +40,7 @@ interface Memory {
 type Tab = 'general' | 'style' | 'role'
 
 // The programs a new terminal can open with: the shell, then the main agents, each with the
-// command that starts it. The other agent CLIs (shared/agents.js) start from a plain terminal,
+// command that starts it. The other agent CLIs (shared/agents.ts) start from a plain terminal,
 // typed in it or as its command, and get the same context there.
 const LISTED = ['claude', 'codex', 'gemini']
 const PROGRAMS = [
@@ -68,15 +68,10 @@ const NO_ROLE: Role = {
   none: true
 }
 
-// The dialog behind the dock's Terminal button, in three tabs: General (the program, which is the
-// only choice that matters, its name, the command that starts it and the folder), Style (the
-// look, with a preview) and Role (for the agent, or in a plain terminal for whichever agent CLI
-// starts in it). Every tab starts filled in, so the
-// terminal can open from any of them. `number` is the id the node will get, for its default name;
-// `folder` is the workspace's. `roles` has every role, built-in and custom, by key; onSaveRole and
-// onRemoveRole change the custom ones; `commands` has the commands set in the settings in place
-// of the agents' own. onCreate gets { agent, title, cwd, role, command, style },
-// with only what applies to the program.
+// The new terminal dialog, in three tabs: General (the program, its name, command and folder),
+// Style (its look, with a preview) and Role. Every tab starts filled in, so the terminal can open
+// from any of them. `number` is the id the node will get, for its default name, and `commands` the
+// agents' commands from the settings. onCreate gets only the fields that apply to the program.
 export default function Launcher({
   number,
   folder,

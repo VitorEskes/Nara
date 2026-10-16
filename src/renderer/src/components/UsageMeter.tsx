@@ -15,7 +15,7 @@ export interface Spend {
 // How much of their plans the agents have used, in the top bar: for each provider, a bar with the
 // share of the 5-hour window and the share of the week. A click opens the details under it: when
 // each window resets, and what this workspace's agents have spent. `limits` comes from main's
-// usage.js; `spend` is this workspace's { tokens, cost, agents: [{ id, name, agent, usage }] }.
+// usage.ts; `spend` is this workspace's { tokens, cost, agents: [{ id, name, agent, usage }] }.
 export default function UsageMeter({
   limits,
   spend,

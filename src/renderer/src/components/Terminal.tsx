@@ -10,14 +10,10 @@ import { TERMINAL_THEMES } from '../terminalThemes'
 // How long to wait between pasting a message from another agent and pressing Enter.
 const ENTER_DELAY = 500
 
-// A real terminal: xterm.js draws it, the PTY in main runs it.
-// `workspaceId` and `nodeId` say which canvas node the PTY belongs to, and so which links apply.
-// With `agent` (a key of AGENTS), the PTY opens straight into that agent instead of a shell, and
-// `session` is the id its conversation is saved under. `role` (a key of ROLES or a custom role)
-// goes into the prompt the agent opens with: changing it restarts the agent, which resumes its
-// conversation under the new role. `command` is what the user
-// typed to start it, in place of the agent's own; without an agent it runs in the shell as it
-// opens. `look` (terminalLook) changes in place, without touching the PTY.
+// A terminal: xterm.js draws it and a PTY in main runs it. `workspaceId` and `nodeId` say which
+// node the PTY belongs to, and so which links apply. With `agent`, the PTY opens straight into
+// that agent, and `session` is the id its conversation is saved under; changing `role` restarts
+// the agent, which resumes under the new role. `look` changes in place without touching the PTY.
 export default function Terminal({
   workspaceId,
   nodeId,
@@ -170,8 +166,7 @@ export default function Terminal({
 // xterm computes the cell under the mouse as (clientX - rect.left) / cellWidth: the distance is
 // in screen px (already including the canvas scale) and the cell in layout px (without it). Here
 // the event is "unscaled" before it reaches xterm. This uses a private API (_core), which is why
-// @xterm/xterm is pinned in package.json — check that this still holds when upgrading.
-// The part of xterm's private mouse service this replaces.
+// @xterm/xterm is pinned in package.json: check that this still holds when upgrading.
 interface MouseService {
   getCoords: (event: Coords, element: HTMLElement, ...rest: unknown[]) => unknown
   getMouseReportCoords: (event: Coords, element: HTMLElement) => unknown

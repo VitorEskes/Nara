@@ -85,7 +85,7 @@ const api = {
     set: (theme: Theme) => ipcRenderer.send('theme:set', theme)
   },
   roles: {
-    // The roles the user made; the built-in ones are in shared/roles.js.
+    // The roles the user made; the built-in ones are in shared/roles.ts.
     list: (): Promise<SavedRole[]> => ipcRenderer.invoke('roles:list'),
     save: (role: Role): Promise<SavedRole | null> => ipcRenderer.invoke('roles:save', role),
     remove: (key: string): Promise<boolean> => ipcRenderer.invoke('roles:remove', key)
@@ -137,7 +137,7 @@ const api = {
   },
   browser: {
     // A browser node's page, so `nara browser` in a linked terminal can drive and read it
-    // (main/browser.js). `contentsId` is its webview's webContents id.
+    // (main/browser.ts). `contentsId` is its webview's webContents id.
     attach: (workspaceId: string, nodeId: NodeId, contentsId: number) =>
       ipcRenderer.send('browser:attach', workspaceId, nodeId, contentsId),
     detach: (workspaceId: string, nodeId: NodeId) =>
@@ -146,7 +146,7 @@ const api = {
     onKey: (fn: (key: BrowserKey) => void) => listen('browser:key', fn)
   },
   code: {
-    // Every path is absolute and has to be inside one of the workspace's folders (main/code.js).
+    // Every path is absolute and has to be inside one of the workspace's folders (main/code.ts).
     // { files, status, repo, truncated } for a folder; files are relative to it.
     list: (workspaceId: string, root: string): Promise<CodeListing | { error: string }> =>
       ipcRenderer.invoke('code:list', workspaceId, root),
@@ -174,7 +174,7 @@ const api = {
     onChanged: (fn: (path: string) => void) => listen('code:changed', fn)
   },
   review: {
-    // What the workspace's agents changed, one item per repository (main/review.js).
+    // What the workspace's agents changed, one item per repository (main/review.ts).
     queue: (workspaceId: string): Promise<ReviewItem[]> =>
       ipcRenderer.invoke('review:queue', workspaceId),
     // `path` is relative to the item's folder; `commit` is the item's baseCommit.
@@ -200,7 +200,7 @@ const api = {
   },
   telemetry: {
     // [{ workspaceId, nodeId, agent, model, title, usage, tasks, activity, lines }], each agent's
-    // report (main/telemetry.js); an update can carry { workspaceId, nodeId, removed: true }.
+    // report (main/telemetry.ts); an update can carry { workspaceId, nodeId, removed: true }.
     list: (): Promise<AgentReport[]> => ipcRenderer.invoke('telemetry:list'),
     onUpdate: (fn: (reports: (AgentReport | RemovedReport)[]) => void) =>
       listen('telemetry:update', fn)
@@ -212,9 +212,9 @@ const api = {
     jump: (status: AgentStatus) => ipcRenderer.send('hud:jump', status)
   },
   pet: {
-    // The app tells main which pet is out on the desktop, if any: { pet, size } (main/pet.js).
+    // The app tells main which pet is out on the desktop, if any: { pet, size } (main/pet.ts).
     configure: (config: PetConfig) => ipcRenderer.send('pet:configure', config),
-    // The rest is the desktop pet's own window (main/petProcess.js).
+    // The rest is the desktop pet's own window (main/petProcess.ts).
     prefs: (): Promise<PetConfig> => ipcRenderer.invoke('pet:prefs'),
     onPrefs: (fn: (prefs: PetConfig) => void) => listen('pet:prefs', fn),
     // The rectangles it draws in, in its pixels: only those take the pointer.

@@ -21,18 +21,14 @@ import type {
 // On disk a freehand stroke's points are a string (packShape below).
 type StoredShape = Omit<Shape, 'points'> & { points?: string | [number, number][] }
 
-// Each workspace is a canvas saved to its own JSON file, named after a random id so renaming a
-// workspace never touches the file. state.json remembers which workspaces were open and which one
-// was active.
+// Each workspace is a canvas saved to its own JSON file, named after a random id so renaming it
+// never touches the file. state.json remembers which workspaces were open and which was active.
+// A workspace has the folder its terminals open in and may belong to a project: a name and a
+// default folder, kept in projects.json.
 //
-// A workspace has the folder its terminals and agents open in, and may belong to a project. A
-// project is a name and a default folder for the workspaces created in it; the projects are all
-// in projects.json. A workspace without a project is a loose one, as every workspace was before
-// projects existed (those also have no folder until an agent asks for one).
-//
-// The renderer owns the live state and sends a copy on every change. Main keeps the latest copy
-// of each open workspace here, which is also where message routing reads the links from, and
-// writes it to disk once the changes settle: a single drag produces dozens of updates per second.
+// The renderer owns the live state and sends a copy on every change. Main keeps the latest copy of
+// each open workspace (message routing reads the links from it) and writes it to disk once the
+// changes settle, since a single drag produces dozens of updates per second.
 const VERSION = 1
 const SAVE_DELAY = 1000
 
@@ -95,7 +91,7 @@ export function registerWorkspaces(win: BrowserWindow): void {
     return project ? create({ project: project.id, folder }) : create({ folder })
   })
 
-  // For a workspace from before folders existed, the first agent opened in it picks one.
+  // A workspace without a folder asks for one when the first agent opens in it.
   ipcMain.handle('workspace:pick-folder', async (_ev, id: string) => {
     const workspace = workspaces.get(id)
     if (!workspace) return null
@@ -163,7 +159,7 @@ export function registerWorkspaces(win: BrowserWindow): void {
   })
 
   // Saves right away instead of waiting for the timers, while the shells are still alive to
-  // report their directory (pty.js kills them on 'closed', which comes after this).
+  // report their directory (pty.ts kills them on 'closed', which comes after this).
   win.on('close', () => {
     for (const id of workspaces.keys()) save(id)
   })

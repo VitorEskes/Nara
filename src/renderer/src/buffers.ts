@@ -13,13 +13,10 @@ export interface Buffer {
 }
 
 // The files open in the code view, one buffer per file however many workspaces have it open: a
-// Monaco model, the version that was last saved and the file's mtime then. Agents edit the same
-// files, so each buffer also keeps up with the disk:
-// - the file changed and the buffer has no edits of the user's: it takes the new text;
-// - it has some: the buffer is in 'conflict' and the editor asks what to keep;
-// - the file is gone: the buffer is 'missing' until it's saved again.
-// A save checks the file didn't change since it was read, and never writes over an agent's work
-// without asking.
+// Monaco model, the last saved version and the file's mtime. Agents edit the same files, so:
+// - a file that changed while the buffer has no edits takes the new text;
+// - with edits, the buffer is in 'conflict' and the editor asks what to keep;
+// - a file that's gone is 'missing' until it's saved again.
 const buffers = new Map<string, Buffer>()
 const listeners = new Set<() => void>()
 let version = 0

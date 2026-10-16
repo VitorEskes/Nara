@@ -15,15 +15,11 @@ import type { NodeId } from '../../../shared/types'
 const PARTITION = 'persist:nara-browser'
 const HOME = 'about:blank'
 
-// A web page on the canvas: an address bar over an Electron <webview>, which runs the page in a
-// process of its own (main/browser.js locks it down). `url` is where it was last, saved with the
-// workspace; onUrl hears every navigation. A linked agent drives it through main with `nara
-// browser`, so the page tells main who it is once it's ready.
+// A web page on the canvas: an address bar over an Electron <webview>, which runs the page in its
+// own process (main/browser.ts locks it down). Linked agents drive it with `nara browser`.
 //
-// On the canvas a page would take the wheel and every click from the camera, so it only takes
-// the pointer while `interactive` (its node selected, or expanded); until then a shield over it
-// passes the press to the node, which selects it. `expanded` fills the room between the panels;
-// onExpand toggles it.
+// A page would take the wheel and every click from the camera, so it only takes the pointer while
+// `interactive` (selected or expanded); until then a shield over it passes the press to the node.
 export default function BrowserNode({
   workspaceId,
   nodeId,

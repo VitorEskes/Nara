@@ -6,7 +6,7 @@ import { URGENCY, byUrgency } from '../agentStatus'
 import { tip } from '../tip'
 import type { AgentStatus } from '../../../shared/types'
 
-// The floating HUD (main/hud.js): the pet and its command center in a small window over every
+// The floating HUD (main/hud.ts): the pet and its command center in a small window over every
 // app, summoned with the global shortcut. Escape or the close button puts it away; going to an
 // agent brings Nara to the front, on that agent.
 export default function Hud(): JSX.Element {

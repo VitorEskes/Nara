@@ -14,14 +14,13 @@ type PetMessage =
   | { type: 'seen'; workspaceId: string; nodeId: NodeId }
   | { type: 'jump'; status: AgentStatus }
 
-// The desktop pet: the pet lives outside Nara's window, over every app on the screen, for as long
-// as one is picked in the settings. It runs as a second Electron process of the app itself (the
-// `--nara-pet` flag, petProcess.js), because a window that stays on top and is placed where the
-// user leaves it is something only X11 grants: under Wayland the compositor decides both, so there
-// the pet's process runs through XWayland while the app stays on Wayland.
+// The desktop pet lives outside Nara's window, over every app, while one is picked in the
+// settings. It runs as a second process of the app (`--nara-pet`, petProcess.ts) because under
+// Wayland only an XWayland window can stay on top and be placed where the user leaves it; the app
+// itself stays on Wayland.
 //
-// The two talk over a socket, one JSON message per line. The app sends the agents' statuses and
-// the pet's settings; the pet sends the user's answers to the agents and asks to be taken to one.
+// The two talk over a socket, one JSON message per line: the app sends the agents' statuses and
+// the pet's settings, the pet sends back the user's answers and jumps to an agent.
 export const PET_FLAG = '--nara-pet'
 // A pet process that dies on its own is started again, after this long, at most this many times.
 const RESPAWN_AFTER = 2000

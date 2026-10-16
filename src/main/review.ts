@@ -125,7 +125,7 @@ export function registerReview(win: BrowserWindow): void {
   })
 }
 
-// The folders the review view reads files in, for the code view's checks (code.js): a shared
+// The folders the review view reads files in, for the code view's checks (code.ts): a shared
 // checkout's top can sit above the workspace's folder.
 export function reviewFolders(id: string): string[] {
   return [...(known.get(id)?.keys() ?? [])]

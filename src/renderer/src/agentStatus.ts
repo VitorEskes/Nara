@@ -2,7 +2,7 @@ import { nodeLabel } from './nodeLabel'
 import type { AgentState, AgentStatus } from '../../shared/types'
 
 // What the pet, its command center and the HUD make of main's agent statuses
-// (status.js): how urgent each state is, what to call it, and who the agent is.
+// (status.ts): how urgent each state is, what to call it, and who the agent is.
 
 // Waiting on the user first, then failed, done, at work, and idle last.
 export const URGENCY: Record<AgentState, number> = {

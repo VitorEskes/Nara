@@ -7,16 +7,15 @@ import { reviewFolders } from './review'
 import { workspaces } from './workspaces'
 import type { CodeListing, FileStatus } from '../shared/types'
 
-// The files of a workspace for the code view: the tree of a folder, reading and writing a file,
-// creating, renaming and trashing, and word when a file that's open changes on disk (an agent
-// edited it). Every path is absolute, and every call checks it's inside one of the workspace's
-// folders: its own, or one of its agents' worktrees.
+// The files of a workspace for the code view: listing, reading, writing, creating, renaming and
+// trashing, and a notice when an open file changes on disk. Every path is absolute and checked to
+// be inside one of the workspace's folders: its own or one of its agents' worktrees.
 const MAX_FILE = 5 * 1024 * 1024
 // A folder walked by hand (outside git) stops after this many files.
 const MAX_LIST = 20000
 // Skipped when walking a folder that isn't a repository; in one, git's ignore rules decide.
 const SKIP = new Set(['node_modules', '.git', '.hg', '.svn', '.cache', '.next', 'dist', 'out'])
-// Changes to a file come in bursts (a write is often several events); this waits for them to settle.
+// A write often comes as several events; this waits for them to settle.
 const SETTLE = 120
 
 const HANDLERS = [
@@ -174,7 +173,7 @@ export function registerCode(win: BrowserWindow): void {
 }
 
 // Whether `path` is inside one of the workspace's folders: its own, its agents' worktrees, or a
-// repository the review view is going through (review.js). Checked on the real path of the file
+// repository the review view is going through (review.ts). Checked on the real path of the file
 // or of its closest folder that exists, so a symlink can't lead out.
 function allowed(id: string, path: unknown): path is string {
   const workspace = workspaces.get(id)

@@ -26,7 +26,7 @@ import { registerWorkspaces, workspaces } from './workspaces'
 
 setUpDataFolder()
 
-// The same program runs the desktop pet in a process of its own (pet.js): that process shows the
+// The same program runs the desktop pet in a process of its own (pet.ts): that process shows the
 // pet and nothing else.
 if (process.argv.includes(PET_FLAG)) runPetProcess()
 else runApp()
@@ -89,7 +89,7 @@ function createWindow(): void {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
-      // The browser nodes (BrowserNode.jsx); main/browser.js locks their pages down.
+      // The browser nodes (BrowserNode.tsx); main/browser.ts locks their pages down.
       webviewTag: true
     }
   })

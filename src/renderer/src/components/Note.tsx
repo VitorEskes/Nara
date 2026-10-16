@@ -32,17 +32,13 @@ type Field = HTMLTextAreaElement
 // The block being written and where its caret is.
 type Focus = { id: number; caret: number } | null
 
-// A note: Markdown, edited as blocks (markdown.js). Every block shows formatted, and the one being
-// written turns into its text, so the Markdown is there to edit without getting in the way of
-// reading. Typing "# ", "- ", "[] ", "> " or "```" at the start of a line turns it into that
-// block; "/" on an empty line opens a menu of them. Enter starts the next block (another item in
-// a list), Tab nests a list item, and the grip on the left drags a block somewhere else.
+// A note: Markdown edited as blocks (markdown.ts). Every block shows formatted except the one being
+// written, which shows its Markdown. "# ", "- ", "[] ", "> " or "```" at the start of a line turn
+// it into that block, "/" opens a menu of them, Tab nests a list item and the grip drags a block.
 //
-// `text` is the Markdown, saved with the workspace and shared with the agents linked to the note;
-// onChange gets it whenever an edit changes it. `style` holds the font, size, ink, paper and
-// alignment picked in the inspector. With `view` 'source' the note shows its Markdown as it is.
-// `command` is an edit sent from the inspector ({ seq, type, url?, alt? }): a block to add where
-// the caret is, applied once per seq.
+// `text` is the Markdown shared with the agents linked to the note. With `view` 'source' the note
+// shows its Markdown as it is. `command` is a block to insert from the inspector
+// ({ seq, type, url?, alt? }), applied once per seq.
 export default function Note({
   text = '',
   style,

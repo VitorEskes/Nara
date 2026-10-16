@@ -8,7 +8,7 @@ import type { AgentStatus } from '../shared/types'
 // summoned from anywhere with a global shortcut. It loads the same renderer as the main window,
 // which shows the HUD instead of the app when the page's hash is #hud.
 //
-// On Linux under Wayland the shortcut goes through the desktop portal (see index.js), and the
+// On Linux under Wayland the shortcut goes through the desktop portal (see index.ts), and the
 // compositor decides where the window opens and whether it stays on top.
 const HUD_SHORTCUT = 'CommandOrControl+Alt+Space'
 const SIZE = { width: 380, height: 540 }

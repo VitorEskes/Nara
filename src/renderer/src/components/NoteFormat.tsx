@@ -24,7 +24,7 @@ export interface NoteCommand {
   alt?: string
 }
 
-// What can be added to a note from here, each as the block it makes (markdown.js).
+// What can be added to a note from here, each as the block it makes (markdown.ts).
 const BLOCKS: { type: BlockType; label: string; glyph?: string; Icon?: IconComponent }[] = [
   { type: 'h1', label: 'Title', glyph: 'H1' },
   { type: 'h2', label: 'Subtitle', glyph: 'H2' },

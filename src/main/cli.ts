@@ -53,12 +53,9 @@ The reply, if any, arrives in this terminal the same way: no need to wait or che
 A note is shared text on the canvas: anyone linked to it can read it, and so can the user.
 A browser is a web page on the canvas that the user sees too: open your dev server in it.`
 
-// `nara hook <event>` is run by Claude Code's hooks (main/pty.js), not by hand: it tells Nara what
-// the agent just did. It never fails out loud, since an error would show up in the agent.
-// `nara run <cli> [args]` is how the shell integration starts an agent CLI typed in a canvas
-// terminal (main/shell.js): it asks the app for the flags and variables to start it with, runs it
-// in this terminal, and tells the app when it's gone. Outside Nara, or if the app doesn't answer,
-// the CLI runs as it is.
+// `nara hook <event>` is run by Claude Code's hooks (pty.ts) and fails silently, since an error
+// would show up in the agent. `nara run <cli> [args]` starts an agent CLI typed in a terminal
+// (shell.ts) with the flags and variables the app gives it; outside Nara the CLI runs as it is.
 if (process.argv[2] === 'run') {
   run(process.argv[3], process.argv.slice(4))
 } else if (process.argv[2] === 'hook') {
@@ -151,7 +148,7 @@ async function hook(event: string | undefined): Promise<void> {
   await Promise.race([request({ command: 'hook', event, payload }).catch(() => {}), timeout])
 }
 
-// `nara statusline` is Claude Code's status line in Nara's agents (main/agents.js). It hands Nara
+// `nara statusline` is Claude Code's status line in Nara's agents (main/agents.ts). It hands Nara
 // the plan's limits Claude Code passes it, then prints the user's own status line if they have
 // one (NARA_USER_STATUSLINE), or a short one of its own.
 async function statusline(): Promise<void> {

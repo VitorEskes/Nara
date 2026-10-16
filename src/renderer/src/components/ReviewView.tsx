@@ -106,17 +106,13 @@ const STATUS_WORDS: Record<ReviewFile['status'], string> = {
   D: 'deleted'
 }
 
-// The review view: what the workspace's agents changed, one item per repository (main/review.js),
-// gone through file by file in a diff whose right side is the file itself, editable and saved
-// with Ctrl+S. A click in the diff's gutter leaves a comment on a line; the comments go to the
-// agent in one message, and it takes it from there. Once the work is right it's merged into the
-// branch it came from (an agent's worktree) or committed (a checkout shared with the user). Both
-// happen in a small modal, from the two buttons at the foot of the side panel.
+// The review view: what the workspace's agents changed, one item per repository (main/review.ts),
+// file by file in a diff whose right side is the file itself, editable and saved with Ctrl+S. A
+// click in the gutter leaves a comment; the comments go to the agent in one message. Finished work
+// is merged (an agent's worktree) or committed (a checkout shared with the user).
 //
-// `items` is the queue (null while it's first read), `state` what's been reviewed (saved with the
-// workspace) and onState changes it. `panel` shows the side panel with the files and the actions.
-// `visible` is false while the workspace is put away or on its canvas or code. `views` goes at the
-// panel's top: the workspace's views.
+// `items` is the queue (null while it's first read) and `state` what's been reviewed, saved with
+// the workspace. `views` goes at the top of the side panel.
 export default function ReviewView({
   workspaceId,
   visible,

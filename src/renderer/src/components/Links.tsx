@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, type JSX } from 'react'
 import type { Box, CanvasNode, Link, NodeId, Point } from '../../../shared/types'
 
-// The rope being pulled out of a node: its tip in world coordinates and the node under the
-// cursor that could take it, if any. `mode` is 'drag', or 'pick' once a click left it on the cursor.
+// The rope being pulled out of a node: its tip in world coordinates and the node under the cursor
+// that could take it. `mode` is 'drag', or 'pick' once a click left it on the cursor.
 export interface LinkDraft extends Point {
   from: NodeId
   mode: 'drag' | 'pick'
@@ -17,17 +17,13 @@ interface Rope {
   v: Point
 }
 
-// Links look like a rope pinned between two nodes. Everything is drawn in world coordinates
-// inside .world, so pan and zoom come for free from the camera transform.
+// Links are drawn as ropes pinned between two nodes, in world coordinates inside .world. Ropes sit
+// behind the nodes and their pins in the overlay above, so a pin on a node's edge isn't half
+// hidden; the rope being pulled goes in the overlay whole.
 //
-// The rope sits behind the nodes (z-index 0), and its pins go in the overlay, above them: a pin
-// sits on the node's edge, and half of it would be hidden under the node otherwise. The rope
-// being pulled goes in the overlay too, whole: it has to stay in sight over any node it crosses.
-//
-// Each rope hangs from its belly, the point halfway along it, which a spring pulls toward where
-// gravity would leave it. When a node moves the belly lags behind and swings a little before it
-// settles, so the rope reads as a rope and not a line. The springs run outside React: a frame
-// loop writes the paths straight into the DOM while any rope is still moving, and stops after.
+// Each rope hangs from its midpoint, which a spring pulls toward where gravity would leave it, so
+// it swings a little when a node moves. The springs run outside React: a frame loop writes the
+// paths into the DOM while any rope is moving.
 
 // How much slack a rope has, past the straight line between its ends: a little always, and more
 // the longer it is. The sag follows from it, up to a limit.

@@ -34,16 +34,14 @@ export interface Launch {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-// How to open an agent in a node: the shell command, plus the variables it needs in its
-// environment. Claude Code runs under a session id that Nara picked and saved with the node, so
-// after a restart the node picks its conversation back up instead of starting over. `command` is
-// the one the user typed in the new terminal dialog in place of the agent's own (`claude --model
-// opus`, a path): it's their command line, run as if they had typed it, with Nara's flags after it.
+// The shell command and environment that open an agent in a node. Claude Code runs under a
+// session id saved with the node, so it resumes its conversation after a restart. `command` is
+// what the user typed in the new terminal dialog in place of the agent's own; Nara's flags go
+// after it.
 //
-// Free text (the prompt, the first message, the hooks) goes through the environment and the shell
-// expands each as a single argument, so it never has to be quoted into the command line. The
-// rest comes from fixed lists (shared/prompt.js) and goes in as it is. An agent that takes its
-// context as a message gets it back as `message`, for main to paste once it's up (pty.js).
+// Free text (the prompt, the first message, the hooks) travels in environment variables, so it
+// never has to be quoted into the command line. An agent that takes its context as a message gets
+// it back as `message`, pasted once the agent is up (pty.ts).
 export function agentLaunch({
   agent,
   command: typed,
@@ -59,10 +57,9 @@ export function agentLaunch({
   return { command: [command, ...words].join(' '), env: parts.env, message: parts.message }
 }
 
-// The same for an agent typed in a plain terminal (`nara run`, main/shell.js): the arguments as
-// they are, to go before the user's own, which win where they say the same thing. Claude Code gets
-// a session id of its own unless the user picked one (or a conversation to resume), so what it
-// does and spends shows up like an agent node's. The role's first message only goes in when the
+// The same for an agent typed in a plain terminal (`nara run`, shell.ts). Nara's arguments go
+// before the user's, so the user's win. Claude Code gets its own session id unless the user chose
+// one, so its spend shows up like an agent node's. The role's first message only goes in when the
 // user typed nothing after the command.
 export function agentRun({
   agent,
@@ -128,8 +125,8 @@ function agentParts({
     if (mode) args.push('--permission-mode', mode)
     if (access === 'read-only') args.push('--disallowedTools', EDIT_TOOLS.join(','))
     // The hooks tell Nara when the agent starts and ends a turn and when it asks for something
-    // (main/status.js), which beats guessing from the terminal's output.
-    // The status line hands Nara the plan's limits (main/usage.js); the user's own status line,
+    // (main/status.ts), which beats guessing from the terminal's output.
+    // The status line hands Nara the plan's limits (main/usage.ts); the user's own status line,
     // if they have one, still prints through it.
     if (hooks) {
       env.NARA_SETTINGS = JSON.stringify({
@@ -299,7 +296,7 @@ function contextMessage(prompt: string, kickoff: string): string {
 // the command line; it runs again whenever the node reopens.
 export function startupLaunch(command: string, shell: string): Launch {
   return {
-    // bash only loads the shell integration (shell.js) with its --rcfile, on the exec too.
+    // bash only loads the shell integration (shell.ts) with its --rcfile, on the exec too.
     command: 'eval "$NARA_STARTUP"; exec "$NARA_SHELL" ${NARA_BASHRC:+--rcfile "$NARA_BASHRC"}',
     env: { NARA_STARTUP: command, NARA_SHELL: shell }
   }

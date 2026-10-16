@@ -19,7 +19,7 @@ export const SHORTCUTS = {
 export type ShortcutName = keyof typeof SHORTCUTS
 
 // Switches a workspace between its canvas and its code. Not in SHORTCUTS: the workspace on screen
-// takes it (Workspace.jsx), not the app.
+// takes it (Workspace.tsx), not the app.
 export const CODE_TOGGLE: Shortcut = { code: 'KeyE', keys: 'Ctrl+Shift+E' }
 // Switches to the review of the agents' changes and back; G as in VS Code's source control.
 export const REVIEW_TOGGLE: Shortcut = { code: 'KeyG', keys: 'Ctrl+Shift+G' }

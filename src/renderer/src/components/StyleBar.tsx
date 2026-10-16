@@ -16,7 +16,7 @@ import { tip } from '../tip'
 // The style of the whiteboard: above the dock while a drawing tool is on or shapes are selected.
 // Each group opens a small popover: the color (and the fill, for closed shapes), the stroke
 // (width, clean or sketched, dashes) and the text (size and font). `style` is the style shown,
-// with every key filled in; `keys` the ones that apply (shapes.js styleKeys); onChange gets the
+// with every key filled in; `keys` the ones that apply (shapes.ts styleKeys); onChange gets the
 // keys that changed. With shapes selected, `actions` holds what can be done to them.
 export default function StyleBar({
   style,

@@ -2,7 +2,7 @@ import type { JSX } from 'react'
 import Modal from './Modal'
 import { answer, useDialog } from '../dialogs'
 
-// Shows the confirmation or notice asked for with dialogs.js, one at a time.
+// Shows the confirmation or notice asked for with dialogs.ts, one at a time.
 export default function DialogHost(): JSX.Element | null {
   const dialog = useDialog()
   if (!dialog) return null

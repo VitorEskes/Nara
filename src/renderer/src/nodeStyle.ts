@@ -5,7 +5,7 @@ type Options = Record<string, { label: string }>
 
 // The ways a node can be styled from the side panel: a note's text, and a terminal's look.
 // A note saves only the keys (`style: { font: 'serif', size: 'l' }`); anything missing falls back
-// to DEFAULTS, so notes saved before styles existed look the same as a fresh one.
+// to DEFAULTS, so a note without a style looks like a fresh one.
 
 export const FONTS: Record<string, { label: string; family: string }> = {
   sans: { label: 'Sans', family: 'var(--font-ui)' },
@@ -83,7 +83,7 @@ export function resolveStyle(style: NodeStyle = {}): NoteStyle {
 }
 
 // A terminal's look is saved the same way (`style: { size: 'l', theme: 'forest' }`): its text
-// size, its color scheme (terminalThemes.js), a tone that marks it out on the canvas, the shape of
+// size, its color scheme (terminalThemes.ts), a tone that marks it out on the canvas, the shape of
 // its cursor and the icon on its bar.
 export const TERMINAL_SIZES: Record<string, { label: string; px: number }> = {
   s: { label: 'S', px: 11 },

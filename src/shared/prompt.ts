@@ -1,7 +1,7 @@
 import type { NodeId, Role, Worktree } from './types'
 
 // What an agent is told when it opens in a node, and the flags that hold it to its role. Main
-// builds the command line from this (main/agents.js) and the renderer shows the same text in the
+// builds the command line from this (main/agents.ts) and the renderer shows the same text in the
 // role's preview, so what the user reads is exactly what the agent gets.
 //
 // A role is { label, description, instructions, model, mode, access, kickoff }: the words go into

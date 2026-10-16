@@ -5,16 +5,16 @@ import { join } from 'path'
 import { normalizeUrl } from '../shared/url'
 import type { NodeId } from '../shared/types'
 
-// Browser nodes: a <webview> on the canvas (BrowserNode.jsx). Their pages are locked down like any
+// Browser nodes: a <webview> on the canvas (BrowserNode.tsx). Their pages are locked down like any
 // website's, and each one tells main its webContents once it's ready, so an agent linked to it
-// can drive and read it with `nara browser` (messages.js).
+// can drive and read it with `nara browser` (messages.ts).
 
 // The most of a page's text `nara browser read` prints.
 const MAX_TEXT = 200 * 1024
 // Only web pages: never a file of the user's, never anything that runs with more rights.
 const SCHEMES = new Set(['http:', 'https:', 'about:'])
 
-// The keys of the app's Ctrl+Shift shortcuts (renderer's shortcuts.js): the app's own, the code
+// The keys of the app's Ctrl+Shift shortcuts (renderer's shortcuts.ts): the app's own, the code
 // view's and the review's.
 const APP_KEYS = new Set(['KeyN', 'KeyW', 'KeyO', 'KeyB', 'KeyL', 'KeyE', 'KeyG'])
 

@@ -22,17 +22,11 @@ const MIN_HEIGHT = 120
 // The handles around a node: each edge moves only that edge, each corner the two that meet there.
 const EDGES = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw']
 
-// A box in the world: position and size are in world coordinates, not screen coordinates.
-// `label` is the name on the bar; `agent` ({ key, label }) and `role` ({ label, tone }) go on it
-// too. `look` is a terminal's (terminalLook): its colors, tone and icon. `paper` is a note's color
-// (`paperDark` when it's a dark one). An agent's `status` (status.js) and `usage` (telemetry.js)
-// show as its state and how full its context is, and `linked` says whether any rope is pinned to
-// it. While a rope is being pulled, `dimmed` marks a node it can't be tied to; `highlighted`
-// lights the node up while its row in the side panel's connections is hovered. `frame` ({ x, y,
-// w, h, scale, screen }) takes the node out of its place on the canvas: a browser filling the
-// screen, in world coordinates that land on the room between the panels, scaled back to the
-// screen's own size. There its bar and its edges move and resize that box on screen (`screen`, in
-// pixels) through onFrame, and a double-click on the bar gives it the whole room again (null).
+// A node's box on the canvas, in world coordinates, with its bar: the label, the agent and role,
+// its state and how full its context is. `look` is a terminal's look and `paper` a note's color.
+// While a rope is being pulled, `dimmed` marks a node it can't be tied to. `frame` takes the node
+// out of the canvas, as a browser filling the screen; its bar and edges then move and resize it on
+// screen through onFrame, and a double-click on the bar gives it the whole room again.
 export default function CanvasNode({
   id,
   type,

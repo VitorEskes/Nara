@@ -91,7 +91,7 @@ const THEMES: { key: Theme; label: string; Icon: IconComponent }[] = [
   { key: 'system', label: 'System', Icon: MonitorIcon }
 ]
 
-// Where the new terminal dialog keeps the look it opens with (Launcher.jsx).
+// Where the new terminal dialog keeps the look it opens with (Launcher.tsx).
 const LAUNCHER_MEMORY = 'new-terminal'
 
 // The settings, in a dialog with the sections on the left and the chosen one on the right, and a

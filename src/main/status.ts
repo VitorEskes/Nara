@@ -37,7 +37,7 @@ type Listener = (statuses: AgentStatus[]) => void
 const agents = new Map<number, TrackedAgent>()
 let send = (): void => {}
 let describe: Describe = () => ({})
-// Who else hears every change besides the windows: the desktop pet's process (pet.js).
+// Who else hears every change besides the windows: the desktop pet's process (pet.ts).
 const listeners = new Set<Listener>()
 
 // `name(workspaceId, nodeId)` gives the node's title and its workspace's name for the pet's

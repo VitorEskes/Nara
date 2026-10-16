@@ -54,20 +54,17 @@ interface Watcher {
   nextActivity: number
 }
 
-// What each agent has spent and is doing, read from the files the agents keep of their own
-// sessions: Claude Code's transcript (<config>/projects/<folder>/<session>.jsonl, under the session
-// id Nara gave the node) and Codex's rollout (~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl, the
-// newest one in the node's folder). Each new line adds to the agent's report:
+// What each agent has spent and is doing, read from the files the agents keep of their sessions:
+// Claude Code's transcript (<config>/projects/<folder>/<session>.jsonl) and Codex's rollout
+// (~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl). Each new line adds to the agent's report:
 //
-//   { model, title, usage, tasks, activity, lines }
-//
-// - usage: tokens in, out and cached, summed over the session; `context` is how much of the
-//   context window the last turn filled and `window` its size; `cost` is an estimate at API prices.
-// - tasks: the agent's own task list (Claude Code's todos or tasks, Codex's plan).
+// - usage: tokens in, out and cached; `context` is how much of the window the last turn filled,
+//   and `cost` an estimate at API prices.
+// - tasks: the agent's own task list (Claude Code's todos, Codex's plan).
 // - activity: each tool it ran and each message it got, newest last.
 //
-// The files are only appended to, so each is read from where the last read stopped. Reports go to
-// every window a second at most, and only for the agents that changed.
+// The files are append-only, so each read starts where the last one stopped. Reports go out at
+// most once a second, and only for the agents that changed.
 const POLL = 1500
 const SEND_EVERY = 1000
 // The most read from a file in one go, so a long resumed conversation is caught up over a few

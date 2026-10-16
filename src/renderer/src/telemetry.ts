@@ -1,4 +1,4 @@
-// What the renderer makes of main's telemetry (main/telemetry.js): what each agent has spent, how
+// What the renderer makes of main's telemetry (main/telemetry.ts): what each agent has spent, how
 // full its context is, what it's working on and what it did.
 
 import type { AgentReport, Usage } from '../../shared/types'

@@ -17,12 +17,8 @@ import type {
 } from '../../../shared/types'
 
 // The workspace on screen, in the sidebar under its name: its branch and its agents, each with
-// what it's doing. A click on an agent selects it and opens what it has spent and
-// changed; another click closes it. The workspace renders this itself, into the sidebar's slot
-// (Workspace.jsx), since it holds all of it.
-//
-// `agents` are its agent nodes, `statuses` and `telemetry` what main reports about them by node
-// id, `queue` what they changed (main/review.js). `selected` is the node selected on the canvas.
+// what it's doing. A click on an agent selects it and opens what it has spent and changed. The
+// workspace renders this into the sidebar's slot (Workspace.tsx), since it holds all of it.
 export default function WorkspaceNav({
   folder,
   agents,
