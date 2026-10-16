@@ -66,7 +66,8 @@ export const CANVAS_KEYS: Record<string, string> = {
 
 export function canvasKeyFor(e: KeyboardEvent): string | null {
   if (e.ctrlKey || e.altKey || e.metaKey) return null
-  if ((e.target as Element | null)?.closest?.('input, textarea, select, [contenteditable], .xterm')) return null
+  if ((e.target as Element | null)?.closest?.('input, textarea, select, [contenteditable], .xterm'))
+    return null
   // Shift is allowed so "+" works on layouts where it needs it, and Shift+1 / Shift+0 match
   // Figma; the digit comes from e.code, since Shift+1 reads as "!".
   const digit = e.code?.startsWith('Digit') ? e.code.slice(5) : null

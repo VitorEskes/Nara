@@ -129,7 +129,12 @@ const TERMINAL_DEFAULTS: TerminalLook = {
 
 // The look with every key filled in. No tone means none; no icon means the program's own.
 export function terminalLook(style: NodeStyle = {}): TerminalLook {
-  const options: Record<string, object> = { size: TERMINAL_SIZES, theme: TERMINAL_THEMES, tone: TONES, cursor: CURSORS }
+  const options: Record<string, object> = {
+    size: TERMINAL_SIZES,
+    theme: TERMINAL_THEMES,
+    tone: TONES,
+    cursor: CURSORS
+  }
   return {
     ...TERMINAL_DEFAULTS,
     ...Object.fromEntries(

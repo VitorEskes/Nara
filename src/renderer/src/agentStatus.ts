@@ -5,7 +5,13 @@ import type { AgentState, AgentStatus } from '../../shared/types'
 // (status.js): how urgent each state is, what to call it, and who the agent is.
 
 // Waiting on the user first, then failed, done, at work, and idle last.
-export const URGENCY: Record<AgentState, number> = { waiting: 4, failed: 3, review: 2, working: 1, idle: 0 }
+export const URGENCY: Record<AgentState, number> = {
+  waiting: 4,
+  failed: 3,
+  review: 2,
+  working: 1,
+  idle: 0
+}
 
 export const STATE_LABELS: Record<AgentState, string> = {
   waiting: 'Needs you',
@@ -25,7 +31,10 @@ export function agentName({ nodeId, title }: Pick<AgentStatus, 'nodeId' | 'title
 }
 
 // The same agent across updates.
-export function agentKey({ workspaceId, nodeId }: Pick<AgentStatus, 'workspaceId' | 'nodeId'>): string {
+export function agentKey({
+  workspaceId,
+  nodeId
+}: Pick<AgentStatus, 'workspaceId' | 'nodeId'>): string {
   return `${workspaceId}:${nodeId}`
 }
 

@@ -44,7 +44,10 @@ export function ask({
 }
 
 // A notice with a single button to put it away.
-export function tell({ title, message }: Pick<DialogOptions, 'title' | 'message'>): Promise<boolean> {
+export function tell({
+  title,
+  message
+}: Pick<DialogOptions, 'title' | 'message'>): Promise<boolean> {
   return ask({ title, message, confirm: 'OK', cancel: null })
 }
 

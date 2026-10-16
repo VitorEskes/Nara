@@ -9,17 +9,7 @@
 // image's text is its caption, and `url` where it is.
 
 export type BlockType =
-  | 'p'
-  | 'h1'
-  | 'h2'
-  | 'h3'
-  | 'ul'
-  | 'ol'
-  | 'todo'
-  | 'quote'
-  | 'code'
-  | 'hr'
-  | 'image'
+  'p' | 'h1' | 'h2' | 'h3' | 'ul' | 'ol' | 'todo' | 'quote' | 'code' | 'hr' | 'image'
 
 export interface Block {
   id: number

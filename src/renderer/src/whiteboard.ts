@@ -230,7 +230,10 @@ export function useWhiteboard({
     if (!g) return
     if (g.kind === 'draw') {
       setDraft(null)
-      const shape: Shape = { ...strokeShape(g.points, { style: { ...style } }), id: nextId.current++ }
+      const shape: Shape = {
+        ...strokeShape(g.points, { style: { ...style } }),
+        id: nextId.current++
+      }
       change((all) => [...all, shape])
     } else if (g.kind === 'erase') {
       // The whole swipe is one step to undo.
@@ -539,7 +542,12 @@ export function useWhiteboard({
     if (e.key === 'Enter' && only && (CLOSED.has(only.type) || only.type === 'text')) {
       return run(() => setEditing(only.id))
     }
-    const arrows: Record<string, Pair> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }
+    const arrows: Record<string, Pair> = {
+      ArrowLeft: [-1, 0],
+      ArrowRight: [1, 0],
+      ArrowUp: [0, -1],
+      ArrowDown: [0, 1]
+    }
     if (arrows[e.key]) {
       const step = e.shiftKey ? NUDGE_FAR : NUDGE
       return run(() => nudge(arrows[e.key][0] * step, arrows[e.key][1] * step))

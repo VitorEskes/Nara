@@ -10,7 +10,11 @@ import type { View } from '../views'
 import type { Limits, NodeId, Project } from '../../../shared/types'
 
 // What the panel on the right holds in each view.
-const PANELS: Record<View, string> = { canvas: 'Inspector', code: 'Explorer', review: 'Review panel' }
+const PANELS: Record<View, string> = {
+  canvas: 'Inspector',
+  code: 'Explorer',
+  review: 'Review panel'
+}
 
 // The bar across the top of a workspace: what its agents have spent and the side panel's switch.
 // Translucent, so the canvas runs on under it. Where you are is in the sidebar, and the views at
