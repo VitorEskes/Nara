@@ -1,4 +1,4 @@
-import { useEffect, useRef, type JSX } from 'react'
+import { useEffect, useRef, useState, type JSX } from 'react'
 import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
@@ -6,14 +6,18 @@ import { TERMINAL_SIZES, type TerminalLook } from '../nodeStyle'
 import type { PtyOptions } from '../../../preload'
 import type { NodeId } from '../../../shared/types'
 import { TERMINAL_THEMES } from '../terminalThemes'
+import { AGENTS } from '../../../shared/agents'
 
 // How long to wait between pasting a message from another agent and pressing Enter.
 const ENTER_DELAY = 500
+// What a shell exits with when it can't find the command it was asked to run.
+const NOT_FOUND = 127
 
 // A terminal: xterm.js draws it and a PTY in main runs it. `workspaceId` and `nodeId` say which
 // node the PTY belongs to, and so which links apply. With `agent`, the PTY opens straight into
 // that agent, and `session` is the id its conversation is saved under; changing `role` restarts
 // the agent, which resumes under the new role. `look` changes in place without touching the PTY.
+// An agent whose CLI the shell can't find says so over the terminal, with where to get it.
 export default function Terminal({
   workspaceId,
   nodeId,
@@ -45,6 +49,9 @@ export default function Terminal({
   const { theme, cursor } = look
   // Read once when the terminal opens; later changes go through the effect at the bottom.
   const lookRef = useRef({ fontSize, theme, cursor })
+  // The command the shell couldn't find, and how many times the user tried again since.
+  const [missing, setMissing] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
 
   // onExit changes on every parent render. If it were a dependency of the effect below, every
   // render would kill the PTY and spawn another; kept in a ref, the effect always reads the latest.
@@ -82,7 +89,9 @@ export default function Terminal({
       if (from !== id) return
       // A clean exit (e.g. `exit`) closes the node; on error it stays open to show why.
       if (code === 0) onExitRef.current?.()
-      else term.write(`\r\n[process exited with code ${code}]\r\n`)
+      else if (code === NOT_FOUND && agent && AGENTS[agent]) {
+        setMissing(command?.trim().split(/\s+/)[0] || AGENTS[agent].command)
+      } else term.write(`\r\n[process exited with code ${code}]\r\n`)
     })
 
     // Message from another agent (`nara send`): it comes in as a paste, like Ctrl+V, and the
@@ -113,6 +122,7 @@ export default function Terminal({
       // StrictMode mounts/unmounts twice in dev: if already unmounted, kill the orphan PTY.
       if (!alive) return window.api.pty.kill(newId)
       id = newId
+      setMissing(null)
     })
 
     const input = term.onData((data) => {
@@ -145,7 +155,7 @@ export default function Terminal({
       if (id) window.api.pty.kill(id)
       term.dispose()
     }
-  }, [workspaceId, nodeId, agent, session, role, command, cwd, worktree])
+  }, [workspaceId, nodeId, agent, session, role, command, cwd, worktree, attempt])
 
   // The colors and the cursor change in place. A new size changes how many rows and columns fit
   // in the same box, so the PTY hears about it.
@@ -160,7 +170,29 @@ export default function Terminal({
     refit()
   }, [fontSize, theme, cursor])
 
-  return <div ref={container} className="terminal" />
+  const cli = agent ? AGENTS[agent] : undefined
+  return (
+    <>
+      <div ref={container} className="terminal" />
+      {missing && cli && (
+        <div className="terminal-missing" role="alert">
+          <p className="terminal-missing-title">{cli.label} not found</p>
+          <p>
+            Nara opens it with <code>{missing}</code>, but your shell couldn’t find that command.
+            Install it, or set its command in Settings, then try again.
+          </p>
+          <div className="terminal-missing-actions">
+            <a className="button subtle" href={cli.install} target="_blank" rel="noreferrer">
+              How to install
+            </a>
+            <button type="button" className="button" onClick={() => setAttempt((n) => n + 1)}>
+              Try again
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  )
 }
 
 // xterm computes the cell under the mouse as (clientX - rect.left) / cellWidth: the distance is

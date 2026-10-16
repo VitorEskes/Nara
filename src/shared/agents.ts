@@ -9,9 +9,11 @@
 // `enforces` lists the role settings the CLI holds itself to as flags or a policy: the model, the
 // permission mode and read-only access. `answers` are the keys that answer a yes-or-no prompt from
 // the pet's command center. `telemetry` marks the agents whose transcripts main/telemetry.ts reads.
+// `install` is where to get the CLI, for when the user's shell can't find it.
 export interface Agent {
   label: string
   command: string
+  install: string
   prompt: boolean
   context: 'system' | 'first' | 'paste'
   enforces: { model?: boolean; mode?: boolean; readOnly?: boolean }
@@ -23,6 +25,7 @@ export const AGENTS: Record<string, Agent> = {
   claude: {
     label: 'Claude Code',
     command: 'claude',
+    install: 'https://docs.anthropic.com/en/docs/claude-code',
     prompt: true,
     context: 'system',
     enforces: { model: true, mode: true, readOnly: true },
@@ -32,6 +35,7 @@ export const AGENTS: Record<string, Agent> = {
   codex: {
     label: 'Codex',
     command: 'codex',
+    install: 'https://github.com/openai/codex',
     prompt: true,
     context: 'system',
     enforces: { readOnly: true },
@@ -41,6 +45,7 @@ export const AGENTS: Record<string, Agent> = {
   antigravity: {
     label: 'Antigravity CLI',
     command: 'agy',
+    install: 'https://antigravity.google/docs/cli/install',
     prompt: true,
     context: 'first',
     enforces: { mode: true }
@@ -48,6 +53,7 @@ export const AGENTS: Record<string, Agent> = {
   opencode: {
     label: 'OpenCode',
     command: 'opencode',
+    install: 'https://opencode.ai/docs/cli/',
     prompt: true,
     context: 'system',
     enforces: { mode: true, readOnly: true }
@@ -55,6 +61,7 @@ export const AGENTS: Record<string, Agent> = {
   qwen: {
     label: 'Qwen Code',
     command: 'qwen',
+    install: 'https://github.com/QwenLM/qwen-code',
     prompt: true,
     context: 'system',
     enforces: { mode: true, readOnly: true },
@@ -63,6 +70,7 @@ export const AGENTS: Record<string, Agent> = {
   cursor: {
     label: 'Cursor Agent',
     command: 'cursor-agent',
+    install: 'https://cursor.com/cli',
     prompt: true,
     context: 'first',
     enforces: { mode: true, readOnly: true }
@@ -70,6 +78,7 @@ export const AGENTS: Record<string, Agent> = {
   copilot: {
     label: 'Copilot CLI',
     command: 'copilot',
+    install: 'https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli',
     prompt: true,
     context: 'system',
     enforces: { mode: true, readOnly: true },
@@ -78,12 +87,20 @@ export const AGENTS: Record<string, Agent> = {
   aider: {
     label: 'Aider',
     command: 'aider',
+    install: 'https://aider.chat',
     prompt: true,
     context: 'system',
     enforces: { mode: true, readOnly: true },
     answers: { yes: 'y\r', no: 'n\r' }
   },
-  amp: { label: 'Amp', command: 'amp', prompt: true, context: 'paste', enforces: {} }
+  amp: {
+    label: 'Amp',
+    command: 'amp',
+    install: 'https://ampcode.com/manual#install',
+    prompt: true,
+    context: 'paste',
+    enforces: {}
+  }
 }
 
 // The agent a command name starts, if it's one of them: "cursor-agent" -> "cursor".

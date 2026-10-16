@@ -925,6 +925,50 @@ kbd {
   background-color: transparent !important;
 }
 
+/* Over an agent's terminal when the shell can't find its CLI. */
+.terminal-missing {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-2);
+  background: var(--terminal);
+}
+
+.terminal-missing p {
+  max-width: 360px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.terminal-missing .terminal-missing-title {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.terminal-missing code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+}
+
+.terminal-missing-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.terminal-missing-actions a.button {
+  height: 32px;
+  text-decoration: none;
+}
+
 /* Handles on every edge and corner resize the node: an edge moves only itself, a corner the two
    edges that meet there. They sit just inside the node, over its border. The bottom-right one
    shows a grip on hover, as a hint that the node can be resized at all. */
