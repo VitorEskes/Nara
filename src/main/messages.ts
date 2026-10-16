@@ -1,7 +1,5 @@
 import type { BrowserWindow } from 'electron'
-import { rmSync } from 'fs'
 import { createServer } from 'net'
-import { tmpdir } from 'os'
 import { basename, delimiter, dirname, join } from 'path'
 import nara from '../../resources/bin/nara?asset'
 import { browse, pageUrl } from './browser'
@@ -16,6 +14,7 @@ import {
 } from './pty'
 import { agentRun } from './agents'
 import { AGENTS, agentForCommand } from '../shared/agents'
+import { clearSocket, socketPath } from './socket'
 import { agentHook } from './status'
 import { reportClaude } from './usage'
 import { findRole } from './roles'
@@ -37,8 +36,8 @@ interface Request {
 
 // Agents talk by running `nara` in their terminal. The command reaches this server over a socket,
 // and the server pastes the message into the terminal on the other end of the link as if someone
-// had typed it. The pid in the name keeps two running instances from sharing a socket.
-const SOCKET = join(tmpdir(), `nara-${process.pid}.sock`)
+// had typed it.
+const SOCKET = socketPath('nara')
 
 // A terminal with only the shell in the foreground doesn't get messages: the Enter at the end
 // would run the text as a command.
@@ -62,8 +61,7 @@ export function registerMessages(win: BrowserWindow): Record<string, string> {
     })
     conn.on('error', () => {})
   })
-  // A socket left behind by a run that died without cleaning up would make listen fail.
-  rmSync(SOCKET, { force: true })
+  clearSocket(SOCKET)
   server.listen(SOCKET)
 
   win.on('closed', () => server.close())

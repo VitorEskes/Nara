@@ -1,10 +1,8 @@
 import { app, ipcMain, type BrowserWindow } from 'electron'
 import { spawn, type ChildProcess } from 'child_process'
-import { rmSync } from 'fs'
 import { createServer, type Socket } from 'net'
-import { tmpdir } from 'os'
-import { join } from 'path'
 import { replyToAgent } from './pty'
+import { clearSocket, socketPath } from './socket'
 import { onStatuses, seenAgent } from './status'
 import type { AgentReply, AgentStatus, NodeId, PetConfig } from '../shared/types'
 
@@ -27,7 +25,7 @@ const RESPAWN_AFTER = 2000
 const RESPAWN_MAX = 5
 
 export function registerDesktopPet(main: BrowserWindow): void {
-  const socket = join(tmpdir(), `nara-pet-${process.pid}.sock`)
+  const socket = socketPath('nara-pet')
   let config: PetConfig = { pet: null, size: 'm' }
   let child: ChildProcess | null = null
   let peer: Socket | null = null
@@ -63,7 +61,7 @@ export function registerDesktopPet(main: BrowserWindow): void {
     stopStatuses()
     stopStatuses = onStatuses((statuses) => message({ type: 'status', statuses }))
   })
-  rmSync(socket, { force: true })
+  clearSocket(socket)
   server.listen(socket)
 
   function handle(data: PetMessage): void {
