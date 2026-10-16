@@ -20,12 +20,6 @@ import type {
 
 // On disk a freehand stroke's points are a string (packShape below).
 type StoredShape = Omit<Shape, 'points'> & { points?: string | [number, number][] }
-// A stroke from before the whiteboard.
-interface OldStroke {
-  id: number
-  points: string
-  width: number
-}
 
 // Each workspace is a canvas saved to its own JSON file, named after a random id so renaming a
 // workspace never touches the file. state.json remembers which workspaces were open and which one
@@ -254,27 +248,15 @@ function read(id: string): { json: string; workspace: Workspace } | null {
       camera,
       nodes,
       links,
-      shapes,
-      strokes = [],
+      shapes = [],
       code,
       review
     } = JSON.parse(json) as Omit<Workspace, 'shapes'> & {
       version: number
       shapes?: StoredShape[]
-      strokes?: OldStroke[]
     }
     if (version !== VERSION) throw new Error(`unsupported version ${version}`)
-    if (![nodes, links, shapes ?? strokes].every(Array.isArray)) throw new Error('malformed file')
-    // Files saved before notes existed have no type: back then every node was a terminal.
-    const typed = nodes.map((node: Omit<CanvasNode, 'type'> & { type?: NodeType }): CanvasNode => ({
-      type: 'terminal',
-      ...node
-    }))
-    // Files from before the whiteboard have freehand strokes instead, which become its first
-    // shapes; older ones have neither.
-    const drawn = shapes
-      ? shapes.filter((shape) => shape?.type).map(unpackShape)
-      : strokes.filter((stroke) => typeof stroke.points === 'string').map(strokeToShape)
+    if (![nodes, links, shapes].every(Array.isArray)) throw new Error('malformed file')
     return {
       json,
       workspace: {
@@ -282,9 +264,9 @@ function read(id: string): { json: string; workspace: Workspace } | null {
         project,
         folder,
         camera,
-        nodes: typed,
+        nodes,
         links,
-        shapes: drawn,
+        shapes: shapes.filter((shape) => shape?.type).map(unpackShape),
         code,
         review
       }
@@ -402,30 +384,6 @@ function unpackPoints(points: string): [number, number][] {
     .split(' ')
     .filter(Boolean)
     .map((point) => point.split(',').map(Number) as [number, number])
-}
-
-// A stroke from before the whiteboard (absolute points and a width) as a freehand shape: its box,
-// and its points relative to the box's corner.
-function strokeToShape(stroke: OldStroke): Shape {
-  const points = unpackPoints(stroke.points)
-  const xs = points.map(([x]) => x)
-  const ys = points.map(([, y]) => y)
-  const x = Math.min(...xs)
-  const y = Math.min(...ys)
-  return {
-    id: stroke.id,
-    type: 'draw',
-    x,
-    y,
-    w: Math.max(1, Math.max(...xs) - x),
-    h: Math.max(1, Math.max(...ys) - y),
-    angle: 0,
-    style: { stroke: 'ink', width: stroke.width > 3.5 ? 'l' : 'm' },
-    points: points.map(([px, py]): [number, number] => [
-      Math.round((px - x) * 10) / 10,
-      Math.round((py - y) * 10) / 10
-    ])
-  }
 }
 
 function saveSession({ open, active }: Session): void {
