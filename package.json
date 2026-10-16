@@ -1,6 +1,6 @@
 {
   "name": "nara",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A desktop canvas for running teams of coding agents",
   "main": "./out/main/index.js",
   "desktopName": "nara.desktop",
