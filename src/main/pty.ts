@@ -1,11 +1,12 @@
 import { ipcMain, type BrowserWindow } from 'electron'
 import { execFileSync } from 'child_process'
 import { existsSync, readlinkSync } from 'fs'
+import { homedir } from 'os'
 import * as pty from 'node-pty'
 import { AGENTS } from '../shared/agents'
 import { agentLaunch, startupLaunch, type Hooks, type Launch } from './agents'
 import { commandEnded, commandOutput, commandStarted } from './changes'
-import { shellIntegration } from './shell'
+import { defaultShell, isPowerShell, shellIntegration } from './shell'
 import { agentExited, agentOutput, agentTouched, trackAgent, untrackAgent } from './status'
 import { unwatchAgent, watchAgent } from './telemetry'
 import type { PtyOptions } from '../preload'
@@ -60,9 +61,11 @@ export function registerPty(win: BrowserWindow, extraEnv: Record<string, string>
     const id = nextId++
     // An agent runs inside the user's interactive shell (-i loads .zshrc/.bashrc), so it's found
     // on the same PATH as when typed in a terminal. When the agent quits, the shell ends with it.
-    const shell = process.env.SHELL || 'bash'
+    // On Windows it's PowerShell (shell.ts).
+    const shell = defaultShell()
+    const powershell = isPowerShell(shell)
     // A restored terminal asks for the folder it was in, which may have been deleted since.
-    const start = cwd && existsSync(cwd) ? cwd : process.env.HOME
+    const start = cwd && existsSync(cwd) ? cwd : homedir()
     const known = agent && AGENTS[agent] ? agent : undefined
     const launch: Launch | null = known
       ? agentLaunch({
@@ -73,29 +76,26 @@ export function registerPty(win: BrowserWindow, extraEnv: Record<string, string>
           nodeId,
           worktree,
           cwd: start,
-          hooks: known === 'claude' && HOOKS
+          hooks: known === 'claude' && HOOKS,
+          powershell
         })
       : typeof command === 'string' && command.trim()
-        ? startupLaunch(command, shell)
+        ? startupLaunch(command, shell, powershell)
         : null
     // A plain terminal, or one that runs a command first, loads the shell integration
     // (shell.ts): an agent typed in it starts through Nara. An agent node's shell only runs the
     // agent, as it is.
     const integration = known ? { args: [], env: {} } : shellIntegration(shell)
-    const args = [...integration.args, ...(launch ? ['-ic', launch.command] : [])]
+    const args = powershell
+      ? powershellArgs(launch?.command, !known)
+      : [...integration.args, ...(launch ? ['-ic', launch.command] : [])]
     const term = pty.spawn(shell, args, {
       name: 'xterm-256color',
       cols,
       rows,
       cwd: start,
       // NARA_PTY is how `nara` tells the app which terminal the message came from.
-      env: {
-        ...ownEnv(),
-        ...extraEnv,
-        ...integration.env,
-        ...launch?.env,
-        NARA_PTY: String(id)
-      }
+      env: mergeEnv(ownEnv(), extraEnv, integration.env, launch?.env, { NARA_PTY: String(id) })
     })
 
     // A killed program can still write on its way out (Claude Code restores the terminal), and
@@ -169,6 +169,33 @@ const SESSION_MARKERS = new Set([
   'CLAUDE_PID',
   'CLAUDE_EFFORT'
 ])
+
+// PowerShell's command line: the command goes encoded, so nothing in it needs quoting for Windows.
+// A plain terminal stays open after its startup command.
+function powershellArgs(command: string | undefined, stay: boolean): string[] {
+  if (!command) return ['-NoLogo']
+  const encoded = Buffer.from(command, 'utf16le').toString('base64')
+  return ['-NoLogo', ...(stay ? ['-NoExit'] : []), '-EncodedCommand', encoded]
+}
+
+// The environments, the later ones winning. Windows doesn't tell PATH from Path: both would reach
+// the shell, and it could take the one without Nara's folder.
+function mergeEnv(
+  ...envs: (Record<string, string | undefined> | undefined)[]
+): Record<string, string | undefined> {
+  const merged: Record<string, string | undefined> = {}
+  const names = new Map<string, string>()
+  for (const env of envs) {
+    for (const [key, value] of Object.entries(env ?? {})) {
+      const name = process.platform === 'win32' ? key.toUpperCase() : key
+      const old = names.get(name)
+      if (old !== undefined) delete merged[old]
+      names.set(name, key)
+      merged[key] = value
+    }
+  }
+  return merged
+}
 
 function ownEnv(): Record<string, string | undefined> {
   return Object.fromEntries(

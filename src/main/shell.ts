@@ -1,6 +1,6 @@
 import { app } from 'electron'
-import { mkdirSync, writeFileSync } from 'fs'
-import { basename, join } from 'path'
+import { existsSync, mkdirSync, writeFileSync } from 'fs'
+import { basename, delimiter, join } from 'path'
 import { AGENTS } from '../shared/agents'
 
 // The shell integration of plain terminals: an agent CLI typed in one (claude, codex, agy…)
@@ -11,6 +11,21 @@ import { AGENTS } from '../shared/agents'
 //
 // zsh gets a ZDOTDIR of Nara's whose files read the user's and then add the functions; bash gets
 // an --rcfile that reads ~/.bashrc first. Other shells get no integration.
+
+// The shell a terminal opens: the user's own, or on Windows, which has no $SHELL (one set by Git
+// Bash is a path Windows can't run), PowerShell 7 if it's installed and Windows PowerShell if not.
+export function defaultShell(): string {
+  if (process.platform !== 'win32') return process.env.SHELL || 'bash'
+  for (const dir of (process.env.PATH ?? '').split(delimiter)) {
+    const pwsh = dir && join(dir, 'pwsh.exe')
+    if (pwsh && existsSync(pwsh)) return pwsh
+  }
+  return 'powershell.exe'
+}
+
+export function isPowerShell(shell: string): boolean {
+  return /^(pwsh|powershell)(\.exe)?$/i.test(basename(shell))
+}
 
 // The files live in the data folder, written again at every start so they follow the app.
 function folder(): string {

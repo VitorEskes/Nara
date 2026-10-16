@@ -42,19 +42,54 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 // Free text (the prompt, the first message, the hooks) travels in environment variables, so it
 // never has to be quoted into the command line. An agent that takes its context as a message gets
 // it back as `message`, pasted once the agent is up (pty.ts).
+//
+// With `powershell` (Windows), the command is PowerShell's instead of a POSIX shell's.
 export function agentLaunch({
   agent,
   command: typed,
   session,
+  powershell,
   ...options
-}: AgentOptions & { command?: string; session?: string }): Launch {
+}: AgentOptions & { command?: string; session?: string; powershell?: boolean }): Launch {
   const command = typeof typed === 'string' && typed.trim() ? typed.trim() : AGENTS[agent].command
   const resuming = agent === 'claude' && !!session && UUID.test(session) && hasConversation(session)
   const parts = agentParts({ agent, session, resuming, ...options })
+  if (powershell) {
+    return {
+      command: powershellCommand(command, parts.args),
+      env: parts.env,
+      message: parts.message
+    }
+  }
   const words = parts.args.map((arg) =>
     typeof arg === 'string' ? arg : `${arg.prefix ?? ''}"$${arg.env}"`
   )
   return { command: [command, ...words].join(' '), env: parts.env, message: parts.message }
+}
+
+// The same command for PowerShell. Words are quoted, so PowerShell doesn't read a comma as a list
+// or swallow `--`. Windows PowerShell passes an argument with quotes in it to a program as it is,
+// and the program splits it there: the quotes are escaped by hand, the legacy way, which
+// PowerShell 7 is told to keep. A CLI that isn't installed exits with 127, as in a POSIX shell, so
+// the node says so (Terminal.tsx).
+function powershellCommand(command: string, args: Arg[]): string {
+  const quote = (word: string): string => `'${word.replace(/'/g, "''")}'`
+  const escaped = (name: string): string =>
+    `($env:${name} -replace '(\\\\*)"', '$1$1\\"' -replace '(\\\\+)$', '$1$1')`
+  const words = args.map((arg) =>
+    typeof arg === 'string'
+      ? quote(arg)
+      : arg.prefix
+        ? `(${quote(arg.prefix)} + ${escaped(arg.env)})`
+        : escaped(arg.env)
+  )
+  const program = quote(command.split(/\s+/)[0])
+  return [
+    `$PSNativeCommandArgumentPassing = 'Legacy'`,
+    `if (-not (Get-Command ${program} -ErrorAction SilentlyContinue)) { exit 127 }`,
+    `${command} ${words.join(' ')}`,
+    'exit $LASTEXITCODE'
+  ].join('; ')
 }
 
 // The same for an agent typed in a plain terminal (`nara run`, shell.ts). Nara's arguments go
@@ -282,7 +317,12 @@ function contextMessage(prompt: string, kickoff: string): string {
 // it: `exec` swaps in an interactive shell once the command ends or is stopped with Ctrl+C. Like
 // an agent's prompt, the command goes through the environment, so its text is never quoted into
 // the command line; it runs again whenever the node reopens.
-export function startupLaunch(command: string, shell: string): Launch {
+//
+// PowerShell can't exec: it runs the command and stays open after it (pty.ts adds -NoExit).
+export function startupLaunch(command: string, shell: string, powershell = false): Launch {
+  if (powershell) {
+    return { command: 'Invoke-Expression $env:NARA_STARTUP', env: { NARA_STARTUP: command } }
+  }
   return {
     // bash only loads the shell integration (shell.ts) with its --rcfile, on the exec too.
     command: 'eval "$NARA_STARTUP"; exec "$NARA_SHELL" ${NARA_BASHRC:+--rcfile "$NARA_BASHRC"}',

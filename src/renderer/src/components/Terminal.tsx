@@ -118,12 +118,18 @@ export default function Terminal({
       cols: term.cols,
       rows: term.rows
     }
-    window.api.pty.create(options).then((newId) => {
-      // StrictMode mounts/unmounts twice in dev: if already unmounted, kill the orphan PTY.
-      if (!alive) return window.api.pty.kill(newId)
-      id = newId
-      setMissing(null)
-    })
+    window.api.pty
+      .create(options)
+      .then((newId) => {
+        // StrictMode mounts/unmounts twice in dev: if already unmounted, kill the orphan PTY.
+        if (!alive) return window.api.pty.kill(newId)
+        id = newId
+        setMissing(null)
+      })
+      // The shell couldn't start at all: the node says why instead of staying blank.
+      .catch((error: Error) => {
+        if (alive) term.write(`[could not start the terminal: ${error.message}]\r\n`)
+      })
 
     const input = term.onData((data) => {
       if (id) window.api.pty.write(id, data)

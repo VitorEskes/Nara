@@ -41,7 +41,20 @@ const SOCKET = socketPath('nara')
 
 // A terminal with only the shell in the foreground doesn't get messages: the Enter at the end
 // would run the text as a command.
-const SHELLS = new Set(['sh', 'bash', 'zsh', 'fish', 'dash', 'ksh', 'tcsh', 'csh', 'nu', 'pwsh'])
+const SHELLS = new Set([
+  'sh',
+  'bash',
+  'zsh',
+  'fish',
+  'dash',
+  'ksh',
+  'tcsh',
+  'csh',
+  'nu',
+  'pwsh',
+  'powershell',
+  'cmd'
+])
 
 export function registerMessages(win: BrowserWindow): Record<string, string> {
   // One request per connection: `nara` writes the JSON and ends its write side; the response
@@ -223,8 +236,11 @@ function appendLine(text: string, line: string): string {
 
 // Program in the terminal's foreground (the agent, or the shell itself if nothing is running).
 // node-pty returns argv[0], which sometimes includes a path: /usr/bin/zsh.
-function foregroundProgram({ term }: { term: { process: string } }): string {
-  return basename(term.process)
+// Windows only knows the program a terminal started with, its shell: there, the agent Nara
+// started in it stands for what's in the foreground.
+function foregroundProgram({ term, agent }: { term: { process: string }; agent?: string }): string {
+  if (process.platform === 'win32' && agent) return AGENTS[agent]?.command ?? agent
+  return basename(term.process).replace(/\.exe$/i, '')
 }
 
 // Strips control characters (except \n and \t). An ESC in the text would become a key sequence
