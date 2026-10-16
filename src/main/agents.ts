@@ -324,12 +324,10 @@ function userStatusLine(cwd?: string): string | null {
   return command
 }
 
-// Claude Code saves a conversation as <config>/projects/<folder>/<session>.jsonl, and only once
-// the first message is sent. Before that there's nothing to resume and `--resume` would fail
-// with "No conversation found", so the agent starts again under the same id. Looking in every
-// folder avoids depending on how Claude Code names them; if the layout ever changes, agents
-// start new conversations instead of breaking.
-export function hasConversation(session: string): boolean {
+// Claude Code saves a conversation as <config>/projects/<folder>/<session>.jsonl, and only after
+// the first message. Until then `--resume` fails with "No conversation found", so the agent starts
+// again under the same id. Every folder is searched rather than relying on how they're named.
+function hasConversation(session: string): boolean {
   return Boolean(transcriptPath(session))
 }
 

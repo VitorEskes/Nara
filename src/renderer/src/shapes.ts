@@ -1,7 +1,7 @@
 import rough from 'roughjs'
 import { getStroke } from 'perfect-freehand'
 import type { Drawable, Options as RoughOptions } from 'roughjs/bin/core'
-import type { Box, Point, Shape, ShapeStyle, ShapeType } from '../../shared/types'
+import type { Box, Point, Shape, ShapeStyle } from '../../shared/types'
 
 type Pair = [number, number]
 
@@ -41,7 +41,6 @@ export type DraftShape = Omit<Shape, 'id'> & { id: number | 'draft' }
 // `style` holds keys of the options below, so the colors follow the theme; `seed` keeps a sketched
 // shape's wobble the same on every render.
 
-export const TYPES: ShapeType[] = ['rect', 'ellipse', 'triangle', 'diamond', 'line', 'arrow', 'draw', 'text']
 export const CLOSED = new Set<string>(['rect', 'ellipse', 'triangle', 'diamond'])
 export const LINES = new Set<string>(['line', 'arrow'])
 
@@ -145,16 +144,16 @@ function rotate(p: Point, c: Point, angle: number): Point {
 }
 
 // A world point in the shape's own frame: as if it weren't turned.
-export function toLocal(shape: DraftShape, p: Point): Point {
+function toLocal(shape: DraftShape, p: Point): Point {
   return rotate(p, center(shape), -(shape.angle ?? 0))
 }
 
-export function toWorld(shape: DraftShape, p: Point): Point {
+function toWorld(shape: DraftShape, p: Point): Point {
   return rotate(p, center(shape), shape.angle ?? 0)
 }
 
 // The outline in the shape's own frame, as points; closed shapes close back to the first.
-export function outline(s: DraftShape): Pair[] {
+function outline(s: DraftShape): Pair[] {
   const { x, y, w, h } = s
   switch (s.type) {
     case 'rect':

@@ -51,8 +51,8 @@ export type Tool = string | null
 export type Whiteboard = ReturnType<typeof useWhiteboard>
 
 // The tools that draw on the whiteboard, and the shape each one makes.
-export const SHAPE_TOOLS = new Set<string>(['rect', 'ellipse', 'triangle', 'diamond', 'line', 'arrow'])
-export const DRAW_TOOLS = new Set<string>([...SHAPE_TOOLS, 'draw', 'text'])
+const SHAPE_TOOLS = new Set<string>(['rect', 'ellipse', 'triangle', 'diamond', 'line', 'arrow'])
+const DRAW_TOOLS = new Set<string>([...SHAPE_TOOLS, 'draw', 'text'])
 
 // The size a shape gets from a click without a drag, in world units.
 const CLICK_SIZE = { w: 140, h: 90 }

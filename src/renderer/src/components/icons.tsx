@@ -553,33 +553,6 @@ export function TextIcon(props: IconProps): JSX.Element {
   )
 }
 
-export function ShapesIcon(props: IconProps): JSX.Element {
-  return (
-    <Icon {...props}>
-      <circle cx="5.5" cy="5.5" r="3" />
-      <path d="M8.5 9h5v5h-5z" />
-    </Icon>
-  )
-}
-
-export function UndoIcon(props: IconProps): JSX.Element {
-  return (
-    <Icon {...props}>
-      <path d="M5.5 3L2.5 6l3 3" />
-      <path d="M2.5 6h7a3.5 3.5 0 0 1 0 7H7" />
-    </Icon>
-  )
-}
-
-export function RedoIcon(props: IconProps): JSX.Element {
-  return (
-    <Icon {...props}>
-      <path d="M10.5 3l3 3-3 3" />
-      <path d="M13.5 6h-7a3.5 3.5 0 0 0 0 7H9" />
-    </Icon>
-  )
-}
-
 export function CopyIcon(props: IconProps): JSX.Element {
   return (
     <Icon {...props}>
@@ -623,14 +596,6 @@ export function ListChecksIcon(props: IconProps): JSX.Element {
   )
 }
 
-export function ActivityIcon(props: IconProps): JSX.Element {
-  return (
-    <Icon {...props}>
-      <path d="M1.75 8h2.5l1.75-4.5 3.5 9L11.25 8h3" />
-    </Icon>
-  )
-}
-
 export function DiffIcon(props: IconProps): JSX.Element {
   return (
     <Icon {...props}>
@@ -645,43 +610,6 @@ export function RestartIcon(props: IconProps): JSX.Element {
     <Icon {...props}>
       <path d="M13 8a5 5 0 1 1-1.6-3.65" />
       <path d="M13 2.75v3h-3" />
-    </Icon>
-  )
-}
-
-export function TokenIcon(props: IconProps): JSX.Element {
-  return (
-    <Icon {...props}>
-      <circle cx="8" cy="8" r="5.5" />
-      <path d="M8 5v6M6 6.5h3a1.25 1.25 0 0 1 0 2.5H7" />
-    </Icon>
-  )
-}
-
-export function GaugeIcon(props: IconProps): JSX.Element {
-  return (
-    <Icon {...props}>
-      <path d="M2.5 11.5a5.5 5.5 0 1 1 11 0" />
-      <path d="M8 11.5l2.5-3.5" />
-    </Icon>
-  )
-}
-
-export function SlidersIcon(props: IconProps): JSX.Element {
-  return (
-    <Icon {...props}>
-      <path d="M2.5 4.5h6M11.5 4.5h2M2.5 11.5h2M7.5 11.5h6" />
-      <circle cx="10" cy="4.5" r="1.5" />
-      <circle cx="6" cy="11.5" r="1.5" />
-    </Icon>
-  )
-}
-
-export function LayoutIcon(props: IconProps): JSX.Element {
-  return (
-    <Icon {...props}>
-      <rect x="2.25" y="2.75" width="11.5" height="10.5" rx="1.75" />
-      <path d="M2.25 6.25h11.5M6.5 6.25v7" />
     </Icon>
   )
 }

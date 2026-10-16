@@ -13,7 +13,7 @@ import type { NodeId } from '../../../shared/types'
 
 // Pages share one session, kept across runs: a login in one browser node holds in the others.
 const PARTITION = 'persist:nara-browser'
-export const HOME = 'about:blank'
+const HOME = 'about:blank'
 
 // A web page on the canvas: an address bar over an Electron <webview>, which runs the page in a
 // process of its own (main/browser.js locks it down). `url` is where it was last, saved with the

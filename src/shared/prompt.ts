@@ -59,7 +59,7 @@ export function roleProfile(role: Partial<Role> = {}): RoleProfile {
 
 // The role's part of the prompt. It comes first, before how Nara works, and says plainly that it
 // holds for the whole session: appended at the end of a long prompt, a role reads as background.
-export function rolePrompt(role: Role | undefined | null): string {
+function rolePrompt(role: Role | undefined | null): string {
   if (!role) return ''
   const summary = role.description ? ` ${role.description.replace(/\.?$/, '.')}` : ''
   const lines = [
@@ -86,7 +86,7 @@ export function rolePrompt(role: Role | undefined | null): string {
 }
 
 // How Nara works, for every agent that opens in a node.
-export function naraPrompt(nodeId: NodeId | string): string {
+function naraPrompt(nodeId: NodeId | string): string {
   return `# Working inside Nara
 
 You are running inside Nara, a desktop app where terminals and AI agents live as nodes on an infinite canvas. You are terminal ${nodeId}. The user sees your terminal on the canvas and can link it to other nodes: other terminals, usually running agents, notes, which are shared text, and browsers, web pages the user sees too.

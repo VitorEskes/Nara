@@ -10,7 +10,7 @@ import type { AgentStatus } from '../shared/types'
 //
 // On Linux under Wayland the shortcut goes through the desktop portal (see index.js), and the
 // compositor decides where the window opens and whether it stays on top.
-export const HUD_SHORTCUT = 'CommandOrControl+Alt+Space'
+const HUD_SHORTCUT = 'CommandOrControl+Alt+Space'
 const SIZE = { width: 380, height: 540 }
 // Room left between the HUD and the edge of the screen.
 const MARGIN = 16
