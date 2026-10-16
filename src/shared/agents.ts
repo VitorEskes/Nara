@@ -3,7 +3,7 @@
 // its command line by main/agents.ts. `context` says how it arrives:
 // - 'system': with the agent's own instructions, for the whole session (a flag, an instructions
 //   folder or config, or a read-only file kept in the chat).
-// - 'first': as the message the agent starts with (Gemini CLI, Cursor Agent).
+// - 'first': as the message the agent starts with (Antigravity CLI, Cursor Agent).
 // - 'paste': pasted once the agent is up (Amp, and any CLI started with `nara run`).
 //
 // `enforces` lists the role settings the CLI holds itself to as flags or a policy: the model, the
@@ -38,13 +38,12 @@ export const AGENTS: Record<string, Agent> = {
     telemetry: true,
     answers: { yes: 'y', no: '\x1b' }
   },
-  gemini: {
-    label: 'Gemini CLI',
-    command: 'gemini',
+  antigravity: {
+    label: 'Antigravity CLI',
+    command: 'agy',
     prompt: true,
     context: 'first',
-    enforces: { mode: true, readOnly: true },
-    answers: { yes: '1', no: '\x1b' }
+    enforces: { mode: true }
   },
   opencode: {
     label: 'OpenCode',

@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from 'fs'
 import { basename, join } from 'path'
 import { AGENTS } from '../shared/agents'
 
-// The shell integration of plain terminals: an agent CLI typed in one (claude, codex, gemini…)
+// The shell integration of plain terminals: an agent CLI typed in one (claude, codex, agy…)
 // starts through `nara run` (cli.ts), which hands it Nara's prompt and the node's role. Each CLI
 // gets a shell function, defined after the user's startup files so it wins over the PATH;
 // `command claude` still runs the CLI as it is. The integration also marks where each command

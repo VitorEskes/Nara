@@ -260,7 +260,7 @@ function read(id: string): { json: string; workspace: Workspace } | null {
         project,
         folder,
         camera,
-        nodes,
+        nodes: nodes.map(retireGemini),
         links,
         shapes: shapes.filter((shape) => shape?.type).map(unpackShape),
         code,
@@ -271,6 +271,15 @@ function read(id: string): { json: string; workspace: Workspace } | null {
     console.error(`nara: could not read workspace ${id}: ${(error as Error).message}`)
     return null
   }
+}
+
+// Gemini CLI was retired for Antigravity CLI: its nodes open the new one, and the old command,
+// if it was saved with the node, goes with it.
+function retireGemini(node: CanvasNode): CanvasNode {
+  if (node.agent !== 'gemini') return node
+  const command = node.command?.trim() === 'gemini' ? undefined : node.command
+  const title = node.title === 'Gemini CLI' ? 'Antigravity CLI' : node.title
+  return { ...node, agent: 'antigravity', command, title }
 }
 
 // A workspace in a project is named "workspace 1", "workspace 2"...; a loose one after its folder.

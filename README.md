@@ -6,7 +6,7 @@
 
 **The canvas for teams of coding agents.**
 
-Run Claude Code, Codex, Gemini and any CLI agent side by side.<br/>
+Run Claude Code, Codex, Antigravity and any CLI agent side by side.<br/>
 Give each one a role, link the ones that should work together, and review every change, all in one desktop app.
 
 <p>
@@ -136,7 +136,7 @@ Works with **any CLI agent**: if it runs in a terminal, it runs in Nara.
 <p>
   <a href="https://docs.anthropic.com/en/docs/claude-code"><kbd><img src="https://www.google.com/s2/favicons?domain=anthropic.com&sz=64" alt="" width="16" valign="middle" /> Claude Code</kbd></a> &nbsp;
   <a href="https://github.com/openai/codex"><kbd><img src="https://www.google.com/s2/favicons?domain=openai.com&sz=64" alt="" width="16" valign="middle" /> Codex</kbd></a> &nbsp;
-  <a href="https://github.com/google-gemini/gemini-cli"><kbd><img src="https://www.google.com/s2/favicons?domain=gemini.google.com&sz=64" alt="" width="16" valign="middle" /> Gemini CLI</kbd></a> &nbsp;
+  <a href="https://antigravity.google/docs/cli/install"><kbd><img src="https://www.google.com/s2/favicons?domain=antigravity.google&sz=64" alt="" width="16" valign="middle" /> Antigravity CLI</kbd></a> &nbsp;
   <a href="https://opencode.ai/docs/cli/"><kbd><img src="https://www.google.com/s2/favicons?domain=opencode.ai&sz=64" alt="" width="16" valign="middle" /> OpenCode</kbd></a> &nbsp;
   <a href="https://github.com/QwenLM/qwen-code"><kbd><img src="https://www.google.com/s2/favicons?domain=qwenlm.github.io&sz=64" alt="" width="16" valign="middle" /> Qwen Code</kbd></a> &nbsp;
   <a href="https://cursor.com/cli"><kbd><img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" alt="" width="16" valign="middle" /> Cursor Agent</kbd></a> &nbsp;

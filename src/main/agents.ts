@@ -228,17 +228,14 @@ function otherParts(
     return { args, env, message: kickoff || null }
   }
 
-  if (agent === 'gemini') {
-    // Gemini CLI can only replace its whole system prompt, which would drop its own: the context
-    // is its opening message instead. Read-only access is a policy that denies its edit tools.
-    const approval = ({ plan: 'plan', acceptEdits: 'auto_edit', auto: 'auto_edit' } as Approvals)[
-      mode
-    ]
-    if (approval) args.push('--approval-mode', approval)
-    if (readOnly && mode !== 'plan') {
-      env.NARA_POLICY = contextFile('read-only.toml', GEMINI_READ_ONLY)
-      args.push({ prefix: '--policy=', env: 'NARA_POLICY' })
-    }
+  if (agent === 'antigravity') {
+    // Antigravity CLI takes no instructions on its command line: the context is its opening
+    // message. Its modes only cover edits, and nothing denies its edit tools, so read-only access
+    // is left to the prompt.
+    const approval = (
+      { plan: 'plan', acceptEdits: 'accept-edits', auto: 'accept-edits' } as Approvals
+    )[mode]
+    if (approval) args.push('--mode', approval)
     return opening('-i')
   }
 
@@ -259,15 +256,6 @@ type Approvals = Record<string, string | undefined>
 
 // Qwen Code's tools that change files.
 const QWEN_EDIT_TOOLS = ['edit', 'write_file', 'notebook_edit']
-
-// Gemini CLI's policy for a read-only role: its tools that change files are denied, above the
-// user's own rules. Shell commands still run, as for Claude Code.
-const GEMINI_READ_ONLY = `[[rule]]
-toolName = ["write_file", "replace"]
-decision = "deny"
-priority = 900
-denyMessage = "Your role in Nara is read-only: you don't edit files."
-`
 
 // Instructions an agent reads from a file, kept in the data folder in a folder named after their
 // text: the same text is written once, and a file never changes under an agent reading it.

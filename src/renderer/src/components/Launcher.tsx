@@ -42,7 +42,7 @@ type Tab = 'general' | 'style' | 'role'
 // The programs a new terminal can open with: the shell, then the main agents, each with the
 // command that starts it. The other agent CLIs (shared/agents.ts) start from a plain terminal,
 // typed in it or as its command, and get the same context there.
-const LISTED = ['claude', 'codex', 'gemini']
+const LISTED = ['claude', 'codex', 'antigravity']
 const PROGRAMS = [
   { key: 'shell', label: 'Terminal', command: '' },
   ...LISTED.map((key) => ({ key, label: AGENTS[key].label, command: AGENTS[key].command }))
