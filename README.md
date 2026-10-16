@@ -36,42 +36,6 @@ Give each one a role, link the ones that should work together, and review every 
 
 <br/>
 
-## Install
-
-### macOS
-
-```bash
-brew install --cask vitoreskes/tap/nara
-```
-
-Or download the `.dmg` for your Mac (`arm64` for Apple silicon, `x64` for Intel) from the [latest release](https://github.com/VitorEskes/Nara/releases/latest). Nara isn't notarized yet: the Homebrew cask takes care of that, but a downloaded `.dmg` needs one extra step the first time, either **System Settings › Privacy & Security › Open Anyway** or:
-
-```bash
-xattr -dr com.apple.quarantine /Applications/Nara.app
-```
-
-### Linux
-
-Download the **AppImage**, which runs on any distribution, or the **`.deb`** for Debian and Ubuntu from the [latest release](https://github.com/VitorEskes/Nara/releases/latest):
-
-```bash
-chmod +x nara-*-x86_64.AppImage && ./nara-*-x86_64.AppImage
-# or
-sudo apt install ./nara_*_amd64.deb
-```
-
-### Windows
-
-Run `nara-*-setup.exe` from the [latest release](https://github.com/VitorEskes/Nara/releases/latest). It isn't signed yet, so SmartScreen asks first: **More info › Run anyway**.
-
-### Requirements
-
-- The agent CLIs you want to use, installed and logged in, on your `PATH`. Nara runs them with your own login and never asks for an API key.
-- **git**, for worktrees and the review.
-- **zsh** or **bash**, so an agent you type in a plain terminal starts with Nara's context.
-
-<br/>
-
 ## Features
 
 <table>
@@ -165,26 +129,6 @@ Run `nara-*-setup.exe` from the [latest release](https://github.com/VitorEskes/N
 
 <br/>
 
-## Getting started
-
-1. **Add a project** with `Ctrl+Shift+O` and pick a git repository.
-2. **Open an orchestrator**: the terminal button in the dock, Claude Code (or another agent), role _Orchestrator_.
-3. **Open two workers**, at least one with _Its own worktree_ on, and a **reviewer**.
-4. **Link them** with the Connect tool, and add a **note** linked to the orchestrator for the plan.
-5. **Ask the orchestrator** for something. It splits the work, the workers build it, the reviewer checks it, and you review and merge with `Ctrl+Shift+G`.
-
-An agent typed in any plain terminal on the canvas (`claude`, `codex`, `gemini`…) starts with Nara's context just the same.
-
-| Shortcut       | Action             |     | Shortcut         | Action                |
-| -------------- | ------------------ | --- | ---------------- | --------------------- |
-| `Ctrl+Shift+N` | New workspace      |     | `Ctrl+Shift+E`   | Canvas ↔ code         |
-| `Ctrl+Shift+O` | Add a project      |     | `Ctrl+Shift+G`   | Canvas ↔ review       |
-| `Ctrl+Shift+W` | All workspaces     |     | `Ctrl+P`         | Open a file           |
-| `Ctrl+Shift+B` | Toggle the sidebar |     | `Ctrl+Shift+L`   | Light or dark         |
-| `Ctrl+,`       | Settings           |     | `Ctrl+Alt+Space` | The HUD, from any app |
-
-<br/>
-
 ## Supported agents
 
 Works with **any CLI agent**: if it runs in a terminal, it runs in Nara.
@@ -202,21 +146,7 @@ Works with **any CLI agent**: if it runs in a terminal, it runs in Nara.
   <kbd>+ any CLI agent</kbd>
 </p>
 
-Every agent starts knowing what Nara is, who it's linked to and the role it plays, and gets the role's first task. How each one takes it, and how much of the role it enforces on itself:
-
-| Agent            | Nara's context and the role       | Role enforced                     | Answers from the HUD | Spend and activity | Resumes |
-| ---------------- | --------------------------------- | --------------------------------- | :------------------: | :----------------: | :-----: |
-| **Claude Code**  | system prompt                     | model, permission mode, read-only |          ✓           |         ✓          |    ✓    |
-| **Codex**        | developer instructions            | read-only                         |          ✓           |         ✓          |    —    |
-| **Qwen Code**    | system prompt                     | permission mode, read-only        |          ✓           |         —          |    —    |
-| **Copilot CLI**  | custom instructions               | permission mode, read-only        |          ✓           |         —          |    —    |
-| **OpenCode**     | instructions                      | permission mode, read-only        |          —           |         —          |    —    |
-| **Aider**        | a read-only file kept in the chat | ask mode, read-only               |          ✓           |         —          |    —    |
-| **Gemini CLI**   | opening message                   | permission mode, read-only        |          ✓           |         —          |    —    |
-| **Cursor Agent** | opening message                   | plan mode, read-only              |          —           |         —          |    —    |
-| **Amp**          | first message, pasted             | —                                 |          —           |         —          |    —    |
-
-Any other CLI starts with `nara run <cli>` and gets the context as its first message, like Amp.
+Every agent starts knowing what Nara is, who it's linked to and the role it plays, and gets the role's first task. How each one takes it, and how much of the role it enforces on itself.
 
 <br/>
 
@@ -242,7 +172,7 @@ Without `<text>`, `send`, `write` and `append` read it from stdin.
 
 ## Privacy
 
-Nara has no account, no server and no analytics. Workspaces, roles and settings are saved in its data folder: `~/.config/nara` on Linux, `~/Library/Application Support/nara` on macOS, `%APPDATA%\nara` on Windows. Spend and activity are read from the agents' own files on your machine. The only request Nara makes on its own is for your Claude plan's usage, with the login Claude Code already keeps, the same place Claude Code's `/usage` reads it from.
+Nara has no account, no server and no analytics. Workspaces, roles and settings are saved in its data folder: `~/.config/nara` on Linux, `~/Library/Application Support/nara` on macOS, `%APPDATA%\nara` on Windows. Spend and activity are read from the agents' own files on your machine. The only request that Nara makes on its own is related to its CLI.
 
 <br/>
 
