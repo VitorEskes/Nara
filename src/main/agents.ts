@@ -1,9 +1,10 @@
-import { randomUUID } from 'crypto'
-import { existsSync, readFileSync, readdirSync } from 'fs'
+import { app } from 'electron'
+import { createHash, randomUUID } from 'crypto'
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
-import { join } from 'path'
+import { dirname, join } from 'path'
 import { AGENTS } from '../shared/agents'
-import { EDIT_TOOLS, agentPrompt, roleProfile } from '../shared/prompt'
+import { EDIT_TOOLS, agentPrompt, roleProfile, type RoleProfile } from '../shared/prompt'
 import { findRole } from './roles'
 import type { NodeId, Worktree } from '../shared/types'
 
@@ -20,8 +21,9 @@ export interface AgentOptions {
   hooks?: Hooks | false
 }
 
-// An argument is a word, or { env } for the value of one of the variables.
-type Arg = string | { env: string }
+// An argument is a word, or { env } for the value of one of the variables, after `prefix` if it
+// has one (`--policy=` and the path).
+type Arg = string | { env: string; prefix?: string }
 type Env = Record<string, string>
 
 export interface Launch {
@@ -51,7 +53,9 @@ export function agentLaunch({
   const command = typeof typed === 'string' && typed.trim() ? typed.trim() : AGENTS[agent].command
   const resuming = agent === 'claude' && !!session && UUID.test(session) && hasConversation(session)
   const parts = agentParts({ agent, session, resuming, ...options })
-  const words = parts.args.map((arg) => (typeof arg === 'string' ? arg : `"$${arg.env}"`))
+  const words = parts.args.map((arg) =>
+    typeof arg === 'string' ? arg : `${arg.prefix ?? ''}"$${arg.env}"`
+  )
   return { command: [command, ...words].join(' '), env: parts.env, message: parts.message }
 }
 
@@ -73,7 +77,9 @@ export function agentRun({
   const own = typed.some((arg) => SESSION_FLAGS.has(arg.split('=')[0]))
   const session = agent === 'claude' && !own ? randomUUID() : undefined
   const parts = agentParts({ agent, session, resuming: false, quiet: typed.length > 0, ...options })
-  const args = parts.args.map((arg) => (typeof arg === 'string' ? arg : parts.env[arg.env]))
+  const args = parts.args.map((arg) =>
+    typeof arg === 'string' ? arg : `${arg.prefix ?? ''}${parts.env[arg.env]}`
+  )
   return { args, env: parts.env, message: parts.message, session }
 }
 
@@ -141,10 +147,7 @@ function agentParts({
     args.push('-c', { env: 'NARA_CODEX_CONFIG' })
     if (access === 'read-only') args.push('--sandbox', 'read-only')
   } else {
-    // The rest have no flag for it that holds across versions: the prompt is their first message,
-    // and the role's first task follows it there.
-    message = contextMessage(env.NARA_PROMPT, quiet ? '' : kickoff)
-    return { args, env, message }
+    return otherParts(agent, env, { mode, access, kickoff: quiet ? '' : kickoff }, Boolean(quiet))
   }
 
   // The role's first message starts the conversation, once: a node that resumes is past it. `--`
@@ -155,6 +158,130 @@ function agentParts({
   }
 
   return { args, env, message }
+}
+
+// The other agents, each the way its CLI takes them (shared/agents.ts lists what each gets). The
+// flags come from each CLI's --help; anything a CLI can't do is left out rather than guessed.
+//
+// An agent that takes its context as its opening message only gets it that way when the user typed
+// nothing after the command (`quiet` is false); otherwise it's pasted once the agent is up. Flags
+// that take a list are written with `=`, so they can't swallow the user's arguments.
+function otherParts(
+  agent: string,
+  env: Env,
+  { mode, access, kickoff }: Pick<RoleProfile, 'mode' | 'access' | 'kickoff'>,
+  quiet: boolean
+): { args: Arg[]; env: Env; message: string | null } {
+  const prompt = env.NARA_PROMPT
+  const readOnly = access === 'read-only'
+  const args: Arg[] = []
+  const opening = (flag: string | null): { args: Arg[]; env: Env; message: string | null } => {
+    if (quiet) return { args, env, message: contextMessage(prompt, '') }
+    env.NARA_OPENING = contextMessage(prompt, kickoff)
+    args.push(...(flag ? [flag] : []), { env: 'NARA_OPENING' })
+    return { args, env, message: null }
+  }
+
+  if (agent === 'qwen') {
+    args.push('--append-system-prompt', { env: 'NARA_PROMPT' })
+    const approval = ({ plan: 'plan', acceptEdits: 'auto-edit', auto: 'auto' } as Approvals)[mode]
+    if (approval) args.push('--approval-mode', approval)
+    if (readOnly && mode !== 'plan') {
+      args.push(...QWEN_EDIT_TOOLS.map((tool) => `--exclude-tools=${tool}`))
+    }
+    if (kickoff) {
+      env.NARA_KICKOFF = kickoff
+      args.push('-i', { env: 'NARA_KICKOFF' })
+    }
+    return { args, env, message: null }
+  }
+
+  if (agent === 'copilot') {
+    // Copilot reads the AGENTS.md of every folder in this list as custom instructions.
+    const own = process.env.COPILOT_CUSTOM_INSTRUCTIONS_DIRS
+    const dir = dirname(contextFile('AGENTS.md', prompt))
+    env.COPILOT_CUSTOM_INSTRUCTIONS_DIRS = own ? `${dir},${own}` : dir
+    if (mode === 'plan') args.push('--plan')
+    else if (mode) args.push('--allow-tool=write')
+    if (readOnly) args.push('--deny-tool=write')
+    if (kickoff) {
+      env.NARA_KICKOFF = kickoff
+      args.push('-i', { env: 'NARA_KICKOFF' })
+    }
+    return { args, env, message: null }
+  }
+
+  if (agent === 'opencode') {
+    // OpenCode adds the files listed in `instructions` to its own, and its permissions come as a
+    // variable too. Plan mode is its built-in plan agent, which doesn't edit.
+    env.OPENCODE_CONFIG_CONTENT = JSON.stringify({ instructions: [contextFile('NARA.md', prompt)] })
+    if (mode === 'plan') args.push('--agent', 'plan')
+    if (readOnly) env.OPENCODE_PERMISSION = JSON.stringify({ edit: 'deny' })
+    else if (mode && mode !== 'plan') env.OPENCODE_PERMISSION = JSON.stringify({ edit: 'allow' })
+    return { args, env, message: kickoff || null }
+  }
+
+  if (agent === 'aider') {
+    // A read-only file stays in Aider's chat for the whole session. Its ask mode answers and
+    // plans without editing.
+    env.NARA_CONTEXT_FILE = contextFile('nara-instructions.md', prompt)
+    args.push('--read', { env: 'NARA_CONTEXT_FILE' })
+    if (readOnly || mode === 'plan') args.push('--chat-mode', 'ask')
+    if (mode === 'auto') args.push('--yes-always')
+    return { args, env, message: kickoff || null }
+  }
+
+  if (agent === 'gemini') {
+    // Gemini CLI can only replace its whole system prompt, which would drop its own: the context
+    // is its opening message instead. Read-only access is a policy that denies its edit tools.
+    const approval = ({ plan: 'plan', acceptEdits: 'auto_edit', auto: 'auto_edit' } as Approvals)[
+      mode
+    ]
+    if (approval) args.push('--approval-mode', approval)
+    if (readOnly && mode !== 'plan') {
+      env.NARA_POLICY = contextFile('read-only.toml', GEMINI_READ_ONLY)
+      args.push({ prefix: '--policy=', env: 'NARA_POLICY' })
+    }
+    return opening('-i')
+  }
+
+  if (agent === 'cursor') {
+    // Cursor Agent takes no instructions: the context is its opening prompt. Its ask mode reads
+    // without editing.
+    if (mode === 'plan') args.push('--mode', 'plan')
+    else if (readOnly) args.push('--mode', 'ask')
+    return opening(null)
+  }
+
+  // Amp, and any CLI started with `nara run`: pasted once it's up.
+  return { args, env, message: contextMessage(prompt, kickoff) }
+}
+
+// A role's permission mode (shared/prompt.ts) as an agent's own approval mode.
+type Approvals = Record<string, string | undefined>
+
+// Qwen Code's tools that change files.
+const QWEN_EDIT_TOOLS = ['edit', 'write_file', 'notebook_edit']
+
+// Gemini CLI's policy for a read-only role: its tools that change files are denied, above the
+// user's own rules. Shell commands still run, as for Claude Code.
+const GEMINI_READ_ONLY = `[[rule]]
+toolName = ["write_file", "replace"]
+decision = "deny"
+priority = 900
+denyMessage = "Your role in Nara is read-only: you don't edit files."
+`
+
+// Instructions an agent reads from a file, kept in the data folder in a folder named after their
+// text: the same text is written once, and a file never changes under an agent reading it.
+function contextFile(name: string, text: string): string {
+  const hash = createHash('sha1').update(text).digest('hex').slice(0, 16)
+  const file = join(app.getPath('userData'), 'context', hash, name)
+  if (!existsSync(file)) {
+    mkdirSync(dirname(file), { recursive: true })
+    writeFileSync(file, text)
+  }
+  return file
 }
 
 // The first message of an agent that takes its context that way: Nara's prompt, said to be

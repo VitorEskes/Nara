@@ -1,4 +1,3 @@
-import { AGENTS } from './agents'
 import type { NodeId, Role, Worktree } from './types'
 
 // What an agent is told when it opens in a node, and the flags that hold it to its role. Main
@@ -128,26 +127,4 @@ function worktreePrompt(worktree?: Pick<Worktree, 'branch' | 'base'> | null): st
   return `# Your worktree
 
 You work in a git worktree of your own, on the branch ${worktree.branch}, made from ${worktree.base}. Other agents may be working on ${worktree.base} or on branches of their own at the same time, so stay on this branch. Commit your work here as you finish each piece, with clear messages: the user reviews this branch in Nara and merges it into ${worktree.base} from there, and only commits get merged.`
-}
-
-// The settings the role turns into, in words, for the role's card and the inspector:
-// [{ label, value }].
-// Without an agent (a plain terminal, where any of them may start), every flag shows: each holds
-// where the agent that starts has it. Agents that take their context as a message (shared/agents.js)
-// have none of them.
-export function roleFlags(
-  agent: string | null | undefined,
-  role: Role | undefined | null
-): { label: string; value: string }[] {
-  if (!role) return []
-  const { model, mode, access, kickoff } = roleProfile(role)
-  const flagged = !agent || AGENTS[agent]?.context === 'flags'
-  const claudeLike = flagged && agent !== 'codex'
-  const flags = []
-  if (claudeLike && model) flags.push({ label: 'Model', value: MODELS[model].label })
-  if (claudeLike && mode) flags.push({ label: 'Permissions', value: MODES[mode].label })
-  if (flagged && access === 'read-only')
-    flags.push({ label: 'Access', value: ACCESS[access].label })
-  if (kickoff) flags.push({ label: 'Starts with', value: kickoff })
-  return flags
 }
