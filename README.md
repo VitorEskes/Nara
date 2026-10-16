@@ -1,124 +1,116 @@
-<h1 align="center">
-  <img src="resources/icon.png" alt="Nara" width="64" valign="middle" /> Nara
-</h1>
+<p align="center">
+  <img src="docs/assets/shika.png" alt="Shika, Nara's pixel-art deer" width="76" />
+</p>
+
+<h1 align="center">Nara</h1>
+
+<p align="center">
+  <strong>A canvas for a team of coding agents.</strong><br/>
+  Put Claude Code, Codex and any CLI agent side by side, give each one a role,<br/>
+  link the ones that should talk, and review what they did — in one window.
+</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/license-MIT-2f6f4f?style=flat" alt="License: MIT" />
-  <img src="https://img.shields.io/badge/Linux%20%7C%20macOS%20%7C%20Windows-3f8462?style=flat-square" alt="Platforms: Linux, macOS and Windows" />
+  <img src="https://img.shields.io/badge/Linux%20%7C%20macOS%20%7C%20Windows-3f8462?style=flat" alt="Platforms: Linux, macOS and Windows" />
   <img src="https://img.shields.io/badge/Electron-39-47848F?style=flat&logo=electron&logoColor=white" alt="Electron 39" />
-  <img src="https://img.shields.io/badge/React-19-149ECA?style=flat&logo=react&logoColor=white" alt="React 19" />
   <img src="https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat&logo=typescript&logoColor=white" alt="TypeScript" />
 </p>
 
 <p align="center">
-  <strong>AI coding agents on an infinite canvas.</strong><br/>
-  Run Claude Code, Codex, Gemini and any other CLI agent side by side — link them, give them roles,<br/>
-  let them talk to each other, and review what they did, all in one place.
+  <a href="#one-release-four-agents">The tour</a> ·
+  <a href="#agents">Agents</a> ·
+  <a href="#the-nara-command">The <code>nara</code> command</a> ·
+  <a href="#install">Install</a> ·
+  <a href="#developing">Developing</a>
 </p>
 
-<!--
-  Hero: drop a screenshot of a workspace at docs/assets/hero.png and uncomment.
+<br/>
+
 <p align="center">
-  <img src="docs/assets/hero.png" alt="A Nara workspace: agents, notes and a browser linked on the canvas" width="960" />
+  <img src="docs/assets/hero.jpg" alt="A Nara workspace: an orchestrator, two workers and a reviewer linked on the canvas, with the plan in a note, the app in a browser and its dev server" width="100%" />
 </p>
--->
 
-## Features
+<p align="center">
+  <sub>Every screenshot here comes from one real session: four Claude Code agents shipping a small release of a focus timer.</sub>
+</p>
+
+<br/>
+
+## One release, four agents
+
+Most agent tools give you a list of chats. Nara gives you a room: every agent is a terminal on an infinite canvas, next to the notes, pages and other agents it works with. Here's how the release in the picture above went.
+
+<br/>
+
+### `01` &nbsp;Put the team together
+
+Open an agent from the dock — Claude Code, Codex, Gemini or a plain terminal for any other CLI — and give it a **role**: an Orchestrator that splits the work, Workers that build, a Reviewer that only reads, a Planner that designs first, or one you write yourself. A role is more than a prompt: its model, permission mode and read-only access become flags the agent itself enforces. Agents that might step on each other get **a git worktree of their own**, on a new branch.
 
 <table>
-<tr>
-<td width="50%" valign="top">
-
-### Infinite Canvas
-
-Terminals, agents, Markdown notes and web pages live as nodes on a canvas you pan and zoom. Sketch around them with a whiteboard: shapes, arrows, text and freehand strokes.
-
-</td>
-<td width="50%" valign="top">
-
-### Agents That Talk
-
-Pull a rope between two nodes and they can reach each other. Agents send messages with `nara send`, share plans in linked notes, and read the browser you're both looking at.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-### Roles That Hold
-
-Open an agent as an **Orchestrator**, **Worker**, **Reviewer** or **Planner**, or write your own. A role is more than a prompt: model, permission mode and read-only access become flags the agent itself enforces.
-
-</td>
-<td width="50%" valign="top">
-
-### A Worktree Each
-
-Start an agent in a git worktree of its own, on a new branch. Agents side by side never edit the same files — review each branch and merge it when it's ready.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-### Review, Built In
-
-Every agent's changes, file by file, in a Monaco diff. Comment on lines, mark files as viewed, send the feedback back to the agent in one message, then commit and merge.
-
-</td>
-<td width="50%" valign="top">
-
-### Code View
-
-The workspace's files in tabs over a Monaco editor, with an explorer and `Ctrl+P` quick open. Open files stay in step with the disk as agents edit them.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-### Know What They Spend
-
-The inspector shows each agent's tokens, context, estimated cost, task list and recent activity. The top bar tracks your Claude and Codex plans — the 5-hour window and the week.
-
-</td>
-<td width="50%" valign="top">
-
-### A Pet on Your Desktop
-
-Shika, a pixel-art deer, sits over every app and tells you when an agent needs you. Click it to answer yes, no or a line of text without switching windows. Codex pets work too.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-### Browsers on the Canvas
-
-Open your dev server right next to the agent building it. Linked agents can load a page, read its text and take screenshots to check their own work.
-
-</td>
-<td width="50%" valign="top">
-
-### Picks Up Where You Left
-
-Projects group their workspaces, and every workspace is saved as you go. Claude Code agents resume their conversations after a restart.
-
-</td>
-</tr>
+  <tr>
+    <td width="50%"><img src="docs/assets/launcher.jpg" alt="The new terminal dialog with Claude Code selected and the option to open it in its own worktree" /></td>
+    <td width="50%"><img src="docs/assets/roles.jpg" alt="The Role tab of the new terminal dialog, with the Reviewer role and its instructions" /></td>
+  </tr>
 </table>
 
-**Also in the box:**
+<br/>
 
-- **Command center & HUD** — every agent across your workspaces, the most urgent first, in a floating window over every app (`Ctrl+Alt+Space`).
-- **Notes as blocks** — Markdown edited as headings, lists, checklists, quotes and code, with `/` for a menu and images pasted in.
-- **Terminal looks** — color schemes, tones, icons, text sizes and cursors for each terminal, with a live preview.
-- **Overview** — every workspace as a card with a miniature of its canvas, grouped by project.
-- **Light and dark** — a graphite palette, dark first, following the system or your choice.
+### `02` &nbsp;Let them talk it through
 
----
+Pull a rope between two nodes and they can reach each other. The Lead kept the plan as a checklist in a linked note, sent each worker its task with `nara send`, and ticked items off as the reports came back — no copy and paste, no babysitting. Every agent knows how Nara works from the moment it starts.
 
-## Supported Agents
+<p align="center">
+  <img src="docs/assets/agents.jpg" alt="The Lead agent linked to a Plan note whose checklist is ticked, and a worker reporting back with nara send" width="100%" />
+</p>
+
+<br/>
+
+### `03` &nbsp;Review, then merge
+
+Each agent's changes show up in the review, file by file, in a Monaco diff — here, the dark mode branch from its own worktree. Leave comments on lines and send them back to the agent in one message, mark files as viewed, and merge the branch when it's ready.
+
+<p align="center">
+  <img src="docs/assets/review.jpg" alt="The review view: a split diff of style.css on the dark mode branch, with its commit, files and a Merge button" width="100%" />
+</p>
+
+<br/>
+
+### `04` &nbsp;Step in whenever you like
+
+The code view puts the workspace's files in tabs over a Monaco editor, with an explorer and `Ctrl+P` to open anything. Files stay in step with the disk while the agents edit them.
+
+<p align="center">
+  <img src="docs/assets/code.jpg" alt="The code view with app.js open in the editor and the explorer on the right" width="100%" />
+</p>
+
+<br/>
+
+### `05` &nbsp;Know what they're doing — from anywhere
+
+Select an agent to see what it did, what it's working on and what it has spent: tokens, context and cost, next to your Claude and Codex plans. When one needs you, Shika — a pixel-art deer that lives on your desktop — says so, and the HUD lets you answer **yes**, **no** or a line of text without leaving the app you're in.
+
+<p align="center">
+  <img src="docs/assets/inspector.jpg" alt="An agent selected: its spend in the sidebar and its recent activity in the inspector" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/assets/hud.jpg" alt="The HUD: the reviewer needs you, with Yes and No, and the other agents done" width="440" />
+</p>
+
+<br/>
+
+### Also on the canvas
+
+- **Browsers** — open your dev server next to the agent building it. Linked agents can load the page, read it and take screenshots.
+- **Notes** — Markdown edited as blocks: headings, checklists, code and pasted images, with `/` for a menu.
+- **Whiteboard** — shapes, arrows, text and freehand strokes around your nodes.
+- **Projects** — workspaces grouped by project, an overview of all of them, and sessions that pick up after a restart.
+- **Looks** — light and dark themes, and a color scheme, tone and icon for every terminal.
+
+<br/>
+
+## Agents
 
 Works with **any CLI agent** — if it runs in a terminal, it runs in Nara.
 
@@ -135,7 +127,7 @@ Works with **any CLI agent** — if it runs in a terminal, it runs in Nara.
   <kbd>+ any CLI agent</kbd>
 </p>
 
-Every agent starts knowing what Nara is, who it's linked to and the role it plays — whether it opens from the new terminal dialog or is typed in a plain terminal. How deep the integration goes depends on the agent:
+Every agent starts knowing what Nara is, who it's linked to and the role it plays — whether it opens from the dialog or is typed in a plain terminal. How deep the rest goes depends on the agent:
 
 |                                                        | Claude Code |   Codex   |         Others         |
 | ------------------------------------------------------ | :---------: | :-------: | :--------------------: |
@@ -145,11 +137,11 @@ Every agent starts knowing what Nara is, who it's linked to and the role it play
 | Answer its questions from the pet or the HUD           |      ✓      |     ✓     |           —            |
 | Resumes its conversation after a restart               |      ✓      |     —     |           —            |
 
-For a CLI that isn't on the list, start it with `nara run <cli>` inside any terminal.
+For a CLI that isn't on the list, start it with `nara run <cli>` in any terminal.
 
----
+<br/>
 
-## The `nara` Command
+## The `nara` command
 
 Every terminal on the canvas has a `nara` command, and every agent is told how to use it. It's how agents reach the nodes linked to them:
 
@@ -165,13 +157,13 @@ nara browser shot <browser>       # a screenshot of the page
 nara run <cli> [args]             # start any agent CLI with Nara's context and the role
 ```
 
-Replies arrive the same way: as a new message in the agent's terminal, so agents never sleep or poll.
+Replies arrive the same way, as a new message in the agent's terminal — so agents never sleep or poll while they wait.
 
----
+<br/>
 
 ## Install
 
-Nara isn't packaged for download yet — build it from source. You'll need **Node.js 22+**, **git**, and the agent CLIs you want to use on your `PATH`.
+Nara isn't packaged for download yet — build it from source. You'll need **Node.js 22+**, **git**, and the agent CLIs you want on your `PATH`.
 
 ```bash
 git clone git@github.com:VitorEskes/Nara.git
@@ -191,9 +183,10 @@ npm run build:win     # NSIS setup .exe
 > [!NOTE]
 > Typing an agent in a plain terminal goes through Nara with **zsh** and **bash**. Under Wayland, the desktop pet runs through XWayland so it can stay on top of every window.
 
----
+<details>
+<summary><strong>Keyboard shortcuts</strong></summary>
 
-## Keyboard Shortcuts
+<br/>
 
 | Shortcut         | Action                        |
 | ---------------- | ----------------------------- |
@@ -208,7 +201,9 @@ npm run build:win     # NSIS setup .exe
 | `Ctrl+,`         | Settings                      |
 | `Ctrl+Alt+Space` | The HUD, from any app         |
 
----
+</details>
+
+<br/>
 
 ## Developing
 
@@ -273,8 +268,11 @@ Nara is an Electron app in TypeScript, built with [electron-vite](https://electr
 
 </details>
 
+<br/>
+
 ---
 
-## License
-
-Nara is free and open source under the [MIT License](LICENSE).
+<p align="center">
+  <img src="docs/assets/shika.png" alt="" width="28" /><br/>
+  <sub>Nara is free and open source under the <a href="LICENSE">MIT License</a>.</sub>
+</p>
