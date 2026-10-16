@@ -1,10 +1,11 @@
-import '@fontsource/geist-sans/400.css'
-import '@fontsource/geist-sans/500.css'
-import '@fontsource/geist-sans/600.css'
+import '@fontsource/open-runde/400.css'
+import '@fontsource/open-runde/500.css'
+import '@fontsource/open-runde/600.css'
+import '@fontsource/open-runde/700.css'
 import '@fontsource/geist-mono/400.css'
 import '@fontsource/geist-mono/700.css'
 // Only the Latin subset: the full Japanese font is tens of megabytes, and the serif is only used
-// for the name and for notes set in serif.
+// for notes set in serif.
 import '@fontsource/shippori-mincho-b1/latin-500.css'
 import '@fontsource/shippori-mincho-b1/latin-800.css'
 import './assets/main.css'

@@ -527,7 +527,11 @@ export function strokeShape(
 // canvas in the font the text is drawn in.
 const LINE_HEIGHT = 1.3
 const TEXT_PAD = 4
-const FONT_NAMES: Record<string, string> = { sans: '"Geist Sans"', hand: '"Shippori Mincho B1"', mono: '"Geist Mono"' }
+const FONT_NAMES: Record<string, string> = {
+  sans: '"Open Runde"',
+  hand: '"Shippori Mincho B1"',
+  mono: '"Geist Mono"'
+}
 let measurer: CanvasRenderingContext2D | null = null
 
 export function textBox(shape: DraftShape): { w: number; h: number } {
