@@ -1264,6 +1264,7 @@ export default function Workspace({
 
       {inspector && !offCanvas && (
         <Inspector
+          workspaceId={workspaceId}
           views={views}
           node={selectedNode || null}
           nodes={nodes}

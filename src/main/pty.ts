@@ -4,6 +4,7 @@ import { existsSync, readlinkSync } from 'fs'
 import * as pty from 'node-pty'
 import { AGENTS } from '../shared/agents'
 import { agentLaunch, startupLaunch, type Hooks, type Launch } from './agents'
+import { commandEnded, commandOutput, commandStarted } from './changes'
 import { shellIntegration } from './shell'
 import { agentExited, agentOutput, agentTouched, trackAgent, untrackAgent } from './status'
 import { unwatchAgent, watchAgent } from './telemetry'
@@ -101,18 +102,23 @@ export function registerPty(win: BrowserWindow, extraEnv: Record<string, string>
     // by then the window may be gone: sending to it would throw in main.
     term.onData((data) => {
       agentOutput(id, data)
+      if (!known) commandOutput(id, workspaceId, nodeId, data)
       const context = contexts.get(id)
       if (context) context.last = Date.now()
       if (!win.isDestroyed()) win.webContents.send('pty:data', id, data)
     })
     term.onExit(({ exitCode }) => {
       agentExited(id, exitCode)
+      commandEnded(id)
       contexts.delete(id)
       terminals.delete(id)
       if (!win.isDestroyed()) win.webContents.send('pty:exit', id, exitCode)
     })
 
     terminals.set(id, { workspaceId, nodeId, term, agent: known })
+    // An agent node's files change for as long as its agent runs; a plain terminal's shell marks
+    // its commands (changes.ts).
+    if (known) commandStarted(id, workspaceId, nodeId, start)
     // The pet follows the agents, not the shells.
     if (known) startAgent(id, { agent: known, session, message: launch?.message, cwd: start })
     return id
@@ -287,6 +293,7 @@ function kill(id: number): void {
   // agent that failed to start stays on screen, stopped, until its node is closed).
   untrackAgent(id)
   unwatchAgent(id)
+  commandEnded(id)
   const terminal = terminals.get(id)
   if (!terminal) return
   terminals.delete(id)

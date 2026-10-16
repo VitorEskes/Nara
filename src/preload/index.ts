@@ -6,6 +6,7 @@ import type {
   AgentTarget,
   AppInfo,
   BrowserKey,
+  ChangesOwner,
   CodeListing,
   CodeRead,
   CodeWrite,
@@ -146,9 +147,10 @@ const api = {
       name?: string
     ): Promise<(Worktree & { error?: undefined }) | { error: string }> =>
       ipcRenderer.invoke('git:worktree', folder, name),
-    // { branch, files: [{ path, status, added, removed }] } or null outside a repository.
-    changes: (folder?: string): Promise<GitChanges | null> =>
-      ipcRenderer.invoke('git:changes', folder),
+    // { branch, files: [{ path, status, added, removed }] } or null outside a repository. With
+    // `owner`, only what that terminal changed, and how many `others` there are.
+    changes: (folder?: string, owner?: ChangesOwner): Promise<GitChanges | null> =>
+      ipcRenderer.invoke('git:changes', folder, owner),
     diff: (folder: string, file: string, untracked: boolean): Promise<string> =>
       ipcRenderer.invoke('git:diff', folder, file, untracked),
     merge: (worktree: Worktree): Promise<Result> => ipcRenderer.invoke('git:merge', worktree),

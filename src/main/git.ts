@@ -3,7 +3,8 @@ import { execFile } from 'child_process'
 import { createHash, randomBytes } from 'crypto'
 import { existsSync, mkdirSync } from 'fs'
 import { basename, join } from 'path'
-import type { GitChange, Worktree } from '../shared/types'
+import { changedBy, topOf } from './changes'
+import type { ChangesOwner, GitChange, Worktree } from '../shared/types'
 
 // Git for the canvas: a worktree of its own for an agent, so agents working side by side never
 // edit the same checkout, and the changes in a node's folder, for the inspector to review. Every
@@ -32,19 +33,31 @@ export function registerGit(win: BrowserWindow): void {
   })
 
   // What changed in the folder against its last commit: { branch, files: [{ path, status, added,
-  // removed }] }, or null outside a repository.
-  ipcMain.handle('git:changes', async (_ev, folder?: string) => {
+  // removed }] }, or null outside a repository. With `owner`, only the files that node's terminal
+  // changed (changes.ts), and `others` says how many more there are.
+  ipcMain.handle('git:changes', async (_ev, folder?: string, owner?: ChangesOwner) => {
     if (!folder || !existsSync(folder)) return null
     try {
       const branch = (await git(folder, ['rev-parse', '--abbrev-ref', 'HEAD'])).trim()
       const status = await git(folder, ['status', '--porcelain=v1', '-z', '--untracked-files=all'])
       const numstat = await git(folder, ['diff', 'HEAD', '--numstat', '-z']).catch(() => '')
       const counts = parseNumstat(numstat)
-      const files = parseStatus(status).map((file) => ({
+      let files: GitChange[] = parseStatus(status).map((file) => ({
         ...file,
         ...(counts.get(file.path) ?? { added: null, removed: null })
       }))
-      return { branch, files }
+      if (!owner) return { branch, files }
+      const top = await topOf(folder)
+      if (!top) return { branch, files }
+      const all = files.length
+      const mine = changedBy(
+        owner.workspaceId,
+        owner.nodeId,
+        top,
+        files.map((f) => f.path)
+      )
+      files = files.filter((f) => mine.has(f.path))
+      return { branch, files, others: all - files.length }
     } catch {
       return null
     }

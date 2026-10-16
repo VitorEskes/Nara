@@ -3,6 +3,7 @@ import { closeSync, existsSync, openSync, readSync, readdirSync, statSync } from
 import { homedir } from 'os'
 import { basename, join, relative } from 'path'
 import { transcriptPath } from './agents'
+import { claimEdit, editedFile } from './changes'
 import { reportCodex } from './usage'
 import type {
   Activity,
@@ -352,6 +353,7 @@ function claudeTool(w: Watcher, block: Entry, at: number, sidechain: boolean): v
     return
   }
   if (['TaskList', 'TaskGet', 'TaskOutput', 'ToolSearch'].includes(name)) return
+  if (CLAUDE_EDITS.has(name)) claim(w, input.file_path ?? input.notebook_path, at)
   const entry: NewActivity = {
     at,
     tool: shortTool(name),
@@ -393,6 +395,23 @@ function describeTool(
     default:
       return { kind: 'other', summary: firstLine(JSON.stringify(input)).slice(0, 120) }
   }
+}
+
+const CLAUDE_EDITS = new Set(['Edit', 'MultiEdit', 'Write', 'NotebookEdit'])
+
+// The agent edited a file: it's this node's change (changes.ts). What was read back from before
+// the node's agent started, as when a session is resumed, isn't.
+function claim(w: Watcher, path: unknown, at: number): void {
+  if (typeof path !== 'string' || !path || at < w.started - 5000) return
+  claimEdit(w.workspaceId, w.nodeId, editedFile(path, w.cwd), at)
+}
+
+// The files a Codex patch adds, updates, deletes or moves to.
+function patchFiles(patch: unknown): string[] {
+  if (typeof patch !== 'string') return []
+  return [...patch.matchAll(/^\*\*\* (?:(?:Add|Update|Delete) File|Move to): (.+)$/gm)].map((m) =>
+    m[1].trim()
+  )
 }
 
 function shortTool(name: string): string {
@@ -477,6 +496,14 @@ function codexLine(w: Watcher, entry: Entry): void {
       }))
       return
     }
+    // A patch comes as the tool's input, or, from older versions, through the shell.
+    const patch =
+      payload.name === 'apply_patch'
+        ? args.input
+        : Array.isArray(args.command) && args.command[0] === 'apply_patch'
+          ? args.command[1]
+          : null
+    for (const f of patchFiles(patch)) claim(w, f, at)
     const command = Array.isArray(args.command) ? args.command.join(' ') : args.command
     const item: NewActivity = {
       at,
@@ -487,6 +514,14 @@ function codexLine(w: Watcher, entry: Entry): void {
     }
     addActivity(w, item)
     if (payload.call_id) w.pending.set(payload.call_id, item)
+  }
+  // Newer Codex versions send the patch as a tool of its own, with the patch as its input.
+  if (
+    entry.type === 'response_item' &&
+    payload.type === 'custom_tool_call' &&
+    payload.name === 'apply_patch'
+  ) {
+    for (const f of patchFiles(payload.input)) claim(w, f, at)
   }
   if (entry.type === 'response_item' && payload.type === 'function_call_output') {
     finishTool(w, payload.call_id, false)

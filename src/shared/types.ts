@@ -301,6 +301,14 @@ export interface GitChange {
 export interface GitChanges {
   branch: string
   files: GitChange[]
+  // With an owner: how many changed files are someone else's.
+  others?: number
+}
+
+// The terminal whose changes to list.
+export interface ChangesOwner {
+  workspaceId: string
+  nodeId: NodeId
 }
 
 export type Result = { ok: true; error?: undefined } | { ok?: undefined; error: string }

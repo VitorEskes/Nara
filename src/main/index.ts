@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { registerBrowser } from './browser'
+import { registerChanges } from './changes'
 import { writeShellIntegration } from './shell'
 import { registerCode } from './code'
 import { registerReview } from './review'
@@ -101,6 +102,7 @@ function createWindow(): void {
   registerWorkspaces(mainWindow)
   registerFolders(mainWindow)
   registerGit(mainWindow)
+  registerChanges()
   registerBrowser(mainWindow, ipcMain)
   registerCode(mainWindow)
   registerReview(mainWindow)

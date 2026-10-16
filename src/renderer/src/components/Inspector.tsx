@@ -74,6 +74,7 @@ function sectionsFor(node: CanvasNode, running: string | null | undefined): Sect
 // node's fields that changed; onRestart starts its agent again. onNoteCommand sends a note an
 // edit from the Format section.
 export default function Inspector({
+  workspaceId,
   node,
   nodes,
   links,
@@ -93,6 +94,7 @@ export default function Inspector({
   onPeerHover,
   views
 }: {
+  workspaceId: string
   node: CanvasNode | null
   nodes: CanvasNode[]
   links: Link[]
@@ -171,7 +173,9 @@ export default function Inspector({
         {/* The key replays the fade when the section or the node changes. */}
         <div key={`${node.id}:${current}`} className="inspector-body">
           {current === 'activity' && <Activity info={info} />}
-          {current === 'changes' && <Changes key={node.id} node={node} onChange={onChange} />}
+          {current === 'changes' && (
+            <Changes key={node.id} workspaceId={workspaceId} node={node} onChange={onChange} />
+          )}
           {current === 'role' && (
             <Role
               key={node.id}
@@ -325,16 +329,21 @@ const STATUS_MARKS: Record<GitChange['status'], string> = {
   conflict: '!'
 }
 
-// What changed in the terminal's folder since the last commit, file by file, each opening to its
-// diff. A terminal in a worktree of its own can merge its branch back, or remove the worktree.
+// What the terminal changed in its folder since the last commit, file by file, each opening to
+// its diff: the files its agents edited and the ones that changed while its commands ran
+// (main/changes.ts). A terminal in a worktree of its own has the worktree to itself, so it lists
+// everything there, and can merge its branch back or remove the worktree.
 function Changes({
+  workspaceId,
   node,
   onChange
 }: {
+  workspaceId: string
   node: CanvasNode
   onChange: ChangeNode
 }): JSX.Element | null {
   const folder = node.worktree?.path ?? node.cwd
+  const own = !node.worktree
   // undefined until it's first read; null outside a repository.
   const [changes, setChanges] = useState<GitChanges | null | undefined>(undefined)
   const [open, setOpen] = useState<string | null>(null)
@@ -345,7 +354,8 @@ function Changes({
   useEffect(() => {
     let current = true
     const read = (): void => {
-      window.api.git.changes(folder).then((next) => {
+      const owner = own ? { workspaceId, nodeId: node.id } : undefined
+      window.api.git.changes(folder, owner).then((next) => {
         if (current) setChanges(next)
       })
     }
@@ -355,7 +365,7 @@ function Changes({
       current = false
       clearInterval(timer)
     }
-  }, [folder, tick])
+  }, [folder, tick, own, workspaceId, node.id])
 
   useEffect(() => {
     if (!open || !folder) return
@@ -436,7 +446,9 @@ function Changes({
 
       {changes.files.length === 0 ? (
         <p className="inspector-empty">
-          Nothing changed on {changes.branch} since the last commit.
+          {own
+            ? `This terminal hasn’t changed anything on ${changes.branch} since the last commit.`
+            : `Nothing changed on ${changes.branch} since the last commit.`}
         </p>
       ) : (
         <>
@@ -476,6 +488,12 @@ function Changes({
             })}
           </ul>
         </>
+      )}
+      {own && !!changes.others && (
+        <p className="inspector-empty">
+          {changes.others} more {changes.others === 1 ? 'file' : 'files'} changed here by other
+          terminals or outside Nara.
+        </p>
       )}
     </>
   )
