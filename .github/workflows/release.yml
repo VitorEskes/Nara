@@ -1,0 +1,92 @@
+name: Release
+
+# Pushing a tag like v0.2.0 builds Nara for every platform, publishes a GitHub release with the
+# installers, and updates the Homebrew cask in VitorEskes/homebrew-tap.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: win
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check the tag matches package.json
+        shell: bash
+        run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+      - run: npm run build:${{ matrix.platform }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nara-${{ matrix.platform }}
+          path: |
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.deb
+            dist/*-setup.exe
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - run: cd dist && sha256sum * > SHA256SUMS.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+
+  homebrew:
+    needs: release
+    runs-on: ubuntu-latest
+    env:
+      TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+    steps:
+      - name: Skip without a tap token
+        if: env.TAP_TOKEN == ''
+        run: echo "::notice::HOMEBREW_TAP_TOKEN isn't set, so the cask wasn't updated."
+      - if: env.TAP_TOKEN != ''
+        uses: actions/checkout@v5
+      - if: env.TAP_TOKEN != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: nara-mac
+          path: dist
+      - if: env.TAP_TOKEN != ''
+        uses: actions/checkout@v5
+        with:
+          repository: VitorEskes/homebrew-tap
+          token: ${{ env.TAP_TOKEN }}
+          path: tap
+      - if: env.TAP_TOKEN != ''
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p tap/Casks
+          scripts/update-cask.sh "$version" dist tap/Casks/nara.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/nara.rb
+          git commit -m "nara $version"
+          git push
