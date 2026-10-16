@@ -17,7 +17,7 @@ const PALETTE: Record<string, string> = {
   H: '#5a9e7b', // fur in the light
   M: '#2d6249', // ears
   L: '#7ab893', // spots
-  E: '#1d201e', // eyes and nose
+  E: '#1d201e', // eyes and mouth
   B: '#8aa7d6' // a drop of sweat
 }
 
@@ -45,12 +45,12 @@ const HEAD: Layer = {
   top: 7,
   rows: [
     '.........DDDDDD.........',
-    '.DDD...DDHHFFFFDD...DDD.',
-    '.DMMMDDFDDFFFFDDFDDMMMD.',
-    '..DMMMDFHFFFFFFFFDMMMD..',
-    '...DDDDFFFFFFFFFFDDDD...',
+    '...DD..DDHHFFFFDD..DD...',
+    '...DMMDFHHFFFFFFFDMMD...',
+    '....DMDFHFFFFFFFFDMD....',
+    '.....DDFFFFFFFFFFDD.....',
     '......DFFFFFFFFFFD......',
-    '......DFFFFFFFFFFD......',
+    '......DFFFDFFDFFFD......',
     '.......DFFFEEFFFD.......',
     '........DFFFFFFD........',
     '.........DDDDDD.........'
@@ -73,20 +73,21 @@ const DROP: Layer = {
   rows: ['......................B.', '.....................BB.', '.....................BB.']
 }
 
-// The body, the tail and the legs; the head covers its top row.
+// The body, turned a little to the right: the front legs under the chest, the back legs and
+// the tail behind, the far leg of each pair in shade. The head covers its top row.
 const BODY: Layer = {
   top: 16,
   rows: [
     '........DDDDDDDD........',
-    '.......DHHFFFFFFD.......',
-    '......DHFFFFFFLFFD......',
-    '......DFFFFFFFFFLFDD....',
-    '.....DFFFFFFFLFFFFDDD...',
-    '.....DFFFFFFFFFFFFD.....',
-    '.....DFFMFFFFFFMFFD.....',
-    '.....DFFMFFMMFFMFFD.....',
-    '......DDDFFMMFFDDD......',
-    '........DKKDDKKD........'
+    '.......DHHFFFFFFDDD.....',
+    '......DHFFFFFFLFFFFD.DD.',
+    '......DFFFFFFFFFLFFFDLD.',
+    '......DFFFFFLFFFFFFFDD..',
+    '......DFFFFFFFFFFLFFD...',
+    '......DFFMFFFFFFFMFFD...',
+    '......DFFMFFDDDDDMFFD...',
+    '.......DFMFD....DMFD....',
+    '.......DKKKD....DKKD....'
   ]
 }
 
