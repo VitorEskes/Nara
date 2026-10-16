@@ -1178,14 +1178,6 @@ export default function Workspace({
           setMode('canvas')
           locate(id)
         }}
-        // Dictation goes to the selected agent, if one is.
-        onVoice={() =>
-          window.api.voice.open(
-            selectedNode?.agent && AGENTS[selectedNode.agent]
-              ? { workspaceId, nodeId: selectedNode.id }
-              : null
-          )
-        }
       />
 
       {codeMounted && (

@@ -1,10 +1,9 @@
 import { useEffect, useState, type JSX } from 'react'
 import CommandCenter from './CommandCenter'
 import { PetFigure } from './Pet'
-import { BrandMark, CloseIcon, MicIcon } from './icons'
+import { BrandMark, CloseIcon } from './icons'
 import { URGENCY, byUrgency } from '../agentStatus'
 import { tip } from '../tip'
-import { VOICE } from '../../../shared/features'
 import type { AgentStatus } from '../../../shared/types'
 
 // The floating HUD (main/hud.js): the pet and its command center in a small window over every
@@ -39,20 +38,6 @@ export default function Hud(): JSX.Element {
           {pet ? <PetFigure pet={pet} mood={focus?.state ?? 'idle'} width={52} /> : <BrandMark />}
         </span>
         <h1>Agents</h1>
-        {VOICE && (
-          <button
-            className="icon-button"
-            {...tip('Dictate to an agent', 'Ctrl+Alt+V', 'bottom')}
-            onClick={() => {
-              window.api.hud.hide()
-              window.api.voice.open(
-                focus ? { workspaceId: focus.workspaceId, nodeId: focus.nodeId } : null
-              )
-            }}
-          >
-            <MicIcon />
-          </button>
-        )}
         <button
           className="icon-button"
           {...tip('Close', 'Esc', 'bottom')}

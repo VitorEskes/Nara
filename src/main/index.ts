@@ -21,8 +21,6 @@ import { registerRoles } from './roles'
 import { registerStatus } from './status'
 import { registerTelemetry } from './telemetry'
 import { registerUsage } from './usage'
-import { registerVoice } from './voice'
-import { VOICE } from '../shared/features'
 import { loadTheme, registerTheme, windowBackground } from './theme'
 import { registerWorkspaces, workspaces } from './workspaces'
 
@@ -111,7 +109,6 @@ function createWindow(): void {
   registerPets(mainWindow)
   registerHud(mainWindow)
   registerDesktopPet(mainWindow)
-  if (VOICE) registerVoice(mainWindow)
   // The pet's bubble names the agent and where it is.
   registerStatus(mainWindow, (workspaceId: string, nodeId: number) => {
     const workspace = workspaces.get(workspaceId)

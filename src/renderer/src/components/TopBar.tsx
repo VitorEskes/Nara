@@ -1,11 +1,10 @@
 import type { JSX } from 'react'
 import ProjectBadge from './ProjectBadge'
 import UsageMeter, { type Spend } from './UsageMeter'
-import { BranchIcon, MicIcon, PanelRightIcon, SidebarIcon } from './icons'
+import { BranchIcon, PanelRightIcon, SidebarIcon } from './icons'
 import { SHORTCUTS } from '../shortcuts'
 import { useBranch } from '../useBranch'
 import ViewSwitch from './ViewSwitch'
-import { VOICE } from '../../../shared/features'
 import { tip } from '../tip'
 import type { View } from '../views'
 import type { Limits, NodeId, Project } from '../../../shared/types'
@@ -13,12 +12,13 @@ import type { Limits, NodeId, Project } from '../../../shared/types'
 // What the panel on the right holds in each view.
 const PANELS: Record<View, string> = { canvas: 'Inspector', code: 'Explorer', review: 'Review panel' }
 
-// The bar across the top of a workspace: what its agents have spent, the dictation and the side
-// panel's switch. Translucent, so the canvas runs on under it. Where you are is in the sidebar,
-// and the views at the top of the side panel; while either is closed, the bar takes over what it
-// held: the project, the workspace and the branch, or the views. `limits` are the plans' limits (main/usage.js) and `spend` what this
-// workspace's agents have spent (UsageMeter.jsx). `mode` is 'canvas', 'code' or 'review',
-// switched with onMode; `toReview` counts the agents' changes waiting to be reviewed.
+// The bar across the top of a workspace: what its agents have spent and the side panel's switch.
+// Translucent, so the canvas runs on under it. Where you are is in the sidebar, and the views at
+// the top of the side panel; while either is closed, the bar takes over what it held: the
+// project, the workspace and the branch, or the views. `limits` are the plans' limits
+// (main/usage.ts) and `spend` what this workspace's agents have spent (UsageMeter.tsx). `mode` is
+// 'canvas', 'code' or 'review', switched with onMode; `toReview` counts the agents' changes
+// waiting to be reviewed.
 export default function TopBar({
   workspace,
   project,
@@ -32,8 +32,7 @@ export default function TopBar({
   mode,
   onMode,
   toReview,
-  onLocate,
-  onVoice
+  onLocate
 }: {
   workspace?: { name: string } | null
   project?: Project | null
@@ -48,7 +47,6 @@ export default function TopBar({
   onMode: (mode: View) => void
   toReview: number
   onLocate: (id: NodeId) => void
-  onVoice: () => void
 }): JSX.Element {
   return (
     <header className="topbar">
@@ -71,15 +69,6 @@ export default function TopBar({
 
       <div className="topbar-end">
         <UsageMeter limits={limits} spend={spend} onLocate={onLocate} />
-        {VOICE && (
-          <button
-            className="icon-button"
-            {...tip('Dictate to an agent', 'Ctrl+Alt+V', 'bottom')}
-            onClick={onVoice}
-          >
-            <MicIcon />
-          </button>
-        )}
         <button
           className={inspector ? 'icon-button active' : 'icon-button'}
           title={PANELS[mode]}

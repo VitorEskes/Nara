@@ -12,7 +12,6 @@ import { SidebarIcon } from './components/icons'
 import { SHORTCUTS, shortcutFor, type ShortcutName } from './shortcuts'
 import { ROLES } from '../../shared/roles'
 import { URGENCY } from './agentStatus'
-import { VOICE } from '../../shared/features'
 import { tip } from './tip'
 import type { Theme } from '../../preload'
 import type {
@@ -39,14 +38,12 @@ export interface Prefs {
   pet: string | null
   petSize: string
   hud: boolean
-  voice: boolean
   commands: Record<string, string>
 }
 const PREF_DEFAULTS: Prefs = {
   pet: BUILT_IN_PET,
   petSize: 'm',
   hud: true,
-  voice: true,
   commands: {}
 }
 
@@ -110,12 +107,6 @@ export default function App() {
   useEffect(() => {
     window.api.pet.configure({ pet: prefs.pet, size: prefs.petSize })
   }, [prefs.pet, prefs.petSize])
-
-  // Whether the voice bar's shortcut is bound.
-  const [voiceBound, setVoiceBound] = useState<boolean | null>(null)
-  useEffect(() => {
-    if (VOICE) window.api.voice.enable(prefs.voice).then(setVoiceBound)
-  }, [prefs.voice])
 
   useEffect(() => {
     window.api.agents.status().then(setStatuses)
@@ -485,7 +476,6 @@ export default function App() {
           onTheme={changeTheme}
           prefs={prefs}
           hudBound={hudBound}
-          voiceBound={voiceBound}
           onPrefs={(change) => setPrefs((current) => ({ ...current, ...change }))}
           roles={roles}
           onSaveRole={saveRole}

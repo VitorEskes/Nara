@@ -3,7 +3,6 @@ import type {
   AgentReply,
   AgentReport,
   AgentStatus,
-  AgentTarget,
   AppInfo,
   BrowserKey,
   ChangesOwner,
@@ -26,7 +25,6 @@ import type {
   Role,
   SavedRole,
   Session,
-  VoiceSettings,
   Workspace,
   WorkspaceLayout,
   WorkspaceSummary,
@@ -110,26 +108,6 @@ const api = {
       ipcRenderer.invoke('agents:reply', workspaceId, nodeId, reply),
     // The HUD sent the user to an agent.
     onJump: (fn: (status: AgentStatus) => void) => listen('agents:jump', fn)
-  },
-  voice: {
-    // Binds the bar's global shortcut, or lets it go; returns whether it's bound.
-    enable: (on: boolean): Promise<boolean> => ipcRenderer.invoke('voice:enable', on),
-    // Opens the bar, ready to send to `target` ({ workspaceId, nodeId }) if given.
-    open: (target?: AgentTarget | null) => ipcRenderer.send('voice:open', target ?? null),
-    hide: () => ipcRenderer.send('voice:hide'),
-    onOpened: (fn: (target: AgentTarget | null) => void) => listen('voice:opened', fn),
-    // The opening that came before the page was ready: { target } or null.
-    take: (): Promise<{ target: AgentTarget | null } | null> => ipcRenderer.invoke('voice:take'),
-    settings: (): Promise<VoiceSettings> => ipcRenderer.invoke('voice:settings'),
-    save: (patch: Partial<VoiceSettings>): Promise<VoiceSettings> =>
-      ipcRenderer.invoke('voice:save', patch),
-    // How far the voice model's first download has got, 0 to 1.
-    onProgress: (fn: (progress: number) => void) => listen('voice:progress', fn),
-    // A WAV (ArrayBuffer) -> { text } or { error }.
-    transcribe: (
-      wav: ArrayBuffer
-    ): Promise<{ text: string; error?: undefined } | { error: string }> =>
-      ipcRenderer.invoke('voice:transcribe', wav)
   },
   notes: {
     // Asks for an image and keeps a copy: { url, name } or null.

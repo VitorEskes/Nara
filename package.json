@@ -27,7 +27,6 @@
     "@fontsource/geist-mono": "^5.3.0",
     "@fontsource/open-runde": "^5.3.0",
     "@fontsource/shippori-mincho-b1": "^5.3.0",
-    "@huggingface/transformers": "^4.3.1",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "6.0.0",
     "monaco-editor": "^0.57.0",

@@ -210,12 +210,6 @@ export interface AgentStatus {
 
 export type AgentReply = { kind: 'yes' } | { kind: 'no' } | { kind: 'text'; text: string }
 
-// An agent somewhere in a workspace.
-export interface AgentTarget {
-  workspaceId: string
-  nodeId: NodeId
-}
-
 // --- Telemetry (main/telemetry.ts)
 
 export interface Usage {
@@ -374,17 +368,6 @@ export interface PetInfo {
 export interface PetConfig {
   pet: string | null
   size: string
-}
-
-// --- Voice
-
-export interface VoiceSettings {
-  engine: string
-  model: string
-  language: string
-  whisperBin: string
-  whisperModel: string
-  systemLanguage?: string
 }
 
 // --- Browser nodes

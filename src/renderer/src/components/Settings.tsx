@@ -13,7 +13,6 @@ import {
   FolderIcon,
   InfoIcon,
   KeyboardIcon,
-  MicIcon,
   MonitorIcon,
   MoonIcon,
   PaletteIcon,
@@ -37,17 +36,9 @@ import {
   keysLabel,
   type Shortcut
 } from '../shortcuts'
-import { VOICE } from '../../../shared/features'
 import { AGENTS } from '../../../shared/agents'
 import type { Theme } from '../../../preload'
-import type {
-  AppInfo,
-  NodeStyle,
-  PetInfo,
-  Role,
-  SavedRole,
-  VoiceSettings
-} from '../../../shared/types'
+import type { AppInfo, NodeStyle, PetInfo, Role, SavedRole } from '../../../shared/types'
 import type { Prefs } from '../App'
 
 interface Section {
@@ -76,16 +67,6 @@ const SECTIONS: Section[][] = [
       Icon: UsersIcon,
       keywords: 'role instructions orchestrator worker reviewer prompt team'
     },
-    ...(VOICE
-      ? [
-          {
-            key: 'voice',
-            label: 'Voice',
-            Icon: MicIcon,
-            keywords: 'dictation microphone speech transcribe whisper local model shortcut'
-          }
-        ]
-      : []),
     {
       key: 'pets',
       label: 'Pets',
@@ -114,15 +95,15 @@ const THEMES: { key: Theme; label: string; Icon: IconComponent }[] = [
 const LAUNCHER_MEMORY = 'new-terminal'
 
 // The settings, in a dialog with the sections on the left and the chosen one on the right, and a
-// search over the sections. `prefs` are the renderer's preferences (App.jsx) and onPrefs changes
-// some of them; `hudBound` says whether the HUD's global shortcut could be bound; `theme` and onTheme are the app's theme; `roles` and the role handlers are the
-// same the new terminal dialog uses. `initial` is the section it opens on.
+// search over the sections. `prefs` are the renderer's preferences (App.tsx) and onPrefs changes
+// some of them; `hudBound` says whether the HUD's global shortcut could be bound; `theme` and
+// onTheme are the app's theme; `roles` and the role handlers are the same the new terminal dialog
+// uses. `initial` is the section it opens on.
 export default function Settings({
   theme,
   onTheme,
   prefs,
   hudBound,
-  voiceBound,
   onPrefs,
   roles,
   onSaveRole,
@@ -134,7 +115,6 @@ export default function Settings({
   onTheme: (theme: Theme) => void
   prefs: Prefs
   hudBound: boolean | null
-  voiceBound: boolean | null
   onPrefs: ChangePrefs
   roles: Record<string, Role>
   onSaveRole: (role: Role) => Promise<SavedRole | null>
@@ -242,7 +222,6 @@ export default function Settings({
           {shown === 'roles' && (
             <Roles roles={roles} onSaveRole={onSaveRole} onRemoveRole={onRemoveRole} />
           )}
-          {shown === 'voice' && <Voice prefs={prefs} bound={voiceBound} onPrefs={onPrefs} />}
           {shown === 'pets' && <Pets prefs={prefs} hudBound={hudBound} onPrefs={onPrefs} />}
           {shown === 'keyboard' && <Keyboard />}
           {shown === 'about' && <About info={info} />}
@@ -407,142 +386,6 @@ function Roles({
         )
       )}
     </div>
-  )
-}
-
-// What turns speech into text, all on this computer.
-const ENGINES = [
-  { key: 'builtin', label: 'Built in' },
-  { key: 'whispercpp', label: 'whisper.cpp' }
-]
-const MODELS: Record<string, { label: string; detail: string }> = {
-  tiny: { label: 'Tiny', detail: '40 MB · fastest, rougher' },
-  base: { label: 'Base', detail: '76 MB · fast and good' },
-  small: { label: 'Small', detail: '250 MB · best, slower' }
-}
-
-// The voice bar: its shortcut, the engine that turns speech into text, and the language.
-function Voice({
-  prefs,
-  bound,
-  onPrefs
-}: {
-  prefs: Prefs
-  bound: boolean | null
-  onPrefs: ChangePrefs
-}): JSX.Element | null {
-  const [settings, setSettings] = useState<VoiceSettings | null>(null)
-
-  useEffect(() => {
-    window.api.voice.settings().then(setSettings)
-  }, [])
-
-  async function save(patch: Partial<VoiceSettings>): Promise<void> {
-    setSettings(await window.api.voice.save(patch))
-  }
-
-  if (!settings) return null
-  const engine = ENGINES.findIndex((e) => e.key === settings.engine)
-  const field = (
-    name: 'whisperBin' | 'whisperModel' | 'language',
-    label: string,
-    placeholder: string,
-    mono = true
-  ): JSX.Element => (
-    <label className="field">
-      <span className="field-label">{label}</span>
-      <input
-        key={`${name}:${settings![name]}`}
-        className={mono ? 'text-input mono' : 'text-input'}
-        defaultValue={settings![name]}
-        placeholder={placeholder}
-        spellCheck={false}
-        onBlur={(e) => e.target.value !== settings![name] && save({ [name]: e.target.value })}
-      />
-    </label>
-  )
-
-  return (
-    <>
-      <div className="settings-card">
-        <h3>Voice bar</h3>
-        <p>
-          Speak to an agent from anywhere: the bar listens, turns what you said into text you can
-          fix, and sends it to the agent you pick. It all happens on this computer, with Whisper: no
-          account, and the audio never leaves it.
-        </p>
-      </div>
-
-      <div className="settings-toggles">
-        <Switch
-          checked={prefs.voice}
-          label="Shortcut"
-          detail={
-            prefs.voice && bound === false
-              ? 'Your desktop didn’t give Nara the shortcut'
-              : 'Opens the bar over every app'
-          }
-          onChange={(voice) => onPrefs({ voice })}
-        >
-          <kbd>⌃⌥V</kbd>
-        </Switch>
-      </div>
-
-      <Group label="Engine">
-        <div
-          className="segmented"
-          role="group"
-          aria-label="Engine"
-          style={{ '--index': engine, '--count': ENGINES.length }}
-        >
-          {ENGINES.map(({ key: name, label }) => (
-            <button
-              key={name}
-              aria-pressed={settings.engine === name}
-              onClick={() => save({ engine: name })}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </Group>
-
-      {settings.engine === 'whispercpp' ? (
-        <div className="settings-form">
-          {field('whisperBin', 'Program', 'whisper-cli')}
-          {field('whisperModel', 'Model file', '~/models/ggml-base.bin')}
-          <span className="field-hint">
-            For whisper.cpp built on this computer, with a ggml model from its repository.
-          </span>
-        </div>
-      ) : (
-        <Group label="Model">
-          <div className="model-options">
-            {Object.entries(MODELS).map(([key, { label, detail }]) => (
-              <button
-                key={key}
-                className="model-option"
-                aria-pressed={settings.model === key}
-                onClick={() => save({ model: key })}
-              >
-                <strong>{label}</strong>
-                <span>{detail}</span>
-              </button>
-            ))}
-          </div>
-          <span className="field-hint">
-            Downloaded the first time you dictate, from Hugging Face, into Nara’s data folder.
-          </span>
-        </Group>
-      )}
-
-      <div className="settings-form">
-        {field('language', 'Language', `The system’s: ${settings.systemLanguage}`, false)}
-        <span className="field-hint">
-          A code like pt, en or es. Whisper transcribes best when it knows the language.
-        </span>
-      </div>
-    </>
   )
 }
 
@@ -734,10 +577,7 @@ function Keyboard(): JSX.Element {
     ['Switch light and dark', SHORTCUTS.theme],
     ['Settings', SHORTCUTS.settings]
   ]
-  const anywhere: [string, string][] = [
-    ['Floating HUD', '⌃⌥Space'],
-    ...(VOICE ? [['Voice bar', '⌃⌥V'] as [string, string]] : [])
-  ]
+  const anywhere: [string, string][] = [['Floating HUD', '⌃⌥Space']]
   const canvas = {
     select: 'Pointer',
     hand: 'Hand',
