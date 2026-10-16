@@ -2,18 +2,15 @@ import { BrowserWindow, app, ipcMain, screen } from 'electron'
 import { connect } from 'net'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
+import icon from '../../resources/icon.png?asset'
 import { readJson, writeAtomic } from './files'
 import { registerPets } from './pets'
 import type { AgentReply, AgentStatus, NodeId, PetConfig } from '../shared/types'
 
-// The desktop pet's own process (pet.js starts it with --nara-pet): one small window, transparent
-// and over every other, with the pet in its bottom right corner and room above and to its left
-// for its bubble and its command center. Only what's drawn takes the pointer: the window's shape
-// follows the pet, the bubble and the panel (the renderer reports them), and the rest of it lets
-// clicks through to whatever is under it. Dragging the pet moves the window.
-//
-// It has none of the app's state: the statuses and the settings come over the socket in
-// NARA_PET_SOCK, and the answers and jumps go back the same way.
+// The desktop pet's process (pet.ts starts it with --nara-pet): one small transparent window over
+// every other, with the pet in its bottom right corner and room for its bubble and command center.
+// The window's shape follows what the renderer draws, so clicks elsewhere go through to whatever is
+// under it. It keeps none of the app's state: everything comes and goes over NARA_PET_SOCK.
 const SIZE = { width: 380, height: 540 }
 // Room left between the window and the edge of the screen at first.
 const MARGIN = 8
@@ -48,6 +45,8 @@ function start(): void {
     skipTaskbar: true,
     alwaysOnTop: true,
     title: 'Nara pet',
+    // Its own process, so the taskbar and the window switcher would otherwise show Electron's icon.
+    ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false

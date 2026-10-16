@@ -25,6 +25,9 @@ mac:
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
+  # Matches the window's app id (package.json's desktopName), so the desktop shows Nara's icon for
+  # the app and for the pet, which runs in a process of its own.
+  syncDesktopName: true
   target:
     - AppImage
     - deb

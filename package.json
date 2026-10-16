@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "description": "AI coding agents on an infinite canvas",
   "main": "./out/main/index.js",
+  "desktopName": "nara.desktop",
   "author": "Vitor",
   "license": "MIT",
   "private": true,

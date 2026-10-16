@@ -1,6 +1,7 @@
 import { BrowserWindow, app, globalShortcut, ipcMain, screen } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
+import icon from '../../resources/icon.png?asset'
 import type { AgentStatus } from '../shared/types'
 
 // The floating HUD: a small window over every other app, with the pet and its command center,
@@ -30,6 +31,7 @@ export function registerHud(main: BrowserWindow): void {
       minimizable: false,
       maximizable: false,
       fullscreenable: false,
+      ...(process.platform === 'linux' ? { icon } : {}),
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),
         sandbox: false
