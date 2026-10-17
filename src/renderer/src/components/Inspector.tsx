@@ -587,7 +587,8 @@ function Activity({ info }: { info?: AgentReport }): JSX.Element {
 }
 
 // The role: pick one, see what it holds the agent to, write a new one in place. A new role
-// restarts the agent, which picks its conversation back up.
+// restarts the agent, which picks its conversation back up, on the new role's model: one an
+// orchestrator picked for the node (`nara model`) goes with the old role.
 // In a plain terminal the role waits for the next agent CLI typed there (`running` is the one
 // there now), and nothing restarts.
 function Role({
@@ -626,7 +627,7 @@ function Role({
             data-tone={tone}
             title={later}
             aria-pressed={node.role === key}
-            onClick={() => node.role !== key && onChange({ role: key })}
+            onClick={() => node.role !== key && onChange({ role: key, model: undefined })}
           >
             <span className="role-dot" />
             {label}
@@ -653,7 +654,7 @@ function Role({
             const saved = await onSaveRole(draft)
             if (!saved) return
             setDraft(null)
-            onChange({ role: saved.key })
+            onChange({ role: saved.key, model: undefined })
           }}
           onCancel={() => setDraft(null)}
         />

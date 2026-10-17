@@ -304,6 +304,19 @@ export default function Workspace({
     [workspaceId]
   )
 
+  // An agent that coordinates this one picked the model it runs on (`nara model`). Main has
+  // already changed its own copy; the terminal restarts on the new model.
+  useEffect(
+    () =>
+      window.api.workspace.onModelPicked((id, nodeId, model) => {
+        if (id !== workspaceId) return
+        setNodes((current) =>
+          current.map((node) => (node.id === nodeId ? { ...node, model } : node))
+        )
+      }),
+    [workspaceId]
+  )
+
   function updateNode(id: NodeId, changes: Partial<NodeData>): void {
     setNodes((current) => current.map((node) => (node.id === id ? { ...node, ...changes } : node)))
   }
@@ -1120,6 +1133,8 @@ export default function Workspace({
                 // A plain terminal's role is for the agents typed in it, which main reads when
                 // one starts; changing it mustn't restart the shell.
                 role={node.agent && AGENTS[node.agent] ? node.role : undefined}
+                // A new model restarts the agent, which resumes its conversation on it.
+                model={node.agent && AGENTS[node.agent] ? node.model : undefined}
                 command={node.command}
                 cwd={node.cwd}
                 worktree={

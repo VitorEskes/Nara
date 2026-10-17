@@ -39,6 +39,7 @@ export interface PtyOptions {
   agent?: string
   session?: string
   role?: string
+  model?: string
   command?: string
   cwd?: string
   worktree?: { branch: string; base: string }
@@ -77,7 +78,9 @@ const api = {
     close: (id: string): Promise<void> => ipcRenderer.invoke('workspace:close', id),
     remove: (id: string): Promise<boolean> => ipcRenderer.invoke('workspace:remove', id),
     onNoteWritten: (fn: (workspaceId: string, nodeId: NodeId, text: string) => void) =>
-      listen('workspace:note-written', fn)
+      listen('workspace:note-written', fn),
+    onModelPicked: (fn: (workspaceId: string, nodeId: NodeId, model: string) => void) =>
+      listen('workspace:model-picked', fn)
   },
   theme: {
     // 'light', 'dark' or 'system'.

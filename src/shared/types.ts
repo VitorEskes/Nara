@@ -51,6 +51,9 @@ export interface CanvasNode extends Box {
   agent?: string
   session?: string
   role?: string
+  // The model the agent runs on instead of its role's, picked by an agent that coordinates it
+  // (`nara model`, main/messages.ts).
+  model?: string
   command?: string
   // Notes.
   text?: string

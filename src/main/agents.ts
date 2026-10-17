@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { homedir } from 'os'
 import { dirname, join } from 'path'
 import { AGENTS } from '../shared/agents'
-import { EDIT_TOOLS, agentPrompt, roleProfile, type RoleProfile } from '../shared/prompt'
+import { EDIT_TOOLS, MODELS, agentPrompt, roleProfile, type RoleProfile } from '../shared/prompt'
 import { findRole } from './roles'
 import type { NodeId, Worktree } from '../shared/types'
 
@@ -15,6 +15,8 @@ export type Hooks = Record<string, { hooks: { type: string; command: string }[] 
 export interface AgentOptions {
   agent: string
   role?: string
+  // A model picked for this node (`nara model`), in place of the role's.
+  model?: string
   nodeId: NodeId
   worktree?: Pick<Worktree, 'branch' | 'base'> | null
   cwd?: string
@@ -134,6 +136,7 @@ function agentParts({
   session,
   resuming,
   role: key,
+  model: picked,
   nodeId,
   hooks,
   worktree,
@@ -145,7 +148,9 @@ function agentParts({
   message: string | null
 } {
   const role = findRole(key)
-  const { model, mode, access, kickoff } = roleProfile(role)
+  const profile = roleProfile(role)
+  const { mode, access, kickoff } = profile
+  const model = picked && Object.hasOwn(MODELS, picked) ? picked : profile.model
   const args: Arg[] = []
   const env: Env = { NARA_PROMPT: agentPrompt(nodeId, role, worktree) }
   const message: string | null = null

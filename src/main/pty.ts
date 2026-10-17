@@ -48,6 +48,11 @@ const contexts = new Map<number, { text: string; started: number; last: number }
 const CONTEXT_QUIET = 1500
 const CONTEXT_WAIT = 20000
 let send: (channel: string, ...args: unknown[]) => void = () => {}
+// Agents about to restart (a new model, `nara model`), by workspace and node, with the messages
+// sent to them in the meantime: the old terminal is on its way out, and the new one gets them.
+const holding = new Map<string, string[]>()
+const holdKey = (workspaceId: string, nodeId: NodeId): string => `${workspaceId}:${nodeId}`
+const HOLD_LIMIT = 30000
 
 // `extraEnv` holds the variables every terminal gets (the ones the `nara` command uses).
 export function registerPty(win: BrowserWindow, extraEnv: Record<string, string>): void {
@@ -56,7 +61,7 @@ export function registerPty(win: BrowserWindow, extraEnv: Record<string, string>
   }
   const contextTimer = setInterval(deliverContexts, 300)
   ipcMain.handle('pty:create', (_ev, options: PtyOptions) => {
-    const { workspaceId, nodeId, agent, session, role, command, worktree } = options
+    const { workspaceId, nodeId, agent, session, role, model, command, worktree } = options
     const { cols = 80, rows = 24, cwd } = options
     const id = nextId++
     // An agent runs inside the user's interactive shell (-i loads .zshrc/.bashrc), so it's found
@@ -73,6 +78,7 @@ export function registerPty(win: BrowserWindow, extraEnv: Record<string, string>
           command,
           session,
           role,
+          model,
           nodeId,
           worktree,
           cwd: start,
@@ -119,8 +125,12 @@ export function registerPty(win: BrowserWindow, extraEnv: Record<string, string>
     // An agent node's files change for as long as its agent runs; a plain terminal's shell marks
     // its commands (changes.ts).
     if (known) commandStarted(id, workspaceId, nodeId, start)
-    // The pet follows the agents, not the shells.
-    if (known) startAgent(id, { agent: known, session, message: launch?.message, cwd: start })
+    // The pet follows the agents, not the shells. Messages sent while the agent restarted wait
+    // until it's up, like a context.
+    const held = holding.get(holdKey(workspaceId, nodeId))
+    holding.delete(holdKey(workspaceId, nodeId))
+    const message = [launch?.message, ...(held ?? [])].filter(Boolean).join('\n\n') || null
+    if (known) startAgent(id, { agent: known, session, message, cwd: start })
     return id
   })
 
@@ -261,6 +271,31 @@ export function endAgent(id: number): void {
   terminal.agent = undefined
   untrackAgent(id)
   unwatchAgent(id)
+}
+
+// The agent in the node is about to restart: messages wait for the new one (holdMessage).
+// If the node never restarts (it was closed, or the window reloaded), they go to whatever runs
+// there after HOLD_LIMIT, rather than waiting forever.
+export function holdMessages(workspaceId: string, nodeId: NodeId): void {
+  const key = holdKey(workspaceId, nodeId)
+  const held = holding.get(key) ?? []
+  holding.set(key, held)
+  setTimeout(() => {
+    if (holding.get(key) !== held) return
+    holding.delete(key)
+    const target = findTerminal(workspaceId, nodeId)
+    if (target && held.length) {
+      contexts.set(target.id, { text: held.join('\n\n'), started: Date.now(), last: 0 })
+    }
+  }, HOLD_LIMIT)
+}
+
+// Keeps a message for an agent that's restarting; false if it isn't.
+export function holdMessage(workspaceId: string, nodeId: NodeId, text: string): boolean {
+  const held = holding.get(holdKey(workspaceId, nodeId))
+  if (!held) return false
+  held.push(text)
+  return true
 }
 
 function deliverContexts(): void {

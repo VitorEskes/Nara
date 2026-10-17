@@ -24,6 +24,7 @@ export default function Terminal({
   agent,
   session,
   role,
+  model,
   command,
   cwd,
   worktree,
@@ -35,6 +36,7 @@ export default function Terminal({
   agent?: string
   session?: string
   role?: string
+  model?: string
   command?: string
   cwd?: string
   // { branch, base } as JSON, so it compares by value.
@@ -111,6 +113,7 @@ export default function Terminal({
       agent,
       session,
       role,
+      model,
       command,
       cwd,
       // Only what the prompt needs, and as text, so it can be a dependency below.
@@ -161,7 +164,7 @@ export default function Terminal({
       if (id) window.api.pty.kill(id)
       term.dispose()
     }
-  }, [workspaceId, nodeId, agent, session, role, command, cwd, worktree, attempt])
+  }, [workspaceId, nodeId, agent, session, role, model, command, cwd, worktree, attempt])
 
   // The colors and the cursor change in place. A new size changes how many rows and columns fit
   // in the same box, so the PTY hears about it.
