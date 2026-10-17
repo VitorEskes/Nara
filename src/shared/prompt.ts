@@ -31,9 +31,15 @@ export const MODES: Record<string, { label: string; detail: string }> = {
 }
 
 // Whether the agent can change files. Read-only takes the editing tools away from Claude Code and
-// runs Codex in a read-only sandbox.
+// runs Codex in a read-only sandbox. Delegates depends on the canvas: while an agent is linked to
+// it, Claude Code's editing tools are refused (main/messages.ts) and the work goes to that agent;
+// alone, it edits like any other. The other CLIs only have the prompt to hold them to it.
 export const ACCESS: Record<string, { label: string; detail: string }> = {
   full: { label: 'Can edit', detail: 'Reads and changes files' },
+  delegate: {
+    label: 'Delegates',
+    detail: 'Hands the edits to linked agents; edits itself only when none is linked'
+  },
   'read-only': { label: 'Read-only', detail: 'Reads and runs commands, never edits files' }
 }
 
@@ -44,15 +50,17 @@ export const EDIT_TOOLS = ['Edit', 'Write', 'NotebookEdit']
 export interface RoleProfile {
   model: string
   mode: string
-  access: 'full' | 'read-only'
+  access: Access
   kickoff: string
 }
+
+export type Access = 'full' | 'delegate' | 'read-only'
 
 export function roleProfile(role: Partial<Role> = {}): RoleProfile {
   return {
     model: Object.hasOwn(MODELS, role.model ?? '') ? (role.model ?? '') : '',
     mode: Object.hasOwn(MODES, role.mode ?? '') ? (role.mode ?? '') : '',
-    access: role.access === 'read-only' ? 'read-only' : 'full',
+    access: role.access === 'read-only' || role.access === 'delegate' ? role.access : 'full',
     kickoff: typeof role.kickoff === 'string' ? role.kickoff.trim() : ''
   }
 }
@@ -71,6 +79,16 @@ function rolePrompt(role: Role | undefined | null): string {
   const { access, mode } = roleProfile(role)
   if (access === 'read-only') {
     lines.push('', 'You work read-only: Nara has taken away your tools for editing files.')
+  }
+  if (access === 'delegate') {
+    lines.push(
+      '',
+      'While an agent is linked to you, Nara refuses your tools for editing files: the changes go to the linked agents. With no agent linked you work alone and edit yourself.',
+      '',
+      'Two commands are yours alone, for the agents linked to you:',
+      "  nara model <terminal> <model>   run a Claude Code agent on opus, sonnet, haiku, or default (its role's own). It restarts and resumes its conversation; messages you send meanwhile wait for it. Only while it's idle.",
+      "  nara merge <terminal>           merge the agent's worktree branch into the branch it was made from: only what it committed. A conflict is undone and the files listed."
+    )
   }
   if (mode === 'plan') {
     lines.push(
@@ -93,6 +111,7 @@ You are running inside Nara, a desktop app where terminals and AI agents live as
 
 You reach the nodes linked to you with the \`nara\` command, run from your shell:
   nara peers                        list the terminals and notes linked to you, with their roles
+  nara canvas                       describe the whole canvas: what's linked to you and what isn't
   nara send <terminal> <text>       send a message to a linked terminal
   nara note read <note>             print a linked note
   nara note write <note> <text>     replace the note's text
@@ -102,7 +121,7 @@ You reach the nodes linked to you with the \`nara\` command, run from your shell
   nara browser shot <browser>       save a screenshot of the page (prints the PNG's path)
 
 How it works:
-- The user can add and remove links at any time. Run \`nara peers\` whenever you need to know who you can reach, instead of relying on an earlier answer.
+- The user can add, remove and relink nodes at any time. A turn may start with a "[nara · canvas]" block: that's the canvas as it is right now, with what changed since your previous turn. Trust it over anything earlier in the conversation. Without one, run \`nara canvas\` whenever you need to know who you can reach.
 - A message arrives in the other terminal as if someone had typed it there. Messages to you arrive the same way, as a new turn that starts with "[nara · message from terminal N · reply with: nara send N ...]". That turn comes from the agent in terminal N, not from the user. Turns without that header come from the user, who has the final word.
 - Don't sleep, poll or wait for a reply: end your turn, and the reply will arrive as a new message.
 - Only terminals running an agent can receive messages; \`nara peers\` marks the ones that only have a shell.
@@ -126,5 +145,5 @@ function worktreePrompt(worktree?: Pick<Worktree, 'branch' | 'base'> | null): st
   if (!worktree?.branch) return ''
   return `# Your worktree
 
-You work in a git worktree of your own, on the branch ${worktree.branch}, made from ${worktree.base}. Other agents may be working on ${worktree.base} or on branches of their own at the same time, so stay on this branch. Commit your work here as you finish each piece, with clear messages: the user reviews this branch in Nara and merges it into ${worktree.base} from there, and only commits get merged.`
+You work in a git worktree of your own, on the branch ${worktree.branch}, made from ${worktree.base}. Other agents may be working on ${worktree.base} or on branches of their own at the same time, so stay on this branch. Commit your work here as you finish each piece, with clear messages: the user, or the agent coordinating you, merges this branch into ${worktree.base}, and only commits get merged. Commit before you report a task as done.`
 }

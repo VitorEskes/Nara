@@ -1,4 +1,5 @@
 import type { BrowserWindow } from 'electron'
+import { createHash } from 'crypto'
 import { createServer } from 'net'
 import { basename, delimiter, dirname, join } from 'path'
 import nara from '../../resources/bin/nara?asset'
@@ -8,18 +9,22 @@ import {
   currentCwd,
   endAgent,
   findTerminal,
+  holdMessage,
+  holdMessages,
   startAgent,
   startContext,
   terminals
 } from './pty'
 import { agentRun } from './agents'
 import { AGENTS, agentForCommand } from '../shared/agents'
+import { MODELS, roleProfile } from '../shared/prompt'
+import { git, mergeWorktree } from './git'
 import { clearSocket, socketPath } from './socket'
-import { agentHook } from './status'
+import { agentHook, agentState } from './status'
 import { reportClaude } from './usage'
 import { findRole } from './roles'
 import { updateNode, workspaces } from './workspaces'
-import type { CanvasNode, NodeId } from '../shared/types'
+import type { AgentState, CanvasNode, Link, NodeId, Role } from '../shared/types'
 
 // What the `nara` command sends (cli.ts): which terminal it runs in, and what it asks for.
 interface Request {
@@ -97,8 +102,32 @@ async function handle(
   const sender = terminals.get(Number(from))
   if (!sender) throw new Error('this terminal no longer exists in Nara')
 
+  // Claude Code's hooks (pty.ts, agents.ts). A prompt, the user's or a message from another agent,
+  // gets the canvas as it is now; `output` is what `nara hook` prints back to Claude Code.
   if (command === 'hook') {
     agentHook(Number(from), event ?? '', payload ?? {})
+    if (event === 'prompt') {
+      const context = canvasText(Number(from), true)
+      if (!context) return { ok: true }
+      return {
+        output: {
+          hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context }
+        }
+      }
+    }
+    if (event === 'edit') {
+      const reason = editRefusal(sender.workspaceId, sender.nodeId)
+      if (!reason) return { ok: true }
+      return {
+        output: {
+          hookSpecificOutput: {
+            hookEventName: 'PreToolUse',
+            permissionDecision: 'deny',
+            permissionDecisionReason: reason
+          }
+        }
+      }
+    }
     return { ok: true }
   }
 
@@ -121,7 +150,13 @@ async function handle(
     if (!key) {
       const name = basename(String(agent ?? ''))
       if (!name || SHELLS.has(name)) throw new Error(`${name || 'that'} isn't an agent CLI`)
-      const launch = agentRun({ agent: name, role: node?.role, nodeId, worktree: node?.worktree })
+      const launch = agentRun({
+        agent: name,
+        role: node?.role,
+        model: node?.model,
+        nodeId,
+        worktree: node?.worktree
+      })
       startContext(Number(from), launch.message)
       return { command: agent, args: [], env: launch.env }
     }
@@ -129,6 +164,7 @@ async function handle(
       agent: key,
       args: Array.isArray(args) ? args.map(String) : [],
       role: node?.role,
+      model: node?.model,
       nodeId,
       worktree: node?.worktree,
       cwd,
@@ -143,35 +179,16 @@ async function handle(
     return { ok: true }
   }
 
-  // Links have no direction: from→to works the same as to→from.
   const { nodes = [], links = [] } = workspaces.get(workspaceId) ?? {}
-  const peers = links.flatMap((l) => (l.from === nodeId ? [l.to] : l.to === nodeId ? [l.from] : []))
+  const peers = linkedTo(links, nodeId)
   const nodeOf = (id: NodeId | undefined): CanvasNode | undefined =>
     nodes.find((node) => node.id === id)
 
   if (command === 'peers') {
-    return {
-      peers: peers.map((peerId) => {
-        // The name the user gave the node, if any: new nodes are just "terminal 3".
-        const title = nodeOf(peerId)?.title
-        if (nodeOf(peerId)?.type === 'note') return { nodeId: peerId, type: 'note', title }
-        if (nodeOf(peerId)?.type === 'browser') {
-          return { nodeId: peerId, type: 'browser', title, url: pageUrl(workspaceId, peerId) }
-        }
-        const target = findTerminal(workspaceId, peerId)
-        const program = target && foregroundProgram(target)
-        const role = findRole(nodeOf(peerId)?.role)?.label.toLowerCase()
-        return {
-          nodeId: peerId,
-          type: 'terminal',
-          title,
-          program,
-          role,
-          canReceive: !program || !SHELLS.has(program)
-        }
-      })
-    }
+    return { peers: peers.map((peerId) => peerInfo(workspaceId, peerId, nodeOf(peerId))) }
   }
+
+  if (command === 'canvas') return { text: canvasText(Number(from), false) }
 
   if (command === 'send') {
     if (to === undefined || !peers.includes(to))
@@ -182,18 +199,83 @@ async function handle(
     if (nodeOf(to)?.type === 'browser') {
       throw new Error(`${to} is a browser, not a terminal: use nara browser open ${to} <url>`)
     }
+    const clean = stripControlChars(text)
+    if (!clean.trim()) throw new Error('empty message')
+    // The header tells the agent on the other side who sent it and how to reply.
+    const header = `[nara · message from terminal ${nodeId} · reply with: nara send ${nodeId} "..."]`
+    const message = `${header} ${clean}`
+    // An agent restarting on a new model gets it once it's back up.
+    if (holdMessage(workspaceId, to, message)) return { ok: true }
+
     const target = findTerminal(workspaceId, to)
     if (!target) throw new Error(`terminal ${to} no longer exists`)
     if (SHELLS.has(foregroundProgram(target))) {
       throw new Error(`terminal ${to} is not running an agent, only a shell`)
     }
-    const clean = stripControlChars(text)
-    if (!clean.trim()) throw new Error('empty message')
-
-    // The header tells the agent on the other side who sent it and how to reply.
-    const header = `[nara · message from terminal ${nodeId} · reply with: nara send ${nodeId} "..."]`
-    win.webContents.send('pty:paste', target.id, `${header} ${clean}`)
+    win.webContents.send('pty:paste', target.id, message)
     return { ok: true }
+  }
+
+  // The model a linked Claude Code agent runs on, picked by an agent whose role delegates: the
+  // node restarts on it and resumes its conversation (renderer's Workspace.tsx). "default" goes
+  // back to the role's own.
+  if (command === 'model') {
+    coordinator(workspaceId, nodeId)
+    if (to === undefined || !peers.includes(to))
+      throw new Error(`terminal ${to} is not linked to this one`)
+    const target = nodeOf(to)
+    if (target?.type !== 'terminal' || target.agent !== 'claude') {
+      throw new Error(`terminal ${to} is not a Claude Code node: only those can switch models`)
+    }
+    const word = String(text ?? '')
+      .trim()
+      .toLowerCase()
+    const model = word === 'default' ? '' : word
+    if (!word || !Object.hasOwn(MODELS, model)) {
+      throw new Error(`unknown model "${word}": use opus, sonnet, haiku or default`)
+    }
+    const state = agentState(workspaceId, to)
+    if (state === 'working' || state === 'waiting') {
+      throw new Error(`terminal ${to} is ${STATES[state]}: switch its model once it's idle`)
+    }
+    if ((target.model ?? '') !== model) {
+      holdMessages(workspaceId, to)
+      updateNode(workspaceId, to, { model })
+      win.webContents.send('workspace:model-picked', workspaceId, to, model)
+    }
+    return { model: modelOf(target, model) }
+  }
+
+  // Merges a linked agent's worktree branch into the branch it was made from, for an agent whose
+  // role delegates: what the user would do from the inspector. Only what's committed goes in, and
+  // a merge that conflicts is undone, with the files it conflicted on.
+  if (command === 'merge') {
+    coordinator(workspaceId, nodeId)
+    if (to === undefined || !peers.includes(to))
+      throw new Error(`terminal ${to} is not linked to this one`)
+    const worktree = nodeOf(to)?.worktree
+    if (!worktree) {
+      throw new Error(
+        `terminal ${to} has no worktree of its own: its changes are already in its folder`
+      )
+    }
+    const { path, root, branch, base } = worktree
+    if ((await git(path, ['status', '--porcelain'])).trim()) {
+      throw new Error(`terminal ${to} has uncommitted changes on ${branch}: ask it to commit them`)
+    }
+    const ahead = Number((await git(root, ['rev-list', '--count', `${base}..${branch}`])).trim())
+    if (!ahead) return { text: `${branch} has nothing that isn't in ${base} yet` }
+    const result = await mergeWorktree(worktree)
+    if (result.conflict) {
+      return {
+        conflict: result.conflict,
+        text: `${branch} conflicts with ${base}, so the merge was undone`
+      }
+    }
+    if (result.error) throw new Error(result.error)
+    return {
+      text: `merged ${branch} into ${base} (${ahead} commit${ahead === 1 ? '' : 's'}) in ${root}`
+    }
   }
 
   if (command === 'note') {
@@ -227,6 +309,250 @@ async function handle(
   }
 
   throw new Error(`unknown command: ${command}`)
+}
+
+// The nodes linked to one. Links have no direction: from→to works the same as to→from.
+function linkedTo(links: Link[], nodeId: NodeId): NodeId[] {
+  return links.flatMap((l) => (l.from === nodeId ? [l.to] : l.to === nodeId ? [l.from] : []))
+}
+
+interface Peer {
+  nodeId: NodeId
+  type: 'terminal' | 'note' | 'browser'
+  title?: string
+  url?: string | null
+  program?: string | null
+  role?: string
+  model?: string
+  branch?: string
+  state?: AgentState | null
+  canReceive?: boolean
+}
+
+// What `nara peers` and the canvas say about a node.
+function peerInfo(workspaceId: string, peerId: NodeId, node: CanvasNode | undefined): Peer {
+  // The name the user gave the node, if any: new nodes are just "terminal 3".
+  const title = node?.title
+  if (node?.type === 'note') return { nodeId: peerId, type: 'note', title }
+  if (node?.type === 'browser') {
+    return { nodeId: peerId, type: 'browser', title, url: pageUrl(workspaceId, peerId) }
+  }
+  const target = findTerminal(workspaceId, peerId)
+  const program = target && foregroundProgram(target)
+  return {
+    nodeId: peerId,
+    type: 'terminal',
+    title,
+    program,
+    role: findRole(node?.role)?.label.toLowerCase(),
+    model: node?.agent === 'claude' ? modelOf(node) : undefined,
+    branch: node?.worktree
+      ? `on ${node.worktree.branch}, from ${node.worktree.base}`
+      : node?.agent && 'no worktree, in a shared folder',
+    state: agentState(workspaceId, peerId),
+    canReceive: !program || !SHELLS.has(program)
+  }
+}
+
+// The model a Claude Code node runs on: the one picked for it, or else its role's.
+function modelOf(node: CanvasNode, picked = node.model): string {
+  const own = picked && Object.hasOwn(MODELS, picked) ? picked : ''
+  const model = own || roleProfile(findRole(node.role)).model
+  return model ? MODELS[model].label.toLowerCase() : 'default model'
+}
+
+// Only an agent whose role delegates (shared/prompt.ts) picks models and merges for the others.
+function coordinator(workspaceId: string, nodeId: NodeId): void {
+  const node = workspaces.get(workspaceId)?.nodes.find((n) => n.id === nodeId)
+  if (roleProfile(findRole(node?.role)).access !== 'delegate') {
+    throw new Error('only an agent whose role delegates (like the Orchestrator) can do that')
+  }
+}
+
+// The linked terminals with a live agent in them: the ones a role that delegates hands work to.
+function linkedAgents(workspaceId: string, nodeId: NodeId): NodeId[] {
+  const { links = [] } = workspaces.get(workspaceId) ?? {}
+  return linkedTo(links, nodeId).filter((peerId) => {
+    const state = agentState(workspaceId, peerId)
+    return state !== null && state !== 'failed'
+  })
+}
+
+// Why an agent whose role delegates (shared/prompt.ts) can't edit a file right now, or null if it
+// can: it may only while no agent is linked to it.
+function editRefusal(workspaceId: string, nodeId: NodeId): string | null {
+  const node = workspaces.get(workspaceId)?.nodes.find((n) => n.id === nodeId)
+  const role = findRole(node?.role)
+  if (!role || roleProfile(role).access !== 'delegate') return null
+  const agents = linkedAgents(workspaceId, nodeId)
+  if (!agents.length) return null
+  const list = agents.map((id) => `terminal ${id}`).join(', ')
+  return `You are the ${role.label} and ${list} ${agents.length > 1 ? 'are' : 'is'} linked to you: hand this change to ${agents.length > 1 ? 'one of them' : 'it'} with nara send instead of making it yourself. You may edit files only while no agent is linked to you.`
+}
+
+// What an agent was last shown of each other node on the canvas, by pty id, so the next turn can
+// say what changed: whether it was linked, its name, its role and, for a note, its text.
+interface Shown {
+  linked: boolean
+  name: string
+  role?: string
+  model?: string
+  text?: string
+}
+const shown = new Map<number, Map<NodeId, Shown>>()
+
+const STATES: Record<AgentState, string> = {
+  idle: 'idle',
+  working: 'working',
+  waiting: 'waiting on the user',
+  review: 'idle, finished its last turn',
+  failed: 'stopped with an error'
+}
+
+// The canvas as one agent sees it: its role, what's linked to it and what isn't, and, with `track`
+// (a new turn), what changed since the previous one. Empty when there's nothing to tell: no role
+// and no other node.
+// Only an agent whose role delegates gets all of it on every turn, since it plans around the whole
+// canvas. The others get what's linked to them, on their first turn and then only when that
+// changes: they work from the task they were sent, and every line is read and paid for again.
+// `nara canvas` (no `track`) always tells all of it.
+function canvasText(ptyId: number, track: boolean): string {
+  const terminal = terminals.get(ptyId)
+  if (!terminal) return ''
+  const { workspaceId, nodeId } = terminal
+  const { nodes = [], links = [] } = workspaces.get(workspaceId) ?? {}
+  const me = nodes.find((node) => node.id === nodeId)
+  const peers = new Set(linkedTo(links, nodeId))
+  const role = findRole(me?.role)
+  const full = !track || roleProfile(role).access === 'delegate'
+
+  const now = new Map<NodeId, Shown>()
+  const linked: string[] = []
+  const others: string[] = []
+  for (const node of nodes) {
+    if (node.id === nodeId) continue
+    const peer = peerInfo(workspaceId, node.id, node)
+    const name = nodeName(peer)
+    const isLinked = peers.has(node.id)
+    ;(isLinked ? linked : others).push(`- ${name}${nodeDetail(peer, node, isLinked)}`)
+    now.set(node.id, {
+      linked: isLinked,
+      name,
+      role: peer.role,
+      model: peer.model,
+      text: node.type === 'note' ? digest(node.text ?? '') : undefined
+    })
+  }
+
+  const before = shown.get(ptyId)
+  const changes = before ? canvasChanges(before, now, full) : []
+  if (track) {
+    for (const id of shown.keys()) if (!terminals.has(id)) shown.delete(id)
+    shown.set(ptyId, now)
+  }
+  if (!role && !now.size && !changes.length) return ''
+  if (!full && before && !changes.length) return ''
+
+  const myName = me?.title && me.title !== `terminal ${nodeId}` ? ` "${me.title}"` : ''
+  const lines = [
+    `[nara · canvas · you are terminal ${nodeId}${myName}${role ? `, the ${role.label}` : ''}]`
+  ]
+  if (changes.length) lines.push('', 'Changed since your previous turn:', ...changes)
+  lines.push('', linked.length ? 'Linked to you:' : 'Nothing is linked to you.', ...linked)
+  if (full && others.length) {
+    lines.push(
+      '',
+      'Elsewhere on the canvas, not linked to you (unreachable until the user links them):'
+    )
+    lines.push(...others)
+  }
+  if (role) lines.push('', roleReminder(workspaceId, nodeId, role))
+  return lines.join('\n')
+}
+
+// What changed between two turns' canvases; without `all`, only around the nodes linked to the
+// agent, then or now.
+function canvasChanges(
+  before: Map<NodeId, Shown>,
+  now: Map<NodeId, Shown>,
+  all: boolean
+): string[] {
+  const changes: string[] = []
+  for (const [id, node] of now) {
+    const old = before.get(id)
+    if (!all && !node.linked && !old?.linked) continue
+    if (!old) {
+      changes.push(
+        `- ${node.name} was added to the canvas${node.linked ? ' and linked to you' : ''}`
+      )
+      continue
+    }
+    if (old.linked !== node.linked) {
+      changes.push(`- ${node.name} was ${node.linked ? 'linked to you' : 'unlinked from you'}`)
+    }
+    if (old.name !== node.name) changes.push(`- ${old.name} was renamed: ${node.name}`)
+    if (old.role !== node.role) {
+      changes.push(
+        `- ${node.name} ${node.role ? `is now the ${node.role}` : 'no longer has a role'}`
+      )
+    }
+    if (old.model !== node.model && node.model) {
+      changes.push(`- ${node.name} now runs on ${node.model}`)
+    }
+    if (node.linked && old.text !== node.text) changes.push(`- ${node.name} was edited`)
+  }
+  for (const [id, old] of before) {
+    if (!now.has(id) && (all || old.linked))
+      changes.push(`- ${old.name} was removed from the canvas`)
+  }
+  return changes
+}
+
+// What the agent's role asks of it on this turn, given the canvas.
+function roleReminder(workspaceId: string, nodeId: NodeId, role: Role): string {
+  if (roleProfile(role).access !== 'delegate') {
+    return `You are the ${role.label}: act as your role says.`
+  }
+  const agents = linkedAgents(workspaceId, nodeId)
+  if (!agents.length) {
+    return `You are the ${role.label} and no agent is linked to you: do the work yourself.`
+  }
+  const list = agents.map((id) => `terminal ${id}`).join(', ')
+  return `You are the ${role.label}: hand the work to the agents linked to you (${list}), each as its role fits, and don't edit files yourself. Nara refuses your editing tools while they're linked.`
+}
+
+function nodeName(peer: Peer): string {
+  const name = peer.title && peer.title !== `${peer.type} ${peer.nodeId}` ? ` "${peer.title}"` : ''
+  return `${peer.type} ${peer.nodeId}${name}`
+}
+
+// A node's line after its name: a terminal's program, role and state, how far a note's checklist
+// has got, a browser's page.
+function nodeDetail(peer: Peer, node: CanvasNode, linked: boolean): string {
+  if (peer.type === 'note') {
+    const text = node.text ?? ''
+    if (!text.trim()) return '  empty'
+    const open = text.match(/^\s*[-*] \[ \]/gm)?.length ?? 0
+    const done = text.match(/^\s*[-*] \[[xX]\]/gm)?.length ?? 0
+    const lines = text.trim().split('\n').length
+    const checklist = open + done ? `, checklist ${done}/${open + done} done` : ''
+    return `  ${lines} line${lines === 1 ? '' : 's'}${checklist}`
+  }
+  if (peer.type === 'browser') return `  ${peer.url || '(not loaded)'}`
+  const parts = [
+    peer.program,
+    peer.role && `(${peer.role})`,
+    peer.model,
+    peer.branch,
+    peer.state && STATES[peer.state],
+    linked && !peer.canReceive && "shell only, can't receive messages"
+  ]
+  const detail = parts.filter(Boolean).join('  ')
+  return detail ? `  ${detail}` : ''
+}
+
+function digest(text: string): string {
+  return createHash('sha1').update(text).digest('hex')
 }
 
 // Appended text starts on a line of its own.

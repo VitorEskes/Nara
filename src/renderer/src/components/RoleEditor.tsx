@@ -252,7 +252,7 @@ export function PromptPreview({
 export function RoleBadges({ role }: { role: Role }): JSX.Element | null {
   const { model, mode, access, kickoff } = roleProfile(role)
   const badges = [
-    access === 'read-only' && ACCESS[access].label,
+    access !== 'full' && ACCESS[access].label,
     mode && MODES[mode].label,
     model && MODELS[model].label,
     kickoff && 'Starts on its own'

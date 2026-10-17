@@ -9,7 +9,10 @@ import { findRole } from './roles'
 import type { NodeId, Worktree } from '../shared/types'
 
 // Claude Code's hooks, as its --settings takes them (pty.ts).
-export type Hooks = Record<string, { hooks: { type: string; command: string }[] }[]>
+export type Hooks = Record<
+  string,
+  { matcher?: string; hooks: { type: string; command: string }[] }[]
+>
 
 // What an agent starts with: its role, its node, and where it runs.
 export interface AgentOptions {
@@ -165,12 +168,18 @@ function agentParts({
     if (mode) args.push('--permission-mode', mode)
     if (access === 'read-only') args.push('--disallowedTools', EDIT_TOOLS.join(','))
     // The hooks tell Nara when the agent starts and ends a turn and when it asks for something
-    // (main/status.ts), which beats guessing from the terminal's output.
+    // (main/status.ts), which beats guessing from the terminal's output, and hand the agent the
+    // canvas at the start of every turn (main/messages.ts). A role that delegates also has its
+    // editing tools checked against the canvas before each use.
     // The status line hands Nara the plan's limits (main/usage.ts); the user's own status line,
     // if they have one, still prints through it.
     if (hooks) {
+      const edits = {
+        matcher: EDIT_TOOLS.join('|'),
+        hooks: [{ type: 'command', command: 'nara hook edit' }]
+      }
       env.NARA_SETTINGS = JSON.stringify({
-        hooks,
+        hooks: access === 'delegate' ? { ...hooks, PreToolUse: [edits] } : hooks,
         statusLine: { type: 'command', command: 'nara statusline' }
       })
       args.push('--settings', { env: 'NARA_SETTINGS' })

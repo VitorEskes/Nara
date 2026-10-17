@@ -10,11 +10,17 @@ interface Peer {
   title?: string
   program?: string
   role?: string
+  model?: string
+  branch?: string
+  state?: string | null
   canReceive?: boolean
   url?: string | null
 }
 interface Answer {
   peers?: Peer[]
+  output?: object
+  model?: string
+  conflict?: string[]
   text?: string
   title?: string
   url?: string
@@ -36,6 +42,7 @@ interface StatusInput {
 
 const HELP = `usage:
   nara peers                        list the terminals and notes linked to this one, with roles
+  nara canvas                       describe the whole canvas and what changed since the last turn
   nara send <terminal> <text>       send the text to a linked terminal
   nara note read <note>             print the text of a linked note
   nara note write <note> <text>     replace the note's text
@@ -46,6 +53,10 @@ const HELP = `usage:
   nara browser reload <browser>     load the page again
   nara run <cli> [args]             start an agent CLI here with Nara's context and the role
 
+For an agent whose role delegates (the Orchestrator):
+  nara model <terminal> <model>     run a linked Claude Code agent on opus, sonnet, haiku or default
+  nara merge <terminal>             merge a linked agent's worktree branch into its base
+
 Without <text>, send, write and append read it from stdin.
 
 A message arrives in the target terminal as if someone had typed it and pressed Enter.
@@ -54,7 +65,8 @@ A note is shared text on the canvas: anyone linked to it can read it, and so can
 A browser is a web page on the canvas that the user sees too: open your dev server in it.`
 
 // `nara hook <event>` is run by Claude Code's hooks (pty.ts) and fails silently, since an error
-// would show up in the agent. `nara run <cli> [args]` starts an agent CLI typed in a terminal
+// would show up in the agent. What the app answers for Claude Code (the canvas, or a refused edit)
+// is printed for it to read. `nara run <cli> [args]` starts an agent CLI typed in a terminal
 // (shell.ts) with the flags and variables the app gives it; outside Nara the CLI runs as it is.
 if (process.argv[2] === 'run') {
   run(process.argv[3], process.argv.slice(4))
@@ -144,8 +156,14 @@ async function hook(event: string | undefined): Promise<void> {
   } catch {
     // The event alone is enough.
   }
-  const timeout = new Promise((resolve) => setTimeout(resolve, 2000))
-  await Promise.race([request({ command: 'hook', event, payload }).catch(() => {}), timeout])
+  const timeout = new Promise<void>((resolve) => setTimeout(resolve, 2000))
+  const answer = await Promise.race([
+    request({ command: 'hook', event, payload }).catch(() => {}),
+    timeout
+  ])
+  // Writes to a pipe can be asynchronous (macOS), and the process exits right after: wait for it.
+  const output = answer?.output
+  if (output) await new Promise((resolve) => process.stdout.write(JSON.stringify(output), resolve))
 }
 
 // `nara statusline` is Claude Code's status line in Nara's agents (main/agents.ts). It hands Nara
@@ -201,7 +219,8 @@ async function main(): Promise<void> {
   if (command === 'peers') {
     const { peers = [] } = await request({ command })
     if (peers.length === 0) console.log('nothing linked to this terminal')
-    for (const { nodeId, type, title, program, role, canReceive, url } of peers) {
+    for (const peer of peers) {
+      const { nodeId, type, title, program, role, model, branch, state, canReceive, url } = peer
       // A node the user renamed shows its name after the id, which is still what commands take.
       const name = title && title !== `${type} ${nodeId}` ? `  "${title}"` : ''
       if (type === 'note') {
@@ -212,9 +231,36 @@ async function main(): Promise<void> {
         console.log(`browser ${nodeId}${name}  ${url || '(not loaded)'}`)
         continue
       }
-      const roleName = role ? `  (${role})` : ''
+      const busy = state === 'working' ? 'working' : state === 'waiting' && 'waiting on the user'
+      const detail = [role && `(${role})`, model, branch, busy].filter(Boolean).join('  ')
       const warning = canReceive ? '' : "  (shell only, can't receive messages)"
-      console.log(`terminal ${nodeId}${name}  ${program}${roleName}${warning}`)
+      console.log(`terminal ${nodeId}${name}  ${program}${detail ? `  ${detail}` : ''}${warning}`)
+    }
+    return
+  }
+
+  if (command === 'canvas') {
+    const { text } = await request({ command })
+    console.log(text || 'nothing else on the canvas')
+    return
+  }
+
+  if (command === 'model') {
+    const [target, model] = args
+    const to = nodeNumber(target, 'which terminal? e.g. nara model 2 sonnet')
+    if (!model) throw new Error('which model? opus, sonnet, haiku or default')
+    const answer = await request({ command, to, text: model })
+    console.log(`terminal ${to} runs on ${answer.model}; messages sent now reach it once it's back`)
+    return
+  }
+
+  if (command === 'merge') {
+    const to = nodeNumber(args[0], 'which terminal? e.g. nara merge 2')
+    const answer = await request({ command, to })
+    console.log(answer.text)
+    if (answer.conflict) {
+      console.log(answer.conflict.map((file) => `  ${file}`).join('\n'))
+      process.exit(1)
     }
     return
   }

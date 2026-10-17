@@ -169,6 +169,14 @@ export function agentIn(workspaceId: string, nodeId: NodeId): string | null {
   return null
 }
 
+// What the agent in the node is doing, if one is running there.
+export function agentState(workspaceId: string, nodeId: NodeId): AgentState | null {
+  for (const agent of agents.values()) {
+    if (agent.workspaceId === workspaceId && agent.nodeId === nodeId) return agent.state
+  }
+  return null
+}
+
 export function untrackAgent(id: number): void {
   if (agents.delete(id)) send()
 }
