@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'crypto'
 import { existsSync, mkdirSync } from 'fs'
 import { basename, join } from 'path'
 import { changedBy, topOf } from './changes'
-import type { ChangesOwner, GitChange, Worktree } from '../shared/types'
+import type { ChangesOwner, GitChange, MergeResult, Worktree } from '../shared/types'
 
 // Git for the canvas: a worktree of its own for an agent, so agents working side by side never
 // edit the same checkout, and the changes in a node's folder, for the inspector to review. Every
@@ -82,21 +82,9 @@ export function registerGit(win: BrowserWindow): void {
   // has asked the user). A merge that conflicts is undone and reported. Returns { ok } or
   // { error }.
   ipcMain.handle('git:merge', async (_ev, worktree?: Partial<Worktree>) => {
-    const { root, branch, base } = worktree ?? {}
-    if (!root || !branch) return { error: 'This terminal has no worktree' }
-    try {
-      const current = (await git(root, ['rev-parse', '--abbrev-ref', 'HEAD'])).trim()
-      if (current !== base) return { error: `${root} is on ${current}, not ${base}` }
-      try {
-        await git(root, ['merge', '--no-ff', '--no-edit', branch])
-      } catch (error) {
-        await git(root, ['merge', '--abort']).catch(() => {})
-        return { error: `It conflicts, so it was undone: ${firstLine((error as Error).message)}` }
-      }
-      return { ok: true }
-    } catch (error) {
-      return { error: firstLine((error as Error).message) }
-    }
+    const result = await mergeWorktree(worktree)
+    if (!result.conflict) return result
+    return { error: `It conflicts, so it was undone: ${result.conflict.join(', ')}` }
   })
 
   // Removes a worktree and its folder (the renderer has asked the user); the branch stays, with
@@ -123,6 +111,32 @@ export function registerGit(win: BrowserWindow): void {
       ipcMain.removeHandler(name)
     }
   })
+}
+
+// Merges a worktree's branch into the branch it was made from, in the checkout it was made from:
+// only what's committed. A merge that conflicts is undone, and the files it conflicted on are
+// returned. The inspector's merge button and `nara merge` (main/messages.ts) both use it.
+export async function mergeWorktree(worktree?: Partial<Worktree> | null): Promise<MergeResult> {
+  const { root, branch, base } = worktree ?? {}
+  if (!root || !branch) return { error: 'This terminal has no worktree' }
+  try {
+    const current = (await git(root, ['rev-parse', '--abbrev-ref', 'HEAD'])).trim()
+    if (current !== base) return { error: `${root} is on ${current}, not ${base}` }
+    try {
+      await git(root, ['merge', '--no-ff', '--no-edit', branch])
+    } catch (error) {
+      const conflicted = await git(root, ['diff', '--name-only', '--diff-filter=U', '-z'])
+        .then((text) => text.split('\0').filter(Boolean))
+        .catch(() => [])
+      await git(root, ['merge', '--abort']).catch(() => {})
+      return conflicted.length
+        ? { conflict: conflicted }
+        : { error: firstLine((error as Error).message) }
+    }
+    return { ok: true }
+  } catch (error) {
+    return { error: firstLine((error as Error).message) }
+  }
 }
 
 // `git diff --no-index` exits 1 when the files differ, which here is the normal case.
