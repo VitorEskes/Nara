@@ -5,6 +5,7 @@ import type {
   AgentStatus,
   AppInfo,
   BrowserKey,
+  CanvasNode,
   ChangesOwner,
   CodeListing,
   CodeRead,
@@ -79,8 +80,15 @@ const api = {
     remove: (id: string): Promise<boolean> => ipcRenderer.invoke('workspace:remove', id),
     onNoteWritten: (fn: (workspaceId: string, nodeId: NodeId, text: string) => void) =>
       listen('workspace:note-written', fn),
-    onModelPicked: (fn: (workspaceId: string, nodeId: NodeId, model: string) => void) =>
-      listen('workspace:model-picked', fn)
+    // Main changed a node itself: the model an orchestrator picked (`nara model`), or the
+    // conversation its agent's CLI reported.
+    onNodeChanged: (
+      fn: (
+        workspaceId: string,
+        nodeId: NodeId,
+        changes: Pick<CanvasNode, 'model' | 'conversation'>
+      ) => void
+    ) => listen('workspace:node-changed', fn)
   },
   theme: {
     // 'light', 'dark' or 'system'.

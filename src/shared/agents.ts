@@ -16,7 +16,12 @@ import { MODELS } from './prompt'
 // `model` is how the CLI takes a model picked for its node (`nara model`, main/messages.ts): the
 // flag, what its model names look like, and the command that lists them, for the agent picking.
 // Claude Code takes Nara's aliases (shared/prompt.ts); the others, any name their CLI knows. Amp
-// has no such flag.
+// picks its model by mode.
+//
+// `resume` is how the CLI picks a conversation back up, `{id}` standing for the one its hooks
+// reported (main/hooks.ts), when the node restarts: a new model or role, or the app reopening.
+// Claude Code gets its session id from Nara instead (main/agents.ts), and Aider keeps its chat
+// in a file of the node's.
 export interface Agent {
   label: string
   command: string
@@ -27,6 +32,7 @@ export interface Agent {
   telemetry?: boolean
   answers?: { yes: string; no: string }
   model?: { flag: string; names: string; list?: string }
+  resume?: string[]
 }
 
 export const AGENTS: Record<string, Agent> = {
@@ -50,7 +56,8 @@ export const AGENTS: Record<string, Agent> = {
     enforces: { readOnly: true },
     telemetry: true,
     answers: { yes: 'y', no: '\x1b' },
-    model: { flag: '--model', names: "OpenAI's model names" }
+    model: { flag: '--model', names: "OpenAI's model names" },
+    resume: ['resume', '{id}']
   },
   antigravity: {
     label: 'Antigravity CLI',
@@ -59,7 +66,8 @@ export const AGENTS: Record<string, Agent> = {
     prompt: true,
     context: 'first',
     enforces: { mode: true },
-    model: { flag: '--model', names: 'the names Antigravity lists', list: 'agy models' }
+    model: { flag: '--model', names: 'the names Antigravity lists', list: 'agy models' },
+    resume: ['--conversation', '{id}']
   },
   opencode: {
     label: 'OpenCode',
@@ -72,7 +80,8 @@ export const AGENTS: Record<string, Agent> = {
       flag: '--model',
       names: 'provider/model, e.g. anthropic/claude-sonnet-4-6',
       list: 'opencode models'
-    }
+    },
+    resume: ['--session', '{id}']
   },
   qwen: {
     label: 'Qwen Code',
@@ -82,7 +91,8 @@ export const AGENTS: Record<string, Agent> = {
     context: 'system',
     enforces: { mode: true, readOnly: true },
     answers: { yes: '1', no: '\x1b' },
-    model: { flag: '--model', names: "the models of the provider it's signed in to" }
+    model: { flag: '--model', names: "the models of the provider it's signed in to" },
+    resume: ['--resume', '{id}']
   },
   cursor: {
     label: 'Cursor Agent',
@@ -95,7 +105,8 @@ export const AGENTS: Record<string, Agent> = {
       flag: '--model',
       names: "the slugs Cursor lists, not the models' display names",
       list: 'cursor-agent --list-models'
-    }
+    },
+    resume: ['--resume', '{id}']
   },
   copilot: {
     label: 'Copilot CLI',
@@ -105,7 +116,8 @@ export const AGENTS: Record<string, Agent> = {
     context: 'system',
     enforces: { mode: true, readOnly: true },
     answers: { yes: '1', no: '\x1b' },
-    model: { flag: '--model', names: 'names like gpt-5.2 or claude-sonnet-4.6' }
+    model: { flag: '--model', names: 'names like gpt-5.2 or claude-sonnet-4.6' },
+    resume: ['--resume={id}']
   },
   aider: {
     label: 'Aider',
@@ -127,7 +139,9 @@ export const AGENTS: Record<string, Agent> = {
     install: 'https://ampcode.com/manual#install',
     prompt: true,
     context: 'paste',
-    enforces: {}
+    enforces: {},
+    model: { flag: '--mode', names: 'low, medium, high or ultra' },
+    resume: ['threads', 'continue', '{id}']
   }
 }
 

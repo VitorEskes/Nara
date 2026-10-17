@@ -54,6 +54,9 @@ export interface CanvasNode extends Box {
   // The model the agent runs on instead of its role's, picked by an agent that coordinates it
   // (`nara model`, main/messages.ts).
   model?: string
+  // The conversation the agent's CLI reported through its hooks, which it resumes when the node
+  // restarts (main/agents.ts). Claude Code uses `session` instead.
+  conversation?: string
   command?: string
   // Notes.
   text?: string

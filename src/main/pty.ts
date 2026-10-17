@@ -4,11 +4,12 @@ import { existsSync, readlinkSync } from 'fs'
 import { homedir } from 'os'
 import * as pty from 'node-pty'
 import { AGENTS } from '../shared/agents'
-import { agentLaunch, startupLaunch, type Hooks, type Launch } from './agents'
+import { agentLaunch, startupLaunch, type Launch } from './agents'
 import { commandEnded, commandOutput, commandStarted } from './changes'
 import { defaultShell, isPowerShell, shellIntegration } from './shell'
 import { agentExited, agentOutput, agentTouched, trackAgent, untrackAgent } from './status'
 import { unwatchAgent, watchAgent } from './telemetry'
+import { workspaces } from './workspaces'
 import type { PtyOptions } from '../preload'
 import type { AgentReply, NodeId } from '../shared/types'
 
@@ -25,18 +26,6 @@ interface Terminal {
 // and node ids are only unique within a workspace.
 export const terminals = new Map<number, Terminal>()
 let nextId = 1
-// Claude Code's hooks that tell Nara, through the `nara` command, when the agent takes a prompt,
-// ends its turn and asks for something (status.ts), more reliably than its output can.
-export const HOOKS: Hooks = Object.fromEntries(
-  [
-    ['UserPromptSubmit', 'prompt'],
-    ['Stop', 'stop'],
-    ['Notification', 'notify']
-  ].map(([event, name]) => [
-    event,
-    [{ hooks: [{ type: 'command', command: `nara hook ${name}` }] }]
-  ])
-)
 // How long a killed terminal gets to exit on its own before it's killed outright.
 const KILL_GRACE = 2000
 // Exits still pending from kill().
@@ -82,7 +71,9 @@ export function registerPty(win: BrowserWindow, extraEnv: Record<string, string>
           nodeId,
           worktree,
           cwd: start,
-          hooks: known === 'claude' && HOOKS,
+          hooks: true,
+          conversation: workspaces.get(workspaceId)?.nodes.find((n) => n.id === nodeId)
+            ?.conversation,
           powershell
         })
       : typeof command === 'string' && command.trim()

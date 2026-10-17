@@ -5,7 +5,6 @@ import { basename, delimiter, dirname, join } from 'path'
 import nara from '../../resources/bin/nara?asset'
 import { browse, pageUrl } from './browser'
 import {
-  HOOKS,
   currentCwd,
   endAgent,
   findTerminal,
@@ -15,9 +14,10 @@ import {
   startContext,
   terminals
 } from './pty'
-import { agentRun } from './agents'
+import { agentRun, contextGiven } from './agents'
 import { AGENTS, agentForCommand, pickedModel } from '../shared/agents'
-import { MODELS, roleProfile } from '../shared/prompt'
+import { MODELS, agentPrompt, roleProfile } from '../shared/prompt'
+import { EDIT_TOOL } from './hooks'
 import { git, mergeWorktree } from './git'
 import { clearSocket, socketPath } from './socket'
 import { agentHook, agentState } from './status'
@@ -34,7 +34,13 @@ interface Request {
   to?: NodeId
   text?: string
   event?: string
-  payload?: { message?: string; type?: string; rateLimits?: unknown }
+  payload?: {
+    message?: string
+    type?: string
+    session?: string
+    tool?: string
+    rateLimits?: unknown
+  }
   agent?: string
   args?: unknown
 }
@@ -102,31 +108,20 @@ async function handle(
   const sender = terminals.get(Number(from))
   if (!sender) throw new Error('this terminal no longer exists in Nara')
 
-  // Claude Code's hooks (pty.ts, agents.ts). A prompt, the user's or a message from another agent,
-  // gets the canvas as it is now; `output` is what `nara hook` prints back to Claude Code.
+  // The agents' hooks (main/hooks.ts). A prompt, the user's or a message from another agent, gets
+  // the canvas as it is now (`context`); an edit by a role that delegates may be refused (`deny`).
+  // `nara hook` puts either in the shape its CLI reads (cli.ts).
   if (command === 'hook') {
     agentHook(Number(from), event ?? '', payload ?? {})
+    rememberConversation(sender, payload?.session, win)
     if (event === 'prompt') {
       const context = canvasText(Number(from), true)
-      if (!context) return { ok: true }
-      return {
-        output: {
-          hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context }
-        }
-      }
+      return context ? { context } : { ok: true }
     }
     if (event === 'edit') {
+      if (payload?.tool && !EDIT_TOOL.test(payload.tool)) return { ok: true }
       const reason = editRefusal(sender.workspaceId, sender.nodeId)
-      if (!reason) return { ok: true }
-      return {
-        output: {
-          hookSpecificOutput: {
-            hookEventName: 'PreToolUse',
-            permissionDecision: 'deny',
-            permissionDecisionReason: reason
-          }
-        }
-      }
+      return reason ? { deny: reason } : { ok: true }
     }
     return { ok: true }
   }
@@ -168,7 +163,7 @@ async function handle(
       nodeId,
       worktree: node?.worktree,
       cwd,
-      hooks: key === 'claude' && HOOKS
+      hooks: true
     })
     startAgent(Number(from), { agent: key, session: launch.session, message: launch.message, cwd })
     return { command: AGENTS[key].command, args: launch.args, env: launch.env }
@@ -212,22 +207,27 @@ async function handle(
     if (SHELLS.has(foregroundProgram(target))) {
       throw new Error(`terminal ${to} is not running an agent, only a shell`)
     }
-    win.webContents.send('pty:paste', target.id, message)
+    // An agent whose CLI has no hook for its prompts (Aider, or one Nara doesn't know) gets the
+    // canvas with the message instead, when there's something new on it.
+    const canvas = target.agent && target.agent !== 'aider' ? '' : canvasText(target.id, true)
+    win.webContents.send('pty:paste', target.id, canvas ? `${message}\n\n${canvas}` : message)
     return { ok: true }
   }
 
   // The model a linked agent runs on, picked by an agent whose role delegates: the node restarts
-  // on it (renderer's Workspace.tsx). Claude Code resumes its conversation; the other CLIs start a
-  // new one. "default" goes back to the role's model, or the CLI's own.
+  // on it (renderer's Workspace.tsx) and resumes its conversation, if it has one yet. "default"
+  // goes back to the role's model, or the CLI's own. An agent typed in a plain terminal isn't
+  // restarted: it gets the model the next time it's started there (`nara run`).
   if (command === 'model') {
     coordinator(workspaceId, nodeId)
     if (to === undefined || !peers.includes(to))
       throw new Error(`terminal ${to} is not linked to this one`)
     const target = nodeOf(to)
-    const agent = target?.type === 'terminal' ? target.agent : undefined
+    const typed = target?.type === 'terminal' && !target.agent
+    const agent = !target ? undefined : typed ? findTerminal(workspaceId, to)?.agent : target.agent
     const cli = agent ? AGENTS[agent] : undefined
     if (!target || !agent || !cli) {
-      throw new Error(`terminal ${to} isn't an agent node: only those can switch models`)
+      throw new Error(`terminal ${to} isn't running an agent Nara knows: it takes no model`)
     }
     if (!cli.model) throw new Error(`terminal ${to} runs ${cli.label}, which takes no model`)
     const word = String(text ?? '').trim()
@@ -243,12 +243,20 @@ async function handle(
     if (state === 'working' || state === 'waiting') {
       throw new Error(`terminal ${to} is ${STATES[state]}: switch its model once it's idle`)
     }
-    const name = modelOf(target, model)
+    const name = modelOf({ ...target, agent }, model)
     if ((target.model ?? '') === model) return { text: `terminal ${to} already runs on ${name}` }
-    holdMessages(workspaceId, to)
+    if (!typed) holdMessages(workspaceId, to)
     updateNode(workspaceId, to, { model })
-    win.webContents.send('workspace:model-picked', workspaceId, to, model)
-    const resumes = agent === 'claude' ? 'resuming its conversation' : 'in a new conversation'
+    win.webContents.send('workspace:node-changed', workspaceId, to, { model })
+    if (typed) {
+      return {
+        text: `terminal ${to} runs ${cli.label} in a plain terminal: it gets ${name} the next time ${cli.command} is started there`
+      }
+    }
+    const resumes =
+      agent === 'claude' || agent === 'aider' || target.conversation
+        ? 'resuming its conversation'
+        : 'in a new conversation, since it had none yet'
     return {
       text: `terminal ${to} restarts on ${name}, ${resumes}; messages sent now reach it once it's back`
     }
@@ -317,6 +325,27 @@ async function handle(
   }
 
   throw new Error(`unknown command: ${command}`)
+}
+
+// The conversation an agent's CLI reported from its hooks, saved with its node so the node resumes
+// it (main/agents.ts). Claude Code's is the session Nara gave it, and an agent typed in a plain
+// terminal starts afresh each time. The context it started with counts as told, so resuming
+// doesn't tell it again.
+function rememberConversation(
+  sender: { workspaceId: string; nodeId: NodeId; agent?: string },
+  session: unknown,
+  win: BrowserWindow
+): void {
+  const { workspaceId, nodeId, agent } = sender
+  if (typeof session !== 'string' || !/^[\w.:-]{1,200}$/.test(session)) return
+  const node = workspaces.get(workspaceId)?.nodes.find((n) => n.id === nodeId)
+  if (!node || !agent || agent === 'claude' || node.agent !== agent) return
+  if (node.conversation === session) return
+  updateNode(workspaceId, nodeId, { conversation: session })
+  win.webContents.send('workspace:node-changed', workspaceId, nodeId, { conversation: session })
+  if (AGENTS[agent]?.context !== 'system') {
+    contextGiven(session, agentPrompt(nodeId, findRole(node.role), node.worktree))
+  }
 }
 
 // The nodes linked to one. Links have no direction: from→to works the same as to→from.

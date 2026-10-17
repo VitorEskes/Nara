@@ -32,8 +32,9 @@ export const MODES: Record<string, { label: string; detail: string }> = {
 
 // Whether the agent can change files. Read-only takes the editing tools away from Claude Code and
 // runs Codex in a read-only sandbox. Delegates depends on the canvas: while an agent is linked to
-// it, Claude Code's editing tools are refused (main/messages.ts) and the work goes to that agent;
-// alone, it edits like any other. The other CLIs only have the prompt to hold them to it.
+// it, its editing tools are refused by Nara's hooks (main/hooks.ts, main/messages.ts) and the work
+// goes to that agent; alone, it edits like any other. Aider has no hooks, so only the prompt holds
+// it to that.
 export const ACCESS: Record<string, { label: string; detail: string }> = {
   full: { label: 'Can edit', detail: 'Reads and changes files' },
   delegate: {
@@ -86,7 +87,7 @@ function rolePrompt(role: Role | undefined | null): string {
       'While an agent is linked to you, Nara refuses your tools for editing files: the changes go to the linked agents. With no agent linked you work alone and edit yourself.',
       '',
       'Two commands are yours alone, for the agents linked to you:',
-      "  nara model <terminal> <model>   run a linked agent on another model, or on default (its role's, or its CLI's own). Claude Code takes opus, sonnet or haiku and resumes its conversation; the other CLIs take their own model names (the canvas says which) and start a new conversation, so send them the whole task after. Messages you send meanwhile wait for it. Only while it's idle.",
+      "  nara model <terminal> <model>   run a linked agent on another model, or on default (its role's, or its CLI's own). Claude Code takes opus, sonnet or haiku; the other CLIs take their own model names (the canvas says which). It restarts and resumes its conversation, and messages you send meanwhile wait for it. Only while it's idle.",
       "  nara merge <terminal>           merge the agent's worktree branch into the branch it was made from: only what it committed. A conflict is undone and the files listed."
     )
   }

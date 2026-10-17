@@ -5,16 +5,12 @@ import { homedir } from 'os'
 import { dirname, join } from 'path'
 import { AGENTS, pickedModel } from '../shared/agents'
 import { EDIT_TOOLS, agentPrompt, roleProfile, type RoleProfile } from '../shared/prompt'
+import { addHooks, claudeHooks, type Arg, type Env } from './hooks'
 import { findRole } from './roles'
 import type { NodeId, Worktree } from '../shared/types'
 
-// Claude Code's hooks, as its --settings takes them (pty.ts).
-export type Hooks = Record<
-  string,
-  { matcher?: string; hooks: { type: string; command: string }[] }[]
->
-
-// What an agent starts with: its role, its node, and where it runs.
+// What an agent starts with: its role, its node, and where it runs. `hooks` wires Nara's hooks
+// into its CLI (main/hooks.ts). `conversation` is the one its CLI reported last time, to resume.
 export interface AgentOptions {
   agent: string
   role?: string
@@ -23,13 +19,12 @@ export interface AgentOptions {
   nodeId: NodeId
   worktree?: Pick<Worktree, 'branch' | 'base'> | null
   cwd?: string
-  hooks?: Hooks | false
+  hooks?: boolean
+  conversation?: string
 }
 
 // An argument is a word, or { env } for the value of one of the variables, after `prefix` if it
 // has one (`--policy=` and the path).
-type Arg = string | { env: string; prefix?: string }
-type Env = Record<string, string>
 
 export interface Launch {
   command: string
@@ -40,7 +35,8 @@ export interface Launch {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // The shell command and environment that open an agent in a node. Claude Code runs under a
-// session id saved with the node, so it resumes its conversation after a restart. `command` is
+// session id saved with the node, so it resumes its conversation after a restart; the other CLIs
+// resume the conversation their hooks reported, and Aider its chat file. `command` is
 // what the user typed in the new terminal dialog in place of the agent's own; Nara's flags go
 // after it.
 //
@@ -149,10 +145,39 @@ const SESSION_FLAGS = new Set([
 
 // The arguments and variables both of the above start from. An argument is a word, or { env } for
 // the value of one of the variables. `quiet` leaves the role's first message out.
-function agentParts({
+//
+// A CLI that resumes a conversation gets the command that picks it up first (some are
+// subcommands), and its hooks after its own flags.
+function agentParts(
+  options: AgentOptions & { session?: string; resuming: boolean; quiet?: boolean }
+): { args: Arg[]; env: Env; message: string | null } {
+  const { agent, conversation, hooks } = options
+  const resume = agent !== 'claude' ? AGENTS[agent]?.resume : undefined
+  const id = resume && conversation && CONVERSATION.test(conversation) ? conversation : ''
+  const parts = cliParts({ ...options, resuming: options.resuming || Boolean(id) })
+  if (id && resume) {
+    parts.env.NARA_CONVERSATION = id
+    const words = resume.map((word): Arg => {
+      const at = word.indexOf('{id}')
+      return at < 0 ? word : { env: 'NARA_CONVERSATION', prefix: word.slice(0, at) || undefined }
+    })
+    parts.args.unshift(...words)
+  }
+  if (hooks && agent !== 'claude') {
+    const delegate = roleProfile(findRole(options.role)).access === 'delegate'
+    addHooks(agent, parts.args, parts.env, delegate)
+  }
+  return parts
+}
+
+// A conversation id a CLI reported, as it goes on its command line.
+const CONVERSATION = /^[\w.:-]{1,200}$/
+
+function cliParts({
   agent,
   session,
   resuming,
+  conversation,
   role: key,
   model: picked,
   nodeId,
@@ -191,12 +216,8 @@ function agentParts({
     // The status line hands Nara the plan's limits (main/usage.ts); the user's own status line,
     // if they have one, still prints through it.
     if (hooks) {
-      const edits = {
-        matcher: EDIT_TOOLS.join('|'),
-        hooks: [{ type: 'command', command: 'nara hook edit' }]
-      }
       env.NARA_SETTINGS = JSON.stringify({
-        hooks: access === 'delegate' ? { ...hooks, PreToolUse: [edits] } : hooks,
+        hooks: claudeHooks('claude', access === 'delegate', EDIT_TOOLS.join('|')),
         statusLine: { type: 'command', command: 'nara statusline' }
       })
       args.push('--settings', { env: 'NARA_SETTINGS' })
@@ -211,7 +232,12 @@ function agentParts({
     if (access === 'read-only') args.push('--sandbox', 'read-only')
   } else {
     const settings = { mode, access, kickoff: quiet ? '' : kickoff, model: own }
-    return otherParts(agent, env, settings, Boolean(quiet))
+    return otherParts(agent, env, settings, {
+      quiet: Boolean(quiet),
+      resuming,
+      conversation,
+      session
+    })
   }
 
   // The role's first message starts the conversation, once: a node that resumes is past it. `--`
@@ -230,16 +256,23 @@ function agentParts({
 // An agent that takes its context as its opening message only gets it that way when the user typed
 // nothing after the command (`quiet` is false); otherwise it's pasted once the agent is up. Flags
 // that take a list are written with `=`, so they can't swallow the user's arguments.
+//
+// A resumed conversation is past the role's first message, and already has the context of an
+// agent that takes it as a message, unless it changed since (a new role): then it gets it again.
 function otherParts(
   agent: string,
   env: Env,
-  { mode, access, kickoff, model }: Pick<RoleProfile, 'mode' | 'access' | 'kickoff' | 'model'>,
-  quiet: boolean
+  settings: Pick<RoleProfile, 'mode' | 'access' | 'kickoff' | 'model'>,
+  { quiet, resuming, conversation, session }: Resumption
 ): { args: Arg[]; env: Env; message: string | null } {
+  const { mode, access, model } = settings
+  const kickoff = resuming ? '' : settings.kickoff
   const prompt = env.NARA_PROMPT
   const readOnly = access === 'read-only'
   const args: Arg[] = modelArgs(agent, model, env)
+  const told = resuming && !contextChanged(conversation, prompt)
   const opening = (flag: string | null): { args: Arg[]; env: Env; message: string | null } => {
+    if (told) return { args, env, message: null }
     if (quiet) return { args, env, message: contextMessage(prompt, '') }
     env.NARA_OPENING = contextMessage(prompt, kickoff)
     args.push(...(flag ? [flag] : []), { env: 'NARA_OPENING' })
@@ -290,6 +323,13 @@ function otherParts(
     // plans without editing.
     env.NARA_CONTEXT_FILE = contextFile('nara-instructions.md', prompt)
     args.push('--read', { env: 'NARA_CONTEXT_FILE' })
+    // The node's chat goes in a file of its own, which it picks back up when it restarts.
+    const chat = session && UUID.test(session) ? aiderChat(session) : null
+    if (chat) {
+      env.NARA_AIDER_CHAT = chat
+      args.push('--chat-history-file', { env: 'NARA_AIDER_CHAT' })
+      if (existsSync(chat)) args.push('--restore-chat-history')
+    }
     if (readOnly || mode === 'plan') args.push('--chat-mode', 'ask')
     if (mode === 'auto') args.push('--yes-always')
     return { args, env, message: kickoff || null }
@@ -315,7 +355,49 @@ function otherParts(
   }
 
   // Amp, and any CLI started with `nara run`: pasted once it's up.
-  return { args, env, message: contextMessage(prompt, kickoff) }
+  return { args, env, message: told ? null : contextMessage(prompt, kickoff) }
+}
+
+interface Resumption {
+  quiet: boolean
+  resuming: boolean
+  conversation?: string
+  session?: string
+}
+
+// Whether a conversation was last given other context than this, which it's then told is so: the
+// hash of what each conversation got, kept in the data folder.
+function contextChanged(conversation: string | undefined, prompt: string): boolean {
+  if (!conversation) return true
+  if (contextsSeen()[conversation] === promptHash(prompt)) return false
+  contextGiven(conversation, prompt)
+  return true
+}
+
+// A conversation got this context: when it started, or when it was told again. Its CLI reports
+// the conversation once it's under way (main/messages.ts).
+export function contextGiven(conversation: string, prompt: string): void {
+  const seen = contextsSeen()
+  seen[conversation] = promptHash(prompt)
+  mkdirSync(dirname(contextsFile()), { recursive: true })
+  writeFileSync(contextsFile(), JSON.stringify(seen))
+}
+
+function contextsSeen(): Record<string, string> {
+  try {
+    return JSON.parse(readFileSync(contextsFile(), 'utf8'))
+  } catch {
+    return {}
+  }
+}
+
+const contextsFile = (): string => join(app.getPath('userData'), 'context', 'conversations.json')
+const promptHash = (prompt: string): string => createHash('sha1').update(prompt).digest('hex')
+
+function aiderChat(session: string): string {
+  const dir = join(app.getPath('userData'), 'aider')
+  mkdirSync(dir, { recursive: true })
+  return join(dir, `${session}.md`)
 }
 
 // A model picked for the node, as the agent's CLI takes it (shared/agents.ts). Like the other free

@@ -136,8 +136,8 @@ export function agentExited(id: number, code: number): void {
   } else change(agent, 'failed')
 }
 
-// What Claude Code's hooks report (`nara hook`): it took a prompt, ended its turn, or asked for
-// something. Each settles the state right away instead of waiting for the output to tell.
+// What an agent's hooks report (`nara hook`, main/hooks.ts): it took a prompt, ended its turn, or
+// asked for something. Each settles the state right away instead of waiting for the output to tell.
 export function agentHook(
   id: number,
   event: string,

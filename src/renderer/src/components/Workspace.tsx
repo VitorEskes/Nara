@@ -304,14 +304,15 @@ export default function Workspace({
     [workspaceId]
   )
 
-  // An agent that coordinates this one picked the model it runs on (`nara model`). Main has
-  // already changed its own copy; the terminal restarts on the new model.
+  // Main changed a node: an agent that coordinates this one picked the model it runs on (`nara
+  // model`), and the terminal restarts on it; or the agent's CLI reported its conversation, which
+  // the node resumes next time. Main has already changed its own copy.
   useEffect(
     () =>
-      window.api.workspace.onModelPicked((id, nodeId, model) => {
+      window.api.workspace.onNodeChanged((id, nodeId, changes) => {
         if (id !== workspaceId) return
         setNodes((current) =>
-          current.map((node) => (node.id === nodeId ? { ...node, model } : node))
+          current.map((node) => (node.id === nodeId ? { ...node, ...changes } : node))
         )
       }),
     [workspaceId]

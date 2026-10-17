@@ -18,7 +18,8 @@ interface Peer {
 }
 interface Answer {
   peers?: Peer[]
-  output?: object
+  context?: string
+  deny?: string
   conflict?: string[]
   text?: string
   title?: string
@@ -63,14 +64,14 @@ The reply, if any, arrives in this terminal the same way: no need to wait or che
 A note is shared text on the canvas: anyone linked to it can read it, and so can the user.
 A browser is a web page on the canvas that the user sees too: open your dev server in it.`
 
-// `nara hook <event>` is run by Claude Code's hooks (pty.ts) and fails silently, since an error
-// would show up in the agent. What the app answers for Claude Code (the canvas, or a refused edit)
-// is printed for it to read. `nara run <cli> [args]` starts an agent CLI typed in a terminal
+// `nara hook <event> <cli>` is run by the agents' hooks (main/hooks.ts) and fails silently, since an
+// error would show up in the agent. What the app answers (the canvas, or a refused edit) is printed
+// the way that CLI reads it. `nara run <cli> [args]` starts an agent CLI typed in a terminal
 // (shell.ts) with the flags and variables the app gives it; outside Nara the CLI runs as it is.
 if (process.argv[2] === 'run') {
   run(process.argv[3], process.argv.slice(4))
 } else if (process.argv[2] === 'hook') {
-  hook(process.argv[3]).finally(() => process.exit(0))
+  hook(process.argv[3], process.argv[4]).finally(() => process.exit(0))
 } else if (process.argv[2] === 'statusline') {
   statusline().finally(() => process.exit(0))
 } else {
@@ -144,25 +145,91 @@ function findProgram(name: string): string | null {
   return null
 }
 
-async function hook(event: string | undefined): Promise<void> {
+async function hook(event: string | undefined, cli = 'claude'): Promise<void> {
   if (!process.env.NARA_SOCK || !event) return
-  let payload = {}
-  try {
-    let text = ''
-    for await (const chunk of process.stdin) text += chunk
-    const data = JSON.parse(text || '{}')
-    payload = { message: data.message, type: data.notification_type }
-  } catch {
-    // The event alone is enough.
+  const data = await hookInput()
+  // Antigravity runs its prompt hook before every call to the model in a turn: only the first is
+  // a new prompt.
+  if (cli === 'antigravity' && event === 'prompt' && Number(data.invocationNum) > 0) return
+  const toolCall = data.toolCall as { name?: unknown } | undefined
+  const payload = {
+    message: text(data.message),
+    // Codex has no notification event: its hook runs when it asks for a permission.
+    type:
+      text(data.notification_type) ??
+      (cli === 'codex' && event === 'notify' ? 'permission_prompt' : undefined),
+    // Each CLI names its conversation its own way; the plugins pass `session`.
+    session: text(
+      data.session ??
+        data.session_id ??
+        data.sessionId ??
+        data.conversation_id ??
+        data.conversationId
+    ),
+    tool: text(data.tool ?? data.tool_name ?? data.toolName ?? toolCall?.name)
   }
   const timeout = new Promise<void>((resolve) => setTimeout(resolve, 2000))
   const answer = await Promise.race([
     request({ command: 'hook', event, payload }).catch(() => {}),
     timeout
   ])
+  const output = hookOutput(cli, event, answer ?? {}, data)
   // Writes to a pipe can be asynchronous (macOS), and the process exits right after: wait for it.
-  const output = answer?.output
   if (output) await new Promise((resolve) => process.stdout.write(JSON.stringify(output), resolve))
+}
+
+// What the CLI hands its hook, as JSON on stdin. Aider's command has the terminal there instead,
+// and a CLI may never close it: neither holds the hook up.
+async function hookInput(): Promise<Record<string, unknown>> {
+  if (process.stdin.isTTY) return {}
+  let input = ''
+  const reading = (async () => {
+    for await (const chunk of process.stdin) input += chunk
+  })()
+  await Promise.race([reading.catch(() => {}), new Promise((resolve) => setTimeout(resolve, 1000))])
+  try {
+    const data = JSON.parse(input || '{}')
+    return data && typeof data === 'object' ? data : {}
+  } catch {
+    return {}
+  }
+}
+
+const text = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined)
+
+// The app's answer in the shape each CLI's hook output takes. The plugins (OpenCode, Amp) read it
+// as it is. Claude Code, Codex and Qwen Code share Claude Code's.
+function hookOutput(
+  cli: string,
+  event: string,
+  { context, deny }: Answer,
+  data: Record<string, unknown>
+): object | null {
+  if (cli === 'opencode' || cli === 'amp') return { context, deny }
+  if (event === 'prompt') {
+    if (cli === 'cursor') return { continue: true, ...(context && { additional_context: context }) }
+    if (!context) return null
+    if (cli === 'copilot') {
+      // Its hook can only replace what the model gets, so the canvas goes after it.
+      const prompt = text(data.transformedPrompt)
+      return prompt === undefined ? null : { modifiedTransformedPrompt: `${prompt}\n\n${context}` }
+    }
+    if (cli === 'antigravity') return { injectSteps: [{ ephemeralMessage: context }] }
+    return { hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: context } }
+  }
+  if (event === 'edit' && deny) {
+    if (cli === 'copilot') return { permissionDecision: 'deny', permissionDecisionReason: deny }
+    if (cli === 'cursor') return { permission: 'deny', user_message: deny, agent_message: deny }
+    if (cli === 'antigravity') return { decision: 'deny', reason: deny }
+    return {
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'deny',
+        permissionDecisionReason: deny
+      }
+    }
+  }
+  return null
 }
 
 // `nara statusline` is Claude Code's status line in Nara's agents (main/agents.ts). It hands Nara
