@@ -3,8 +3,8 @@ import { createHash, randomUUID } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
 import { dirname, join } from 'path'
-import { AGENTS } from '../shared/agents'
-import { EDIT_TOOLS, MODELS, agentPrompt, roleProfile, type RoleProfile } from '../shared/prompt'
+import { AGENTS, pickedModel } from '../shared/agents'
+import { EDIT_TOOLS, agentPrompt, roleProfile, type RoleProfile } from '../shared/prompt'
 import { findRole } from './roles'
 import type { NodeId, Worktree } from '../shared/types'
 
@@ -18,7 +18,7 @@ export type Hooks = Record<
 export interface AgentOptions {
   agent: string
   role?: string
-  // A model picked for this node (`nara model`), in place of the role's.
+  // A model picked for this node (`nara model`), in place of the role's or the CLI's own.
   model?: string
   nodeId: NodeId
   worktree?: Pick<Worktree, 'branch' | 'base'> | null
@@ -58,7 +58,8 @@ export function agentLaunch({
 }: AgentOptions & { command?: string; session?: string; powershell?: boolean }): Launch {
   const command = typeof typed === 'string' && typed.trim() ? typed.trim() : AGENTS[agent].command
   const resuming = agent === 'claude' && !!session && UUID.test(session) && hasConversation(session)
-  const parts = agentParts({ agent, session, resuming, ...options })
+  const model = typesModel(command.split(/\s+/)) ? undefined : options.model
+  const parts = agentParts({ agent, session, resuming, ...options, model })
   if (powershell) {
     return {
       command: powershellCommand(command, parts.args),
@@ -113,11 +114,25 @@ export function agentRun({
 } {
   const own = typed.some((arg) => SESSION_FLAGS.has(arg.split('=')[0]))
   const session = agent === 'claude' && !own ? randomUUID() : undefined
-  const parts = agentParts({ agent, session, resuming: false, quiet: typed.length > 0, ...options })
+  const model = typesModel(typed) ? undefined : options.model
+  const parts = agentParts({
+    agent,
+    session,
+    resuming: false,
+    quiet: typed.length > 0,
+    ...options,
+    model
+  })
   const args = parts.args.map((arg) =>
     typeof arg === 'string' ? arg : `${arg.prefix ?? ''}${parts.env[arg.env]}`
   )
   return { args, env: parts.env, message: parts.message, session }
+}
+
+// Whether the user typed a model of their own, which wins over one picked for the node: some CLIs
+// refuse the flag twice.
+function typesModel(words: string[]): boolean {
+  return words.some((word) => ['--model', '-m'].includes(word.split('=')[0]))
 }
 
 // Claude Code's flags that pick the conversation: with one of them, Nara leaves the session alone.
@@ -153,7 +168,9 @@ function agentParts({
   const role = findRole(key)
   const profile = roleProfile(role)
   const { mode, access, kickoff } = profile
-  const model = picked && Object.hasOwn(MODELS, picked) ? picked : profile.model
+  // A role's model is one of Claude Code's; one picked for the node goes to any CLI that takes it.
+  const own = pickedModel(agent, picked)
+  const model = own || profile.model
   const args: Arg[] = []
   const env: Env = { NARA_PROMPT: agentPrompt(nodeId, role, worktree) }
   const message: string | null = null
@@ -190,10 +207,11 @@ function agentParts({
     // Codex takes extra instructions as a config value, in TOML. A JSON string is a valid TOML
     // string, escapes and all.
     env.NARA_CODEX_CONFIG = `developer_instructions=${JSON.stringify(env.NARA_PROMPT)}`
-    args.push('-c', { env: 'NARA_CODEX_CONFIG' })
+    args.push('-c', { env: 'NARA_CODEX_CONFIG' }, ...modelArgs(agent, own, env))
     if (access === 'read-only') args.push('--sandbox', 'read-only')
   } else {
-    return otherParts(agent, env, { mode, access, kickoff: quiet ? '' : kickoff }, Boolean(quiet))
+    const settings = { mode, access, kickoff: quiet ? '' : kickoff, model: own }
+    return otherParts(agent, env, settings, Boolean(quiet))
   }
 
   // The role's first message starts the conversation, once: a node that resumes is past it. `--`
@@ -215,12 +233,12 @@ function agentParts({
 function otherParts(
   agent: string,
   env: Env,
-  { mode, access, kickoff }: Pick<RoleProfile, 'mode' | 'access' | 'kickoff'>,
+  { mode, access, kickoff, model }: Pick<RoleProfile, 'mode' | 'access' | 'kickoff' | 'model'>,
   quiet: boolean
 ): { args: Arg[]; env: Env; message: string | null } {
   const prompt = env.NARA_PROMPT
   const readOnly = access === 'read-only'
-  const args: Arg[] = []
+  const args: Arg[] = modelArgs(agent, model, env)
   const opening = (flag: string | null): { args: Arg[]; env: Env; message: string | null } => {
     if (quiet) return { args, env, message: contextMessage(prompt, '') }
     env.NARA_OPENING = contextMessage(prompt, kickoff)
@@ -298,6 +316,15 @@ function otherParts(
 
   // Amp, and any CLI started with `nara run`: pasted once it's up.
   return { args, env, message: contextMessage(prompt, kickoff) }
+}
+
+// A model picked for the node, as the agent's CLI takes it (shared/agents.ts). Like the other free
+// text, the name travels in a variable.
+function modelArgs(agent: string, model: string, env: Env): Arg[] {
+  const flag = model && AGENTS[agent]?.model?.flag
+  if (!flag) return []
+  env.NARA_MODEL = model
+  return [flag, { env: 'NARA_MODEL' }]
 }
 
 // A role's permission mode (shared/prompt.ts) as an agent's own approval mode.

@@ -86,7 +86,7 @@ function rolePrompt(role: Role | undefined | null): string {
       'While an agent is linked to you, Nara refuses your tools for editing files: the changes go to the linked agents. With no agent linked you work alone and edit yourself.',
       '',
       'Two commands are yours alone, for the agents linked to you:',
-      "  nara model <terminal> <model>   run a Claude Code agent on opus, sonnet, haiku, or default (its role's own). It restarts and resumes its conversation; messages you send meanwhile wait for it. Only while it's idle.",
+      "  nara model <terminal> <model>   run a linked agent on another model, or on default (its role's, or its CLI's own). Claude Code takes opus, sonnet or haiku and resumes its conversation; the other CLIs take their own model names (the canvas says which) and start a new conversation, so send them the whole task after. Messages you send meanwhile wait for it. Only while it's idle.",
       "  nara merge <terminal>           merge the agent's worktree branch into the branch it was made from: only what it committed. A conflict is undone and the files listed."
     )
   }

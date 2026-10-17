@@ -19,7 +19,6 @@ interface Peer {
 interface Answer {
   peers?: Peer[]
   output?: object
-  model?: string
   conflict?: string[]
   text?: string
   title?: string
@@ -54,7 +53,7 @@ const HELP = `usage:
   nara run <cli> [args]             start an agent CLI here with Nara's context and the role
 
 For an agent whose role delegates (the Orchestrator):
-  nara model <terminal> <model>     run a linked Claude Code agent on opus, sonnet, haiku or default
+  nara model <terminal> <model>     run a linked agent on another model, or its default
   nara merge <terminal>             merge a linked agent's worktree branch into its base
 
 Without <text>, send, write and append read it from stdin.
@@ -246,11 +245,11 @@ async function main(): Promise<void> {
   }
 
   if (command === 'model') {
-    const [target, model] = args
-    const to = nodeNumber(target, 'which terminal? e.g. nara model 2 sonnet')
-    if (!model) throw new Error('which model? opus, sonnet, haiku or default')
-    const answer = await request({ command, to, text: model })
-    console.log(`terminal ${to} runs on ${answer.model}; messages sent now reach it once it's back`)
+    // A model's name may have spaces in it (Antigravity's do).
+    const to = nodeNumber(args[0], 'which terminal? e.g. nara model 2 sonnet')
+    const model = args.slice(1).join(' ')
+    if (!model) throw new Error("which model? the name the agent's CLI takes, or default")
+    console.log((await request({ command, to, text: model })).text)
     return
   }
 

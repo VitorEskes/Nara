@@ -16,7 +16,7 @@ import {
   terminals
 } from './pty'
 import { agentRun } from './agents'
-import { AGENTS, agentForCommand } from '../shared/agents'
+import { AGENTS, agentForCommand, pickedModel } from '../shared/agents'
 import { MODELS, roleProfile } from '../shared/prompt'
 import { git, mergeWorktree } from './git'
 import { clearSocket, socketPath } from './socket'
@@ -216,34 +216,42 @@ async function handle(
     return { ok: true }
   }
 
-  // The model a linked Claude Code agent runs on, picked by an agent whose role delegates: the
-  // node restarts on it and resumes its conversation (renderer's Workspace.tsx). "default" goes
-  // back to the role's own.
+  // The model a linked agent runs on, picked by an agent whose role delegates: the node restarts
+  // on it (renderer's Workspace.tsx). Claude Code resumes its conversation; the other CLIs start a
+  // new one. "default" goes back to the role's model, or the CLI's own.
   if (command === 'model') {
     coordinator(workspaceId, nodeId)
     if (to === undefined || !peers.includes(to))
       throw new Error(`terminal ${to} is not linked to this one`)
     const target = nodeOf(to)
-    if (target?.type !== 'terminal' || target.agent !== 'claude') {
-      throw new Error(`terminal ${to} is not a Claude Code node: only those can switch models`)
+    const agent = target?.type === 'terminal' ? target.agent : undefined
+    const cli = agent ? AGENTS[agent] : undefined
+    if (!target || !agent || !cli) {
+      throw new Error(`terminal ${to} isn't an agent node: only those can switch models`)
     }
-    const word = String(text ?? '')
-      .trim()
-      .toLowerCase()
-    const model = word === 'default' ? '' : word
-    if (!word || !Object.hasOwn(MODELS, model)) {
-      throw new Error(`unknown model "${word}": use opus, sonnet, haiku or default`)
+    if (!cli.model) throw new Error(`terminal ${to} runs ${cli.label}, which takes no model`)
+    const word = String(text ?? '').trim()
+    const model =
+      word.toLowerCase() === 'default' ? '' : agent === 'claude' ? word.toLowerCase() : word
+    if (!word || (model && !pickedModel(agent, model))) {
+      const list = cli.model.list ? ` (\`${cli.model.list}\` lists them)` : ''
+      throw new Error(
+        `unknown model "${word}": ${cli.label} takes ${cli.model.names}${list}, or default`
+      )
     }
     const state = agentState(workspaceId, to)
     if (state === 'working' || state === 'waiting') {
       throw new Error(`terminal ${to} is ${STATES[state]}: switch its model once it's idle`)
     }
-    if ((target.model ?? '') !== model) {
-      holdMessages(workspaceId, to)
-      updateNode(workspaceId, to, { model })
-      win.webContents.send('workspace:model-picked', workspaceId, to, model)
+    const name = modelOf(target, model)
+    if ((target.model ?? '') === model) return { text: `terminal ${to} already runs on ${name}` }
+    holdMessages(workspaceId, to)
+    updateNode(workspaceId, to, { model })
+    win.webContents.send('workspace:model-picked', workspaceId, to, model)
+    const resumes = agent === 'claude' ? 'resuming its conversation' : 'in a new conversation'
+    return {
+      text: `terminal ${to} restarts on ${name}, ${resumes}; messages sent now reach it once it's back`
     }
-    return { model: modelOf(target, model) }
   }
 
   // Merges a linked agent's worktree branch into the branch it was made from, for an agent whose
@@ -345,7 +353,7 @@ function peerInfo(workspaceId: string, peerId: NodeId, node: CanvasNode | undefi
     title,
     program,
     role: findRole(node?.role)?.label.toLowerCase(),
-    model: node?.agent === 'claude' ? modelOf(node) : undefined,
+    model: node?.agent && AGENTS[node.agent]?.model ? modelOf(node) : undefined,
     branch: node?.worktree
       ? `on ${node.worktree.branch}, from ${node.worktree.base}`
       : node?.agent && 'no worktree, in a shared folder',
@@ -354,9 +362,11 @@ function peerInfo(workspaceId: string, peerId: NodeId, node: CanvasNode | undefi
   }
 }
 
-// The model a Claude Code node runs on: the one picked for it, or else its role's.
+// The model an agent node runs on: the one picked for it, or else its role's (Claude Code) or its
+// CLI's own.
 function modelOf(node: CanvasNode, picked = node.model): string {
-  const own = picked && Object.hasOwn(MODELS, picked) ? picked : ''
+  const own = pickedModel(node.agent, picked)
+  if (node.agent !== 'claude') return own || "its CLI's default model"
   const model = own || roleProfile(findRole(node.role)).model
   return model ? MODELS[model].label.toLowerCase() : 'default model'
 }
@@ -518,7 +528,19 @@ function roleReminder(workspaceId: string, nodeId: NodeId, role: Role): string {
     return `You are the ${role.label} and no agent is linked to you: do the work yourself.`
   }
   const list = agents.map((id) => `terminal ${id}`).join(', ')
-  return `You are the ${role.label}: hand the work to the agents linked to you (${list}), each as its role fits, and don't edit files yourself. Nara refuses your editing tools while they're linked.`
+  const lines = [
+    `You are the ${role.label}: hand the work to the agents linked to you (${list}), each as its role fits, and don't edit files yourself. Nara refuses your editing tools while they're linked.`
+  ]
+  // How each CLI among them names its models, for `nara model`: Claude Code's are in the prompt.
+  const { nodes = [] } = workspaces.get(workspaceId) ?? {}
+  const clis = new Set(agents.map((id) => nodes.find((node) => node.id === id)?.agent))
+  for (const agent of clis) {
+    const cli = agent && agent !== 'claude' ? AGENTS[agent] : undefined
+    if (!cli?.model) continue
+    const listed = cli.model.list ? `; \`${cli.model.list}\` lists them` : ''
+    lines.push(`nara model for ${cli.label}: ${cli.model.names}${listed}.`)
+  }
+  return lines.join('\n')
 }
 
 function nodeName(peer: Peer): string {
