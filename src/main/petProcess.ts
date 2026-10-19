@@ -5,6 +5,7 @@ import { is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { readJson, writeAtomic } from './files'
 import { registerPets } from './pets'
+import { setWindowState } from './x11'
 import type { AgentReply, AgentStatus, NodeId, PetConfig } from '../shared/types'
 
 // The desktop pet's process (pet.ts starts it with --nara-pet): one small transparent window over
@@ -19,6 +20,9 @@ const MARGIN = 8
 const DRAG_EVERY = 16
 // How often macOS checks whether the pointer is over the shape, in ms.
 const POINTER_EVERY = 50
+// When the window manager is asked to keep the pet out of the taskbar after it shows, in ms: it
+// only takes the request once the window is on screen, which takes a moment.
+const SKIP_TASKBAR_AT = [300, 2000]
 
 export function runPetProcess(): void {
   // Its own browser session: the app's is in use by the app's process.
@@ -57,7 +61,12 @@ function start(): void {
   })
   win.setAlwaysOnTop(true, 'screen-saver')
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-  win.once('ready-to-show', () => win.showInactive())
+  win.once('ready-to-show', () => {
+    win.showInactive()
+    if (process.platform === 'linux') {
+      for (const delay of SKIP_TASKBAR_AT) setTimeout(() => keepOutOfTaskbar(win), delay)
+    }
+  })
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(`${process.env['ELECTRON_RENDERER_URL']}#pet`)
   } else {
@@ -167,6 +176,21 @@ function start(): void {
       () => Boolean(drag)
     )
   }
+}
+
+// skipTaskbar doesn't reach the window manager under X11 (the pet's XWayland included): the pet
+// would show in the taskbar and the window switcher as an app of its own. Asked directly, it
+// leaves it out of both, and stops the taskbar flashing for it.
+function keepOutOfTaskbar(win: BrowserWindow): void {
+  if (win.isDestroyed()) return
+  setWindowState(win.getNativeWindowHandle().readUInt32LE(0), {
+    add: [
+      '_NET_WM_STATE_SKIP_TASKBAR',
+      '_NET_WM_STATE_SKIP_PAGER',
+      '_KDE_NET_WM_STATE_SKIP_SWITCHER'
+    ],
+    remove: ['_NET_WM_STATE_DEMANDS_ATTENTION']
+  }).catch(() => {})
 }
 
 // On macOS the whole window would take the pointer, transparent parts and all, and the clicks

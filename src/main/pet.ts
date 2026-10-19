@@ -88,6 +88,9 @@ export function registerDesktopPet(main: BrowserWindow): void {
       ...(process.platform === 'linux' && process.env.WAYLAND_DISPLAY
         ? ['--ozone-platform=x11']
         : []),
+      // The AppImage starts Nara with --no-sandbox where the system doesn't allow Chromium's
+      // sandbox; the pet runs the same executable, without the AppImage's launcher.
+      ...(app.commandLine.hasSwitch('no-sandbox') ? ['--no-sandbox'] : []),
       // In development Electron is told where the app is; a packaged app knows.
       ...(app.isPackaged ? [] : [app.getAppPath()]),
       PET_FLAG

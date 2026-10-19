@@ -19,6 +19,7 @@ import { runPetProcess } from './petProcess'
 import { registerMessages } from './messages'
 import { registerPty, terminalsExited } from './pty'
 import { registerRoles } from './roles'
+import { registerServers } from './servers'
 import { registerStatus } from './status'
 import { registerTelemetry } from './telemetry'
 import { registerUsage } from './usage'
@@ -178,10 +179,23 @@ function createWindow(): void {
   registerTelemetry(mainWindow)
   registerUsage(mainWindow)
   registerPty(mainWindow, registerMessages(mainWindow))
+  registerUpdates(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow?.show()
   })
+
+  // A node in full screen takes the whole screen (Workspace.tsx), and gives it back as it was: a
+  // window already in full screen stays there. Leaving it another way (F11, the window manager)
+  // brings the node back too.
+  let fullBefore = false
+  ipcMain.on('app:full-screen', (_ev, on: boolean) => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    if (on) fullBefore = mainWindow.isFullScreen()
+    if (on || !fullBefore) mainWindow.setFullScreen(on)
+  })
+  mainWindow.on('leave-full-screen', () => mainWindow?.webContents.send('app:full-screen', false))
+  mainWindow.on('closed', () => ipcMain.removeAllListeners('app:full-screen'))
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
