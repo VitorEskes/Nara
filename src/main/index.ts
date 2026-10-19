@@ -164,6 +164,7 @@ function createWindow(): void {
   registerGit(mainWindow)
   registerChanges()
   registerBrowser(mainWindow, ipcMain)
+  registerServers(mainWindow)
   registerCode(mainWindow)
   registerReview(mainWindow)
   registerImages(mainWindow)

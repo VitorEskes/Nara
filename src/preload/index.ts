@@ -250,7 +250,18 @@ const api = {
   },
   app: {
     info: (): Promise<AppInfo> => ipcRenderer.invoke('app:info'),
-    openData: (): Promise<string> => ipcRenderer.invoke('app:open-data')
+    openData: (): Promise<string> => ipcRenderer.invoke('app:open-data'),
+    // A node in full screen puts the window in full screen; onFullScreen hears it leave.
+    fullScreen: (on: boolean) => ipcRenderer.send('app:full-screen', on),
+    onFullScreen: (fn: (on: boolean) => void) => listen('app:full-screen', fn)
+  },
+  update: {
+    // The app's own update (main/updates.ts): where it is, a check now, and a restart into a
+    // downloaded one.
+    get: (): Promise<UpdateState> => ipcRenderer.invoke('update:get'),
+    check: (): Promise<UpdateState> => ipcRenderer.invoke('update:check'),
+    install: () => ipcRenderer.send('update:install'),
+    onState: (fn: (state: UpdateState) => void) => listen('update:state', fn)
   },
   project: {
     list: (): Promise<Project[]> => ipcRenderer.invoke('project:list'),

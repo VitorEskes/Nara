@@ -1305,7 +1305,9 @@ export default function Workspace({
       {!offCanvas && tool === 'link' && !draft && (
         <div className="floating link-hint" role="status">
           <LinkIcon size={14} />
-          Drag from a node to another, or click one and then the other
+          <span className="link-hint-text">
+            Drag from a node to another, or click one and then the other
+          </span>
           <kbd>Esc</kbd>
         </div>
       )}
@@ -1313,11 +1315,13 @@ export default function Workspace({
       {!offCanvas && draft && (
         <div className="floating link-hint" role="status">
           <LinkIcon size={14} />
-          {!hasTargets
-            ? `Nothing left that ${linkSource && nodeLabel(linkSource)} can connect to`
-            : draft.mode === 'pick'
-              ? `Click a node to connect ${linkSource && nodeLabel(linkSource)}`
-              : `Drop on a node to connect ${linkSource && nodeLabel(linkSource)}`}
+          <span className="link-hint-text">
+            {!hasTargets
+              ? `Nothing left that ${linkSource && nodeLabel(linkSource)} can connect to`
+              : draft.mode === 'pick'
+                ? `Click a node to connect ${linkSource && nodeLabel(linkSource)}`
+                : `Drop on a node to connect ${linkSource && nodeLabel(linkSource)}`}
+          </span>
           {draft.mode === 'pick' && <kbd>Esc</kbd>}
         </div>
       )}

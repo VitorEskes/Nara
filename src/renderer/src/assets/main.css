@@ -2885,6 +2885,18 @@ kbd {
   }
 }
 
+/* A narrow window: the dock and the zoom take the whole width along the bottom, on one line, and
+   the side panel ends above them instead of squeezing them into the room left of it. */
+@media (max-width: 1000px) {
+  .workspace[data-mode='canvas'] .canvas-controls {
+    right: 16px;
+  }
+
+  .workspace[data-mode='canvas'] .inspector {
+    bottom: 78px;
+  }
+}
+
 /* The inspector: everything about the selected node, or the workspace, on the right of the
    canvas. A header with what it is, the tabs, and the tab's body, which scrolls. */
 .inspector {
@@ -3450,14 +3462,19 @@ kbd {
   font-weight: 600;
 }
 
-/* What to do while a string is out, at the top of the canvas. */
+/* What to do while a string is out, at the top of the canvas: under the top bar, in the middle
+   of the room the side panel leaves, and cut short rather than out of the window when the room is
+   narrow. */
 .link-hint {
-  top: 16px;
-  left: 50%;
+  top: calc(var(--topbar-height) + 12px);
+  left: calc((100% - var(--inspector-room)) / 2);
+  z-index: 3;
   display: flex;
   align-items: center;
   gap: 8px;
+  max-width: calc(100% - var(--inspector-room) - 32px);
   height: 36px;
+  box-sizing: border-box;
   padding: 0 14px;
   border-radius: 18px;
   font-size: 13px;
@@ -3467,6 +3484,17 @@ kbd {
   transform: translateX(-50%);
   pointer-events: none;
   animation: hint-in var(--base) var(--ease-out);
+}
+
+.link-hint-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.link-hint .icon,
+.link-hint kbd {
+  flex-shrink: 0;
 }
 
 .link-hint .icon {
@@ -6927,6 +6955,13 @@ html.hud #root {
 @container node-bar (max-width: 300px) {
   .node-bar .role-pill,
   .node-bar .context-ring {
+    display: none;
+  }
+}
+
+/* Too narrow for the title and every button: filling the screen waits for a double-click. */
+@container node-bar (max-width: 220px) {
+  .node:not(.expanded) .node-action {
     display: none;
   }
 }

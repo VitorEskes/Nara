@@ -397,7 +397,7 @@ export default function App(): JSX.Element | null {
   const roles = { ...ROLES, ...Object.fromEntries(customRoles.map((role) => [role.key, role])) }
   const workspaces = all.map((w) => ({ ...w, open: open.includes(w.id) }))
   return (
-    <div className="app" data-sidebar={sidebar}>
+    <div className="app" data-sidebar={sidebar} data-full={fullScreen || undefined}>
       <Sidebar
         hidden={sidebar === 'closed'}
         onHide={toggleSidebar}
