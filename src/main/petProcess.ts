@@ -129,6 +129,7 @@ function start(): void {
       })
   )
   ipcMain.on('pet:jump', (_ev, status: AgentStatus) => tell({ type: 'jump', status }))
+  ipcMain.on('pet:close', () => tell({ type: 'close' }))
 
   // Where the window takes the pointer: the rectangles the renderer draws in, in its pixels. Each
   // edge is rounded outward on its own, so a part that sits between pixels keeps its last row and

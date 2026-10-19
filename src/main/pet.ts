@@ -11,6 +11,7 @@ type PetMessage =
   | { type: 'reply'; id: number; workspaceId: string; nodeId: NodeId; reply: AgentReply }
   | { type: 'seen'; workspaceId: string; nodeId: NodeId }
   | { type: 'jump'; status: AgentStatus }
+  | { type: 'close' }
 
 // The desktop pet lives outside Nara's window, over every app, while one is picked in the
 // settings. It runs as a second process of the app (`--nara-pet`, petProcess.ts) because under
@@ -18,7 +19,7 @@ type PetMessage =
 // itself stays on Wayland.
 //
 // The two talk over a socket, one JSON message per line: the app sends the agents' statuses and
-// the pet's settings, the pet sends back the user's answers and jumps to an agent.
+// the pet's settings, the pet sends back the user's answers, jumps to an agent and its own close.
 export const PET_FLAG = '--nara-pet'
 // A pet process that dies on its own is started again, after this long, at most this many times.
 const RESPAWN_AFTER = 2000
@@ -77,6 +78,9 @@ export function registerDesktopPet(main: BrowserWindow): void {
       main.show()
       main.focus()
       main.webContents.send('agents:jump', data.status)
+    } else if (data.type === 'close') {
+      // The user closed the pet from its bubble: the settings turn it off, which stops it here.
+      if (!main.isDestroyed()) main.webContents.send('pet:closed')
     }
   }
 

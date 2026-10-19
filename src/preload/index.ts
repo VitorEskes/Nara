@@ -233,7 +233,10 @@ const api = {
       ipcRenderer.send('pet:shape', rects),
     dragStart: () => ipcRenderer.send('pet:drag-start'),
     dragEnd: () => ipcRenderer.send('pet:drag-end'),
-    jump: (status: AgentStatus) => ipcRenderer.send('pet:jump', status)
+    jump: (status: AgentStatus) => ipcRenderer.send('pet:jump', status),
+    // The pet's own close button puts it away, and the app's settings hear of it.
+    close: () => ipcRenderer.send('pet:close'),
+    onClosed: (fn: () => void) => listen('pet:closed', fn)
   },
   pets: {
     list: (): Promise<PetInfo[]> => ipcRenderer.invoke('pets:list'),

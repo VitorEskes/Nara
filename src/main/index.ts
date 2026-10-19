@@ -24,6 +24,7 @@ import { registerStatus } from './status'
 import { registerTelemetry } from './telemetry'
 import { registerUsage } from './usage'
 import { loadTheme, registerTheme, windowBackground } from './theme'
+import { registerUpdates } from './updates'
 import { registerWorkspaces, workspaces } from './workspaces'
 
 setUpDataFolder()

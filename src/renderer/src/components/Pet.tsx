@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type JSX, type PointerEvent } from 'react'
 import Shika from './Shika'
 import CommandCenter from './CommandCenter'
+import { CloseIcon } from './icons'
 import { BUILT_IN_PET, PET_SIZES, petSprite, type Sprite as Sheet } from '../pets'
 import { URGENCY, agentName, byUrgency } from '../agentStatus'
 import type { AgentStatus, PetConfig } from '../../../shared/types'
@@ -24,10 +25,19 @@ const FRAME_DEFAULT = 130
 const SLOP = 4
 // How far around the pet its part of the window's shape reaches: it hops out of its box.
 const HOP = 16
+// Room around the bubble and the panel in the shape, for their animations, which move them a few
+// pixels out of their boxes.
+const SWAY = 6
+// How long the bubble and the panel take to go away (main.css's bubble-out), in ms.
+const LEAVE = 140
+// How long the pointer can be off the pet and its bubble before the hover ends, in ms: moving from
+// one to the other, or the window's shape changing under it, doesn't count as leaving.
+const HOVER_LEAVE = 220
 
 // The desktop pet (main/petProcess.ts), alone on a transparent window over every app. Its bubble
 // and animation show what the agents in every open workspace are doing; a click opens the command
-// center, where each agent can be answered or visited, and a drag moves the window.
+// center, where each agent can be answered or visited, and a drag moves the window. The bubble and
+// the panel have a close button that puts the pet away (the settings bring it back).
 //
 // After every change it tells main the rectangles it draws in, and the window lets clicks through
 // everywhere else.
@@ -41,6 +51,9 @@ export default function Pet(): JSX.Element | null {
   const [jumping, setJumping] = useState(false)
   const press = useRef<{ x: number; y: number; moved: boolean } | null>(null)
   const root = useRef<HTMLDivElement>(null)
+  const hoverEnd = useRef<ReturnType<typeof setTimeout>>(undefined)
+  // The shape main has, so it's only sent again when it changes.
+  const sent = useRef('')
 
   useEffect(() => {
     window.api.pet.prefs().then(setPrefs)
@@ -59,37 +72,9 @@ export default function Pet(): JSX.Element | null {
       offStatus()
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('blur', onBlur)
+      clearTimeout(hoverEnd.current)
     }
   }, [])
-
-  // The window's shape: the pet, its bubble and its panel, as they are on screen now. The panel's
-  // list grows and shrinks as agents come and go, so its size is watched too.
-  useLayoutEffect(() => {
-    const el = root.current
-    if (!el) return
-    const report = (): void =>
-      window.api.pet.shape(
-        [...el.querySelectorAll('.pet-body, .pet-bubble, .pet-panel')].map((part) => {
-          const r = part.getBoundingClientRect()
-          const room = part.classList.contains('pet-body') ? HOP : 0
-          return {
-            x: r.left - room,
-            y: r.top - room,
-            width: r.width + room * 2,
-            height: r.height + room * 2
-          }
-        })
-      )
-    report()
-    const observer = new ResizeObserver(report)
-    for (const part of el.querySelectorAll('.pet-bubble, .pet-panel')) observer.observe(part)
-    // The bubble and the panel grow into place, and were measured smaller while they did.
-    el.addEventListener('animationend', report)
-    return () => {
-      observer.disconnect()
-      el.removeEventListener('animationend', report)
-    }
-  })
 
   const pet = prefs?.pet
   const width = PET_SIZES[prefs?.size ?? 'm']?.px ?? PET_SIZES.m.px
@@ -97,6 +82,55 @@ export default function Pet(): JSX.Element | null {
   const focus = news[0]
   const working = statuses.filter((s) => s.state === 'working').length
   const mood = jumping ? 'jump' : (focus?.state ?? 'idle')
+  const bubble = open ? null : focus ? message(focus, working) : hover ? quiet(statuses) : null
+  // The bubble and the panel stay a moment after they're put away, to fade out; the bubble keeps
+  // what it last said while it does.
+  const bubbleShown = usePresence(Boolean(bubble))
+  const panelShown = usePresence(open)
+  const [said, setSaid] = useState(bubble)
+  if (bubble && (bubble.text !== said?.text || bubble.where !== said?.where)) setSaid(bubble)
+
+  // The window's shape: the pet, its bubble and its panel. Measured from their boxes in the page,
+  // not from the screen, so a part that's growing into place or fading out counts at its full
+  // size: the window would otherwise cut it while it moves. The panel's list grows and shrinks as
+  // agents come and go, so its size is watched too.
+  useLayoutEffect(() => {
+    const el = root.current
+    if (!el) return
+    const report = (): void => {
+      const base = el.getBoundingClientRect()
+      const rects = [...el.querySelectorAll<HTMLElement>('.pet-body, .pet-bubble, .pet-panel')].map(
+        (part) => {
+          const room = part.classList.contains('pet-body') ? HOP : SWAY
+          return {
+            x: base.left + part.offsetLeft - room,
+            y: base.top + part.offsetTop - room,
+            width: part.offsetWidth + room * 2,
+            height: part.offsetHeight + room * 2
+          }
+        }
+      )
+      const json = JSON.stringify(rects)
+      if (json === sent.current) return
+      sent.current = json
+      window.api.pet.shape(rects)
+    }
+    report()
+    const observer = new ResizeObserver(report)
+    for (const part of el.querySelectorAll('.pet-bubble, .pet-panel')) observer.observe(part)
+    return () => observer.disconnect()
+  })
+
+  // The hover ends a moment after the pointer leaves the pet and its bubble, unless it comes back.
+  function hoverStart(): void {
+    clearTimeout(hoverEnd.current)
+    setHover(true)
+  }
+
+  function hoverStop(): void {
+    clearTimeout(hoverEnd.current)
+    hoverEnd.current = setTimeout(() => setHover(false), HOVER_LEAVE)
+  }
 
   // A press that moves past the slop drags the window; main moves it with the pointer, so the
   // pointer stays put over the page and only its place on the screen says which way it goes.
@@ -132,20 +166,45 @@ export default function Pet(): JSX.Element | null {
   }
 
   if (!pet) return null
-  const bubble = open ? null : focus ? message(focus, working) : hover ? quiet(statuses) : null
   const row = drag ?? (hover && !focus && !jumping ? 'wave' : mood)
+  const close = (
+    <button
+      className="pet-close"
+      aria-label="Hide the pet"
+      title="Hide the pet (Settings bring it back)"
+      onClick={() => window.api.pet.close()}
+    >
+      <CloseIcon size={11} />
+    </button>
+  )
 
   return (
     <div ref={root} className="pet desktop-pet" data-mood={mood} style={{ width }}>
-      {bubble && (
-        <div className="pet-bubble" data-state={focus?.state} data-side="left" role="status">
-          <span className="pet-bubble-text">{bubble.text}</span>
-          {bubble.where && <span className="pet-bubble-where">{bubble.where}</span>}
+      {bubbleShown && said && (
+        <div
+          className="pet-bubble"
+          data-state={focus?.state}
+          data-side="left"
+          data-leaving={bubbleShown === 'leaving' || undefined}
+          role="status"
+          onPointerEnter={hoverStart}
+          onPointerLeave={hoverStop}
+        >
+          <span className="pet-bubble-text">{said.text}</span>
+          {said.where && <span className="pet-bubble-where">{said.where}</span>}
           {news.length > 1 && <span className="pet-bubble-more">+{news.length - 1}</span>}
+          {close}
         </div>
       )}
-      {open && (
-        <div className="pet-panel" data-side="left" role="dialog" aria-label="Agents">
+      {panelShown && (
+        <div
+          className="pet-panel"
+          data-side="left"
+          data-leaving={panelShown === 'leaving' || undefined}
+          role="dialog"
+          aria-label="Agents"
+        >
+          {close}
           <CommandCenter
             statuses={statuses}
             onJump={(status) => {
@@ -163,13 +222,26 @@ export default function Pet(): JSX.Element | null {
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        onPointerEnter={() => setHover(true)}
-        onPointerLeave={() => setHover(false)}
+        onPointerEnter={hoverStart}
+        onPointerLeave={hoverStop}
       >
         <PetFigure pet={pet} mood={mood} row={row} width={width} dragging={Boolean(drag)} />
       </button>
     </div>
   )
+}
+
+// Whether something shown while `on` is on screen: true while it's on, 'leaving' for a moment
+// after it goes off (while it fades out), then false. Turning it on again while it leaves keeps it.
+function usePresence(on: boolean): boolean | 'leaving' {
+  const [mounted, setMounted] = useState(on)
+  if (on && !mounted) setMounted(true)
+  useEffect(() => {
+    if (on || !mounted) return
+    const timer = setTimeout(() => setMounted(false), LEAVE)
+    return () => clearTimeout(timer)
+  }, [on, mounted])
+  return on ? true : mounted ? 'leaving' : false
 }
 
 // The pet itself, in a mood: Shika drawn, or a Codex pet's sprite sheet on `row` (its mood's

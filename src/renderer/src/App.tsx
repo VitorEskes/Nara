@@ -108,6 +108,9 @@ export default function App(): JSX.Element | null {
     window.api.pet.configure({ pet: prefs.pet, size: prefs.petSize })
   }, [prefs.pet, prefs.petSize])
 
+  // Closed from its own bubble: the settings can bring it back.
+  useEffect(() => window.api.pet.onClosed(() => setPrefs((p) => ({ ...p, pet: null }))), [])
+
   useEffect(() => {
     window.api.agents.status().then(setStatuses)
     const offStatus = window.api.agents.onStatus(setStatuses)
