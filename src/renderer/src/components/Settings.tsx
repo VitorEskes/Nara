@@ -684,6 +684,64 @@ function About({ info }: { info: AppInfo | null }): JSX.Element {
           <ArrowUpRightIcon size={13} />
         </button>
       </div>
+      <UpdateSetting />
+    </div>
+  )
+}
+
+const RELEASES = 'https://github.com/VitorEskes/Nara/releases/latest'
+
+// The app's own update (main/updates.ts): where it is, and the one thing to do about it.
+function UpdateSetting(): JSX.Element {
+  const update = useUpdate()
+  const [busy, setBusy] = useState(false)
+  async function check(): Promise<void> {
+    setBusy(true)
+    await window.api.update.check()
+    setBusy(false)
+  }
+  const state = update?.state
+  const text =
+    update?.state === 'unsupported'
+      ? 'This build doesn’t update itself: new versions are on GitHub'
+      : update?.state === 'checking' || busy
+        ? 'Checking…'
+        : update?.state === 'downloading'
+          ? `Downloading ${update.version} · ${update.percent}%`
+          : update?.state === 'ready'
+            ? `${update.version} is ready: restart to use it`
+            : update?.state === 'error'
+              ? update.message
+              : update?.state === 'latest'
+                ? 'Nara is up to date'
+                : 'Nara checks for new versions every few hours'
+  return (
+    <div className="settings-row about-data about-update">
+      <span className="settings-row-icon">
+        <DownloadIcon size={16} />
+      </span>
+      <span className="settings-row-label">
+        Updates
+        <small data-error={state === 'error' || undefined}>{text}</small>
+      </span>
+      {state === 'unsupported' ? (
+        <button className="button small" onClick={() => window.open(RELEASES)}>
+          Releases
+          <ArrowUpRightIcon size={13} />
+        </button>
+      ) : state === 'ready' ? (
+        <button className="button small primary" onClick={() => window.api.update.install()}>
+          Restart
+        </button>
+      ) : (
+        <button
+          className="button small"
+          disabled={!update || busy || state === 'checking' || state === 'downloading'}
+          onClick={check}
+        >
+          Check now
+        </button>
+      )}
     </div>
   )
 }

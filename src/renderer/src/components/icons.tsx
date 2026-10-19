@@ -768,6 +768,25 @@ export function CommitIcon(props: IconProps): JSX.Element {
   )
 }
 
+// Down into the tray: a new version of the app.
+export function DownloadIcon(props: IconProps): JSX.Element {
+  return (
+    <Icon {...props}>
+      <path d="M8 2.25v8M4.75 7.25L8 10.5l3.25-3.25M2.75 11.5v1.25a1 1 0 001 1h8.5a1 1 0 001-1V11.5" />
+    </Icon>
+  )
+}
+
+// A crosshair: point at a part of the page.
+export function CrosshairIcon(props: IconProps): JSX.Element {
+  return (
+    <Icon {...props}>
+      <circle cx="8" cy="8" r="5.25" />
+      <path d="M8 1.25v3M8 11.75v3M1.25 8h3M11.75 8h3" />
+    </Icon>
+  )
+}
+
 export function BrandMark(): JSX.Element {
   return <img className="brand-mark" src={logo} alt="" width="28" height="28" />
 }

@@ -120,6 +120,7 @@ You reach the nodes linked to you with the \`nara\` command, run from your shell
   nara browser open <browser> <url> load a page in a linked browser
   nara browser read <browser>       print the page's address, title and text
   nara browser shot <browser>       save a screenshot of the page (prints the PNG's path)
+  nara browser console <browser>    print what the page wrote to its console, errors included
 
 How it works:
 - The user can add, remove and relink nodes at any time. A turn may start with a "[nara · canvas]" block: that's the canvas as it is right now, with what changed since your previous turn. Trust it over anything earlier in the conversation. Without one, run \`nara canvas\` whenever you need to know who you can reach.
@@ -127,7 +128,8 @@ How it works:
 - Don't sleep, poll or wait for a reply: end your turn, and the reply will arrive as a new message.
 - Only terminals running an agent can receive messages; \`nara peers\` marks the ones that only have a shell.
 - Notes are Markdown, and the user reads them rendered: headings, lists, checklists (- [ ] and - [x]), code. Use them for what's worth keeping in view, like a plan, a status or a result, and tick checklist items as they get done. Keep messages short and point to a note or a file for anything long.
-- A linked browser is where to check a web UI you're working on: open the dev server in it, read it, or take a screenshot and look at the image.
+- A linked browser is where to check a web UI you're working on: open the dev server in it, read it, take a screenshot and look at the image, or read its console for errors.
+- A message can come from the user about a browser's page: "[nara · the user points at ...]" names the element they clicked (its selector, HTML, the component when the page says) and may give a screenshot of it. Find that element in the code and do what they ask about it.
 - Text with several lines or with quotes is safer through stdin: nara send 2 <<'EOF' ... EOF`
 }
 

@@ -389,3 +389,31 @@ export interface AppInfo {
   version: string
   data: string
 }
+
+// A local server a terminal of the workspace printed the address of (main/servers.ts).
+export interface RunningServer {
+  url: string
+  nodeId: NodeId
+  at: number
+}
+
+// What a click on a browser's page picked (BrowserNode.tsx's picker): enough for an agent to find
+// the element in the code, and its box on the page for a screenshot of it.
+export interface PickedElement {
+  selector: string
+  tag: string
+  text: string
+  html: string
+  rect: { x: number; y: number; width: number; height: number }
+  // The component that rendered it, where the page's framework tells (React, Vue, Svelte in dev).
+  component?: string
+  source?: string
+}
+
+// A message the page wrote to its console (main/browser.ts keeps the last ones of each page).
+export interface ConsoleLine {
+  level: 'info' | 'warning' | 'error' | 'debug'
+  text: string
+  source?: string
+  line?: number
+}

@@ -8,6 +8,7 @@ import type {
   CanvasNode,
   ChangesOwner,
   CodeListing,
+  ConsoleLine,
   CodeRead,
   CodeWrite,
   FolderInfo,
@@ -24,6 +25,7 @@ import type {
   ReviewItem,
   ReviewOriginal,
   Role,
+  RunningServer,
   SavedRole,
   Session,
   Workspace,
@@ -154,7 +156,24 @@ const api = {
     detach: (workspaceId: string, nodeId: NodeId) =>
       ipcRenderer.send('browser:detach', workspaceId, nodeId),
     // An app shortcut pressed while a page had the keyboard: { code, key, shift }.
-    onKey: (fn: (key: BrowserKey) => void) => listen('browser:key', fn)
+    onKey: (fn: (key: BrowserKey) => void) => listen('browser:key', fn),
+    // A screenshot of part of the page (in its CSS pixels): the PNG's path, or null.
+    shot: (
+      workspaceId: string,
+      nodeId: NodeId,
+      rect: { x: number; y: number; width: number; height: number }
+    ): Promise<string | null> => ipcRenderer.invoke('browser:shot', workspaceId, nodeId, rect),
+    // The errors in the page's console since it last loaded.
+    errors: (workspaceId: string, nodeId: NodeId): Promise<ConsoleLine[]> =>
+      ipcRenderer.invoke('browser:errors', workspaceId, nodeId)
+  },
+  servers: {
+    // The local servers the workspace's terminals started that answer now (main/servers.ts).
+    list: (workspaceId: string): Promise<RunningServer[]> =>
+      ipcRenderer.invoke('servers:list', workspaceId),
+    // A terminal printed a server's address.
+    onFound: (fn: (workspaceId: string, server: RunningServer) => void) =>
+      listen('servers:found', fn)
   },
   code: {
     // Every path is absolute and has to be inside one of the workspace's folders (main/code.ts).

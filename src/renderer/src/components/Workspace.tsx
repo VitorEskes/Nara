@@ -1048,6 +1048,16 @@ export default function Workspace({
   const agentNodes = nodes
     .filter((n) => n.type === 'terminal' && agentOf(n))
     .map((n) => (n.agent && AGENTS[n.agent] ? n : { ...n, agent: agentOf(n) ?? undefined }))
+  // The nodes linked to one, and the agents that can be told about a browser: the linked ones
+  // first.
+  const linkedTo = (id: NodeId): NodeId[] =>
+    links.flatMap((l) => (l.from === id ? [l.to] : l.to === id ? [l.from] : []))
+  const recipients = (id: NodeId): { id: NodeId; label: string; linked: boolean }[] => {
+    const near = new Set(linkedTo(id))
+    return agentNodes
+      .map((n) => ({ id: n.id, label: nodeLabel(n), linked: near.has(n.id) }))
+      .sort((a, b) => Number(b.linked) - Number(a.linked))
+  }
   const spend = {
     ...totalUsage(agentNodes.map((n) => telemetry.get(n.id)?.usage)),
     agents: agentNodes.map((n) => ({
@@ -1147,7 +1157,10 @@ export default function Workspace({
               <BrowserNode
                 workspaceId={workspaceId}
                 nodeId={node.id}
+                label={nodeLabel(node)}
                 url={node.url}
+                linked={linkedTo(node.id)}
+                agents={recipients(node.id)}
                 interactive={browsing(node)}
                 onUrl={(url) => node.url !== url && updateNode(node.id, { url })}
                 onFocus={() => {

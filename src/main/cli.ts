@@ -50,6 +50,7 @@ const HELP = `usage:
   nara browser open <browser> <url> load a page in a linked browser
   nara browser read <browser>       print the page's address, title and text
   nara browser shot <browser>       save a screenshot of the page and print its path
+  nara browser console <browser>    print what the page wrote to its console (errors too)
   nara browser reload <browser>     load the page again
   nara run <cli> [args]             start an agent CLI here with Nara's context and the role
 
@@ -363,13 +364,14 @@ async function main(): Promise<void> {
 
   if (command === 'browser') {
     const [action, target, ...words] = args
-    if (!action || !['open', 'read', 'shot', 'reload'].includes(action)) {
-      throw new Error('usage: nara browser <open|read|shot|reload> <browser> [url]')
+    if (!action || !['open', 'read', 'shot', 'console', 'reload'].includes(action)) {
+      throw new Error('usage: nara browser <open|read|shot|console|reload> <browser> [url]')
     }
     const to = nodeNumber(target, `which browser? e.g. nara browser ${action} 3`)
     const text = action === 'open' ? words.join(' ') : undefined
     const result = await request({ command, action, to, text })
-    if (action === 'read') {
+    if (action === 'console') console.log(`${result.url}\n\n${result.text ?? ''}`)
+    else if (action === 'read') {
       console.log(`${result.title || '(untitled)'}\n${result.url}\n`)
       const text = result.text ?? ''
       process.stdout.write(text.endsWith('\n') ? text : `${text}\n`)

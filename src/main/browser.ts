@@ -3,7 +3,7 @@ import { writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { normalizeUrl } from '../shared/url'
-import type { NodeId } from '../shared/types'
+import type { ConsoleLine, NodeId } from '../shared/types'
 
 // Browser nodes: a <webview> on the canvas (BrowserNode.tsx). Their pages are locked down like any
 // website's, and each one tells main its webContents once it's ready, so an agent linked to it
@@ -20,6 +20,11 @@ const APP_KEYS = new Set(['KeyN', 'KeyW', 'KeyO', 'KeyB', 'KeyL', 'KeyE', 'KeyG'
 
 // `${workspaceId}:${nodeId}` -> webContents id.
 const pages = new Map<string, number>()
+// What each page wrote to its console since it last loaded, by webContents id: the last ones.
+const consoles = new Map<number, ConsoleLine[]>()
+const CONSOLE_LINES = 200
+// Room left around an element in its screenshot, in pixels.
+const SHOT_MARGIN = 12
 
 export function registerBrowser(win: BrowserWindow, ipcMain: IpcMain): void {
   // Whatever the renderer asks for, a page gets no Node, no preload and a sandbox.
@@ -43,6 +48,17 @@ export function registerBrowser(win: BrowserWindow, ipcMain: IpcMain): void {
     contents.on('will-navigate', (event, url) => {
       if (!allowed(url)) event.preventDefault()
     })
+    // The console, from the page's last load on.
+    const id = contents.id
+    consoles.set(id, [])
+    contents.on('did-navigate', () => consoles.set(id, []))
+    contents.on('console-message', ({ level, message, sourceId, lineNumber }) => {
+      const lines = consoles.get(id) ?? []
+      lines.push({ level, text: message, source: sourceId || undefined, line: lineNumber })
+      if (lines.length > CONSOLE_LINES) lines.splice(0, lines.length - CONSOLE_LINES)
+      consoles.set(id, lines)
+    })
+    contents.once('destroyed', () => consoles.delete(id))
     // A page with the keyboard gets every key, the app's shortcuts too: those go on to the app
     // instead, as if pressed there.
     contents.on('before-input-event', (event, input) => {
@@ -61,20 +77,42 @@ export function registerBrowser(win: BrowserWindow, ipcMain: IpcMain): void {
     pages.delete(key(workspaceId, nodeId))
   })
 
+  // A screenshot of part of a browser node's page, for the user's message about an element in it
+  // (BrowserNode.tsx): the path of the PNG, or null if the page can't be seen.
+  ipcMain.handle(
+    'browser:shot',
+    async (_ev, workspaceId: string, nodeId: NodeId, rect?: Electron.Rectangle) => {
+      try {
+        return (await browse(workspaceId, nodeId, 'shot', undefined, rect)).file ?? null
+      } catch {
+        return null
+      }
+    }
+  )
+
+  // The errors in a browser node's console, for the user's message about them.
+  ipcMain.handle('browser:errors', (_ev, workspaceId: string, nodeId: NodeId) =>
+    pageErrors(workspaceId, nodeId)
+  )
+
   win.on('closed', () => {
     ipcMain.removeAllListeners('browser:attach')
     ipcMain.removeAllListeners('browser:detach')
+    ipcMain.removeHandler('browser:shot')
+    ipcMain.removeHandler('browser:errors')
     pages.clear()
+    consoles.clear()
   })
 }
 
-// What `nara browser` does to a linked browser node's page. `action` is 'open', 'read', 'shot'
-// or 'reload'.
+// What `nara browser` does to a linked browser node's page. `action` is 'open', 'read', 'shot',
+// 'console' or 'reload'. A shot can be of `rect`, part of the page in its CSS pixels.
 export async function browse(
   workspaceId: string,
   nodeId: NodeId,
   action: string,
-  text?: string
+  text?: string,
+  rect?: Electron.Rectangle
 ): Promise<{ url: string; title?: string; text?: string; file?: string }> {
   const contents = page(workspaceId, nodeId)
   if (action === 'open') {
@@ -104,14 +142,46 @@ export async function browse(
       text: all.length > MAX_TEXT ? `${all.slice(0, MAX_TEXT)}\n… (cut: the page is long)` : all
     }
   }
+  if (action === 'console') {
+    const lines = consoles.get(contents.id) ?? []
+    return {
+      url: contents.getURL(),
+      text: lines.length ? lines.map(consoleLine).join('\n') : '(nothing in the console)'
+    }
+  }
   if (action === 'shot') {
-    const image = await contents.capturePage()
+    const image = await contents.capturePage(rect && around(rect, contents.getZoomFactor()))
     if (image.isEmpty()) throw new Error(`browser ${nodeId} is not on screen, so it can't be seen`)
     const file = join(tmpdir(), `nara-browser-${nodeId}-${Date.now()}.png`)
     await writeFile(file, image.toPNG())
     return { url: contents.getURL(), file }
   }
   throw new Error(`unknown browser action: ${action}`)
+}
+
+// "error  Uncaught TypeError: x is undefined  (app.js:12)".
+function consoleLine({ level, text, source, line }: ConsoleLine): string {
+  const file = source && (source.split('/').pop() || source)
+  const where = file ? `  (${file}${line ? `:${line}` : ''})` : ''
+  return `${level.padEnd(7)} ${text}${where}`
+}
+
+// A box in the page's CSS pixels, with some room around it, as capturePage takes it.
+function around(rect: Electron.Rectangle, zoom: number): Electron.Rectangle {
+  const x = Math.max(0, Math.floor((rect.x - SHOT_MARGIN) * zoom))
+  const y = Math.max(0, Math.floor((rect.y - SHOT_MARGIN) * zoom))
+  return {
+    x,
+    y,
+    width: Math.max(1, Math.ceil((rect.width + SHOT_MARGIN * 2) * zoom)),
+    height: Math.max(1, Math.ceil((rect.height + SHOT_MARGIN * 2) * zoom))
+  }
+}
+
+// The console's errors of a browser node's page.
+function pageErrors(workspaceId: string, nodeId: NodeId): ConsoleLine[] {
+  const id = pages.get(key(workspaceId, nodeId))
+  return (id && consoles.get(id)?.filter((line) => line.level === 'error')) || []
 }
 
 // The current address of a browser node's page, for `nara peers`.
