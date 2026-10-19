@@ -1,4 +1,5 @@
 import { app, ipcMain, shell, BrowserWindow } from 'electron'
+import { spawn } from 'child_process'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -26,12 +27,71 @@ import { registerWorkspaces, workspaces } from './workspaces'
 
 setUpDataFolder()
 
+// The commands of `nara` (cli.ts), as the first argument.
+const CLI_COMMANDS = new Set([
+  'peers',
+  'canvas',
+  'send',
+  'note',
+  'browser',
+  'run',
+  'hook',
+  'statusline',
+  'model',
+  'merge'
+])
+
+// The main window, for a second launch to bring forward.
+let mainWindow: BrowserWindow | null = null
+
 // The same program runs the desktop pet in a process of its own (pet.ts): that process shows the
 // pet and nothing else.
+const cli = cliArgs()
 if (process.argv.includes(PET_FLAG)) runPetProcess()
+else if (cli) runCli(cli)
 else runApp()
 
+// The arguments of a `nara` command that reached the app itself instead of resources/bin/nara. The
+// AppImage puts its own folder on the PATH, and the app's executable there is called `nara` too:
+// a terminal whose PATH lost Nara's folder (a hook's shell, an agent's) finds it first, and
+// without this would open a whole new Nara. Only inside a Nara terminal, which has NARA_SOCK.
+function cliArgs(): string[] | null {
+  if (!process.env.NARA_SOCK) return null
+  // The AppImage adds --no-sandbox where the system doesn't allow Chromium's sandbox.
+  const args = process.argv.slice(app.isPackaged ? 1 : 2).filter((arg) => arg !== '--no-sandbox')
+  return CLI_COMMANDS.has(args[0]) ? args : null
+}
+
+// Runs the command as resources/bin/nara would: cli.js with Electron acting as Node. This process
+// only waits for it, and leaves the keys to it (`nara run` hands them on to the agent).
+function runCli(args: string[]): void {
+  app.disableHardwareAcceleration()
+  const child = spawn(process.execPath, [join(__dirname, 'cli.js'), ...args], {
+    stdio: 'inherit',
+    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
+  })
+  process.on('SIGINT', () => {})
+  for (const signal of ['SIGTERM', 'SIGHUP'] as const) {
+    process.on(signal, () => child.kill(signal))
+  }
+  child.on('error', () => process.exit(1))
+  child.on('exit', (code, signal) => process.exit(code ?? (signal ? 128 : 1)))
+}
+
 function runApp(): void {
+  // One Nara at a time: a second one would fight the first over the sockets and the workspace
+  // files. Launching it again brings the first one forward instead.
+  if (!app.requestSingleInstanceLock()) {
+    app.quit()
+    return
+  }
+  app.on('second-instance', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+  })
+
   registerImageScheme()
 
   // Under Wayland, global shortcuts (the HUD's) go through the desktop portal, which Chromium only
@@ -76,7 +136,7 @@ function runApp(): void {
 }
 
 function createWindow(): void {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 640,
@@ -120,7 +180,7 @@ function createWindow(): void {
   registerPty(mainWindow, registerMessages(mainWindow))
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow?.show()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
