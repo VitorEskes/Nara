@@ -899,12 +899,32 @@ kbd {
   margin-left: 2px;
 }
 
-.node-close {
+.node-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
   margin-left: auto;
+}
+
+.node-close,
+.node-action {
   color: var(--text-4);
 }
 
 .node-bar:hover .node-close {
+  color: var(--text-3);
+}
+
+/* Fill the screen and full screen show while the pointer is on the bar, or while they're on. */
+.node-action {
+  opacity: 0;
+  transition: opacity var(--fast);
+}
+
+.node-bar:hover .node-action,
+.node-action:focus-visible,
+.node.expanded .node-action {
+  opacity: 1;
   color: var(--text-3);
 }
 
@@ -1110,11 +1130,13 @@ kbd {
   border-color: var(--accent);
 }
 
-.node[data-type='note'] .node-close {
+.node[data-type='note'] .node-close,
+.node[data-type='note'] .node-action {
   color: rgb(var(--shade) / 40%);
 }
 
-.node[data-type='note'] .node-close:hover {
+.node[data-type='note'] .node-close:hover,
+.node[data-type='note'] .node-action:hover {
   color: rgb(var(--shade) / 80%);
   background: rgb(var(--shade) / 8%);
 }
@@ -8719,6 +8741,326 @@ html.hud #root {
   color: var(--danger);
 }
 
+/* The bar's own buttons: pointing is pressed while it lasts; the console's errors are a red count;
+   the developer tools go first when the node is narrow. */
+.browser-bar {
+  container: browser-bar / inline-size;
+}
+
+.browser-bar .icon-button.active {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.browser-errors {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  flex-shrink: 0;
+  margin: 0 2px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 11px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--danger);
+  background: var(--danger-soft);
+  cursor: pointer;
+  animation: pop-in var(--fast) var(--ease-spring);
+}
+
+.browser-errors:hover {
+  background: color-mix(in srgb, var(--danger) 22%, transparent);
+}
+
+@container browser-bar (max-width: 380px) {
+  .browser-devtools {
+    display: none;
+  }
+}
+
+/* The local servers on offer, under the address field while it's being typed in and on a blank
+   page: a green dot, the address, and the terminal that started it. */
+.browser-suggest {
+  position: absolute;
+  top: 36px;
+  right: 40px;
+  left: 80px;
+  z-index: 4;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-m);
+  background: var(--stone);
+  box-shadow: var(--shadow-lift);
+  animation: pop-in var(--fast) var(--ease-out);
+}
+
+.browser-suggest::before {
+  content: 'Running in this workspace';
+  display: block;
+  padding: 4px 8px 3px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-4);
+}
+
+.browser-suggest button,
+.browser-server {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-s);
+  font-size: 12px;
+  text-align: left;
+  color: var(--text-2);
+  background: none;
+  cursor: pointer;
+}
+
+.browser-suggest button:hover,
+.browser-server:hover {
+  color: var(--text);
+  background: var(--active-soft);
+}
+
+.suggest-dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.suggest-url {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-ui);
+}
+
+.suggest-from {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-4);
+}
+
+.browser-blank {
+  z-index: 1;
+}
+
+.browser-servers {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: min(100%, 380px);
+  margin: 8px 0 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-m);
+  background: var(--stone);
+  pointer-events: auto;
+}
+
+.browser-server {
+  height: 32px;
+}
+
+/* While pointing: what to do, at the top of the page. */
+.browser-picking {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--tip-text);
+  background: var(--tip-bg);
+  box-shadow: var(--shadow-float);
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: hint-in var(--base) var(--ease-out);
+}
+
+.browser-picking kbd {
+  padding: 0 5px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: 4px;
+  font-size: 10.5px;
+  opacity: 0.8;
+}
+
+/* The message to an agent about the page, over its bottom (BrowserComposer.tsx). */
+.browser-composer {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  left: 10px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 10px;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius-l);
+  background: var(--stone);
+  box-shadow: var(--shadow-lift);
+  animation: bubble-in var(--base) var(--ease-out);
+}
+
+.composer-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.composer-subject {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--text-2);
+}
+
+.composer-subject .icon {
+  flex-shrink: 0;
+  color: var(--accent-text);
+}
+
+.composer-subject[data-error],
+.composer-subject[data-error] .icon {
+  color: var(--danger);
+}
+
+.composer-subject code {
+  flex-shrink: 0;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text);
+  background: var(--active-soft);
+}
+
+.composer-component {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.composer-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-3);
+}
+
+.composer-input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 52px;
+  max-height: 160px;
+  padding: 8px 10px;
+  resize: vertical;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-m);
+  outline: none;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.composer-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.composer-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.composer-to {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.composer-to select {
+  max-width: 220px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-s);
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.composer-note {
+  font-size: 11px;
+  color: var(--text-4);
+}
+
+.composer-note.error {
+  color: var(--danger);
+}
+
+.composer-send {
+  margin-left: auto;
+}
+
+.composer-send kbd {
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  opacity: 0.7;
+}
+
 /* Over the page until the node is selected: the press selects it, and the wheel moves the camera
    instead of scrolling the page. */
 .browser-shield {
@@ -8738,9 +9080,9 @@ html.hud #root {
   pointer-events: none;
 }
 
-/* A browser filling the room between the panels. Its box is in world coordinates scaled back by
-   the zoom (Workspace.tsx); it glides there from its place. Everything else on the canvas stays
-   under it, and what's drawn above the nodes steps aside. */
+/* A node filling the room between the panels. Its box is in world coordinates scaled back by the
+   zoom (Workspace.tsx); it glides there from its place. Everything else on the canvas stays under
+   it, and what's drawn above the nodes steps aside. */
 .node.expanded {
   z-index: 100000 !important;
   transform-origin: 0 0;
@@ -8800,6 +9142,30 @@ html.hud #root {
   display: none;
 }
 
+/* Full screen: the node is all there is. The window takes the screen (App.tsx), the sidebar goes,
+   and so do the bars and the panel around the canvas. */
+.workspace[data-full] .topbar,
+.workspace[data-full] .inspector,
+.workspace[data-full] .canvas-controls,
+.workspace[data-full] .style-bar {
+  display: none;
+}
+
+.workspace[data-full] .node.expanded {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.workspace[data-full] .viewport[data-locked] .node:not(.expanded),
+.workspace[data-full] .viewport[data-locked] .links {
+  opacity: 0;
+}
+
+.app[data-full] .sidebar {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .node.expanded {
     transition: none;
@@ -8815,4 +9181,41 @@ html.hud #root {
     width: 100%;
     opacity: 0.6;
   }
+}
+
+/* A new version of the app (Sidebar.tsx): downloading, then ready to restart into. */
+.update-row {
+  cursor: default;
+}
+
+.update-row.ready {
+  color: var(--accent-text);
+  cursor: pointer;
+}
+
+.update-row.ready .icon {
+  color: var(--accent-text);
+}
+
+.update-progress {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-4);
+}
+
+.update-row .row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.about-update {
+  margin-top: 10px;
+}
+
+.about-update .settings-row-label small[data-error] {
+  color: var(--danger);
 }

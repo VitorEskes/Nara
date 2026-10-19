@@ -597,6 +597,7 @@ function Keyboard(): JSX.Element {
     zoomReset: 'Zoom to 100%',
     zoomIn: 'Zoom in',
     zoomOut: 'Zoom out',
+    expand: 'Fill the screen with the selected node',
     shortcuts: 'Show the shortcuts'
   }
   const keys = Object.entries(canvas).map(([action, label]) => [

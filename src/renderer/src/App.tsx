@@ -84,6 +84,17 @@ export default function App(): JSX.Element | null {
   const [hudBound, setHudBound] = useState<boolean | null>(null)
   // The side panel on the right, open or not, the same on every workspace.
   const [inspector, setInspector] = useState(() => localStorage.getItem('inspector') !== 'closed')
+  // A node of the workspace on screen in full screen: the window takes the screen and the sidebar
+  // steps out (Workspace.tsx).
+  const [fullScreen, setFullScreen] = useState(false)
+  useEffect(() => window.api.app.fullScreen(fullScreen), [fullScreen])
+  useEffect(() => window.api.app.onFullScreen((on) => !on && setFullScreen(false)), [])
+  // Another workspace, or the overview, takes the node out of full screen.
+  const [fullOn, setFullOn] = useState({ active, overview })
+  if (fullOn.active !== active || fullOn.overview !== overview) {
+    setFullOn({ active, overview })
+    if (fullScreen) setFullScreen(false)
+  }
   // Where in the sidebar the workspace on screen puts its views and agents (WorkspaceNav.tsx).
   const [navSlot, setNavSlot] = useState<HTMLElement | null>(null)
   useEffect(() => {
@@ -449,6 +460,8 @@ export default function App(): JSX.Element | null {
               }
               sidebarHidden={sidebar === 'closed'}
               onShowSidebar={toggleSidebar}
+              fullScreen={fullScreen && id === active && !overview}
+              onFullScreen={setFullScreen}
               onPickFolder={() => pickFolder(id)}
               roles={roles}
               commands={prefs.commands}

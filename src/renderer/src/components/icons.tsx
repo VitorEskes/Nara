@@ -740,6 +740,24 @@ export function ShrinkIcon(props: IconProps): JSX.Element {
   )
 }
 
+// Four corners out: take the whole screen.
+export function FullScreenIcon(props: IconProps): JSX.Element {
+  return (
+    <Icon {...props}>
+      <path d="M2.5 6V3.5a1 1 0 011-1H6M10 2.5h2.5a1 1 0 011 1V6M13.5 10v2.5a1 1 0 01-1 1H10M6 13.5H3.5a1 1 0 01-1-1V10" />
+    </Icon>
+  )
+}
+
+// Four corners in: leave the whole screen.
+export function ExitFullScreenIcon(props: IconProps): JSX.Element {
+  return (
+    <Icon {...props}>
+      <path d="M6 2.5V5a1 1 0 01-1 1H2.5M13.5 6H11a1 1 0 01-1-1V2.5M10 13.5V11a1 1 0 011-1h2.5M2.5 10H5a1 1 0 011 1v2.5" />
+    </Icon>
+  )
+}
+
 // A commit on its line, as in every git client.
 export function CommitIcon(props: IconProps): JSX.Element {
   return (

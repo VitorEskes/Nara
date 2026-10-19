@@ -106,7 +106,7 @@ const SIZES: Record<NodeType, { w: number; h: number }> = {
   note: { w: 280, h: 200 },
   browser: { w: 960, h: 640 }
 }
-// The room a browser filling the screen leaves around it, in screen pixels: the same as the side
+// The room a node filling the screen leaves around it, in screen pixels: the same as the side
 // panel's.
 const EXPANDED_MARGIN = 10
 
@@ -129,7 +129,8 @@ const FIT_PADDING = { side: 64, top: 64, bottom: 110 }
 // built-in and custom, by key. `jump` ({ nodeId, at }) is the pet sending the user to one of this
 // workspace's agents. `statuses` and `telemetry` are what main reports about its agents, by node
 // id. `navSlot` is where in the sidebar its views and agents go, or null while the sidebar is
-// hidden.
+// hidden. `fullScreen` is whether its expanded node takes the whole screen, which onFullScreen
+// turns on and off (App.tsx puts the window in full screen and hides the sidebar).
 export default function Workspace({
   workspaceId,
   saved,
@@ -149,6 +150,8 @@ export default function Workspace({
   navSlot,
   sidebarHidden,
   onShowSidebar,
+  fullScreen,
+  onFullScreen,
   onSaveRole,
   onRemoveRole,
   onShortcuts
@@ -171,6 +174,8 @@ export default function Workspace({
   navSlot: HTMLElement | null
   sidebarHidden: boolean
   onShowSidebar: () => void
+  fullScreen: boolean
+  onFullScreen: (on: boolean) => void
   onSaveRole: (role: Role) => Promise<SavedRole | null>
   onRemoveRole: (key: string) => Promise<void>
   onShortcuts: () => void
@@ -246,8 +251,8 @@ export default function Workspace({
   // What the agents changed (main/review.ts), or null until it's first read.
   const [queue, setQueue] = useState<ReviewItem[] | null>(null)
   const [queueSeq, setQueueSeq] = useState(0)
-  // The browser node filling the room between the panels, or null, and the box it was resized
-  // to there (in screen pixels), or null for the whole room.
+  // The node filling the room between the panels (or the whole screen), or null, and the box it
+  // was resized to there (in screen pixels), or null for the whole room.
   const [expanded, setExpanded] = useState<NodeId | null>(null)
   const [expandedBox, setExpandedBox] = useState<Box | null>(null)
   // Counters pick up after the saved ids and layers.
@@ -462,15 +467,26 @@ export default function Workspace({
     createNodeAtCenter('browser', { url: '' })
   }
 
-  // A browser fills the room between the panels, or goes back to its place on the canvas. It's
-  // the one selected while it's there, so the side panel shows it.
+  // A node fills the room between the panels, or goes back to its place on the canvas. It's the
+  // one selected while it's there, so the side panel shows it.
   function toggleExpanded(id: NodeId): void {
     setExpandedBox(null)
-    if (expanded === id) return setExpanded(null)
+    if (expanded === id) {
+      onFullScreen(false)
+      return setExpanded(null)
+    }
     raise(id)
     setSelection([id])
     board.setSelected([])
     setExpanded(id)
+  }
+
+  // A node takes the whole screen, or gives it back and fills the room again.
+  function toggleFullScreen(id: NodeId): void {
+    if (fullScreen && expanded === id) return onFullScreen(false)
+    if (expanded !== id) toggleExpanded(id)
+    setExpandedBox(null)
+    onFullScreen(true)
   }
 
   // Center of the viewport converted to world coordinates: world = (screen - (x, y)) / z.
@@ -756,17 +772,20 @@ export default function Workspace({
       zoomOut: () => zoomTo(camRef.current.z / ZOOM_STEP),
       zoomReset: () => zoomTo(1),
       zoomFit: zoomToFit,
+      expand: () => selection.length === 1 && toggleExpanded(selection[0]),
       shortcuts: onShortcuts
     }
     const typing = (e: KeyboardEvent): Element | null | undefined =>
       (e.target as Element | null)?.closest?.('.xterm, input, textarea, select')
     function onKeyDown(e: KeyboardEvent): void {
       if (e.defaultPrevented || typing(e)) return
+      // Escape takes a node out of full screen, then back to the canvas.
       if (e.key === 'Escape' && expanded != null) {
-        setExpanded(null)
+        if (fullScreen) onFullScreen(false)
+        else setExpanded(null)
         return
       }
-      // A browser filling the screen keeps the camera and the tools out of it.
+      // A node filling the screen keeps the camera and the tools out of it.
       if (expanded != null) return
       if (e.key === 'Escape') {
         setTool(null)
@@ -817,7 +836,10 @@ export default function Workspace({
     // A node that's gone isn't selected any more: with two selected, the inspector would otherwise
     // keep showing the workspace instead of the one left.
     setSelection((current) => current.filter((other) => other !== id))
-    setExpanded((current) => (current === id ? null : current))
+    if (expanded === id) {
+      setExpanded(null)
+      onFullScreen(false)
+    }
   }
 
   // Whether a link from one node to another would be new and valid. Two linked terminals can
@@ -980,15 +1002,21 @@ export default function Workspace({
   const working = new Set(
     [...statuses.values()].filter((s) => s.state === 'working').map((s) => s.nodeId)
   )
-  // The browser filling the screen: its box in world coordinates, on the room left of the side
-  // panel and under the top bar, scaled back by the zoom so the page shows at its own size.
-  const expandedNode = offCanvas
-    ? undefined
-    : nodes.find((n) => n.id === expanded && n.type === 'browser')
+  // The node filling the screen: its box in world coordinates, on the room left of the side panel
+  // and under the top bar (or on all of it, in full screen), scaled back by the zoom so it shows at
+  // its own size.
+  const expandedNode = offCanvas ? undefined : nodes.find((n) => n.id === expanded)
   const frame = expandedNode && size.w > 0 ? expandedFrame() : null
+  const full = fullScreen && Boolean(frame)
+  // Full screen ends with the node's turn on the screen: back on the canvas, or the canvas out of
+  // sight.
+  const hasFrame = Boolean(frame)
+  useEffect(() => {
+    if (fullScreen && !hasFrame && size.w > 0) onFullScreen(false)
+  }, [fullScreen, hasFrame, size.w, onFullScreen])
   function expandedFrame(): Frame {
     const room = expandedRoom()
-    const box = expandedBox ? fitIn(expandedBox, room) : room
+    const box = expandedBox && !fullScreen ? fitIn(expandedBox, room) : room
     return {
       x: (box.x - cam.x) / cam.z,
       y: (box.y - cam.y) / cam.z,
@@ -998,8 +1026,9 @@ export default function Workspace({
       screen: box
     }
   }
-  // The room between the panels, in screen pixels.
+  // The room between the panels, in screen pixels; in full screen, all of it.
   function expandedRoom(): Room {
+    if (fullScreen) return { x: 0, y: 0, w: size.w, h: size.h }
     const x = EXPANDED_MARGIN
     const y = size.top + EXPANDED_MARGIN
     const right = size.w - (panelShown ? size.panel + EXPANDED_MARGIN * 2 : EXPANDED_MARGIN)
@@ -1037,6 +1066,7 @@ export default function Workspace({
       data-inspector={panelShown ? 'open' : undefined}
       data-mode={code.mode}
       data-expanded={frame ? '' : undefined}
+      data-full={full ? '' : undefined}
       onPointerDownCapture={pointerDownAnywhere}
     >
       <Canvas
@@ -1094,7 +1124,10 @@ export default function Workspace({
             dimmed={dimmed(node)}
             highlighted={hoveredPeer === node.id}
             frame={expandedNode?.id === node.id ? frame : undefined}
+            full={full && expandedNode?.id === node.id}
             onFrame={setExpandedBox}
+            onExpand={() => toggleExpanded(node.id)}
+            onFull={() => toggleFullScreen(node.id)}
             onChange={(changes) => updateNode(node.id, changes)}
             onRaise={(e) => pointerDownOnNode(node, e)}
             onMoveStart={() => moveStart(node.id)}
@@ -1116,9 +1149,7 @@ export default function Workspace({
                 nodeId={node.id}
                 url={node.url}
                 interactive={browsing(node)}
-                expanded={expandedNode?.id === node.id}
                 onUrl={(url) => node.url !== url && updateNode(node.id, { url })}
-                onExpand={() => toggleExpanded(node.id)}
                 onFocus={() => {
                   raise(node.id)
                   if (expanded == null && !selection.includes(node.id)) setSelection([node.id])

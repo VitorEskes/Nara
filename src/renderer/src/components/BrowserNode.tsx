@@ -1,13 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type JSX } from 'react'
 import type { DidFailLoadEvent, PageFaviconUpdatedEvent, WebviewTag } from 'electron'
-import {
-  ArrowLeftIcon,
-  ArrowRightIcon,
-  CloseIcon,
-  ExpandIcon,
-  RefreshIcon,
-  ShrinkIcon
-} from './icons'
+import { ArrowLeftIcon, ArrowRightIcon, CloseIcon, RefreshIcon } from './icons'
 import { normalizeUrl } from '../../../shared/url'
 import type { NodeId } from '../../../shared/types'
 
@@ -25,18 +18,14 @@ export default function BrowserNode({
   nodeId,
   url,
   interactive,
-  expanded,
   onUrl,
-  onExpand,
   onFocus
 }: {
   workspaceId: string
   nodeId: NodeId
   url?: string
   interactive: boolean
-  expanded: boolean
   onUrl: (url: string) => void
-  onExpand: () => void
   onFocus: () => void
 }): JSX.Element {
   const view = useRef<WebviewTag>(null)
@@ -177,15 +166,6 @@ export default function BrowserNode({
           />
           {loading && <span className="browser-progress" />}
         </form>
-        <button
-          className="icon-button small"
-          aria-label={expanded ? 'Back to the canvas' : 'Fill the screen'}
-          aria-pressed={expanded}
-          data-tip={expanded ? 'Back to the canvas' : 'Fill the screen'}
-          onClick={onExpand}
-        >
-          {expanded ? <ShrinkIcon size={14} /> : <ExpandIcon size={14} />}
-        </button>
       </div>
       <div className="browser-page">
         <webview

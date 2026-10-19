@@ -1,5 +1,5 @@
 import { useState, type JSX, type PointerEvent, type ReactNode } from 'react'
-import { CloseIcon } from './icons'
+import { CloseIcon, ExitFullScreenIcon, ExpandIcon, FullScreenIcon, ShrinkIcon } from './icons'
 import NodeIcon from './NodeIcon'
 import ContextRing from './ContextRing'
 import { STATE_LABELS } from '../agentStatus'
@@ -8,7 +8,7 @@ import { TERMINAL_THEMES } from '../terminalThemes'
 import type { TerminalLook } from '../nodeStyle'
 import type { AgentStatus, Box, CanvasNode as NodeData, Role, Usage } from '../../../shared/types'
 
-// A node taken out of its place: a browser filling the screen (see below).
+// A node taken out of its place: filling the screen (see below).
 export interface Frame extends Box {
   scale: number
   screen: Box
@@ -25,8 +25,9 @@ const EDGES = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw']
 // A node's box on the canvas, in world coordinates, with its bar: the label, the agent and role,
 // its state and how full its context is. `look` is a terminal's look and `paper` a note's color.
 // While a rope is being pulled, `dimmed` marks a node it can't be tied to. `frame` takes the node
-// out of the canvas, as a browser filling the screen; its bar and edges then move and resize it on
-// screen through onFrame, and a double-click on the bar gives it the whole room again.
+// out of the canvas, filling the screen (onExpand, or a double-click on the bar); its bar and edges
+// then move and resize it on screen through onFrame, and a double-click on the bar gives it the
+// whole room again. `full` is the whole window, on the whole screen (onFull), with nothing around.
 export default function CanvasNode({
   id,
   type,
@@ -49,7 +50,10 @@ export default function CanvasNode({
   dimmed,
   highlighted,
   frame,
+  full,
   onFrame,
+  onExpand,
+  onFull,
   onChange,
   onRaise,
   onMoveStart,
@@ -72,7 +76,10 @@ export default function CanvasNode({
   dimmed: boolean
   highlighted: boolean
   frame?: Frame | false | null
+  full?: boolean
   onFrame: (box: Box | null) => void
+  onExpand: () => void
+  onFull: () => void
   onChange: (changes: Partial<NodeData>) => void
   onRaise: (e: Press) => void
   onMoveStart: () => void
@@ -157,7 +164,11 @@ export default function CanvasNode({
       <div
         className="node-bar"
         onPointerDown={move}
-        onDoubleClick={(e) => frame && !(e.target as Element).closest('button') && onFrame(null)}
+        onDoubleClick={(e) => {
+          if ((e.target as Element).closest('button, .node-port')) return
+          if (frame) onFrame(null)
+          else onExpand()
+        }}
       >
         <div
           className={linked ? 'node-port linked' : 'node-port'}
@@ -180,17 +191,41 @@ export default function CanvasNode({
           </span>
         )}
         {usage && usage.window > 0 && <ContextRing share={contextShare(usage)} size={16} />}
-        <button
-          className="icon-button small node-close"
-          title="Close"
-          aria-label={`Close ${label}`}
-          // Without this the pointerdown bubbles up to the bar, which captures the pointer to drag
-          // and the click never reaches the button.
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => setLeaving(true)}
-        >
-          <CloseIcon size={14} />
-        </button>
+        <span className="node-actions">
+          {frame && (
+            <button
+              className="icon-button small node-action"
+              title={full ? 'Leave full screen' : 'Full screen'}
+              aria-label={full ? 'Leave full screen' : 'Full screen'}
+              aria-pressed={Boolean(full)}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={onFull}
+            >
+              {full ? <ExitFullScreenIcon size={14} /> : <FullScreenIcon size={14} />}
+            </button>
+          )}
+          <button
+            className="icon-button small node-action"
+            title={frame ? 'Back to the canvas' : 'Fill the screen'}
+            aria-label={frame ? 'Back to the canvas' : 'Fill the screen'}
+            aria-pressed={Boolean(frame)}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={onExpand}
+          >
+            {frame ? <ShrinkIcon size={14} /> : <ExpandIcon size={14} />}
+          </button>
+          <button
+            className="icon-button small node-close"
+            title="Close"
+            aria-label={`Close ${label}`}
+            // Without this the pointerdown bubbles up to the bar, which captures the pointer to drag
+            // and the click never reaches the button.
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => setLeaving(true)}
+          >
+            <CloseIcon size={14} />
+          </button>
+        </span>
       </div>
       <div className="node-body">{children}</div>
       {EDGES.map((edge) => (

@@ -56,6 +56,7 @@ export const CANVAS_KEYS: Record<string, string> = {
   n: 'note',
   b: 'browser',
   m: 'minimap',
+  f: 'expand',
   '=': 'zoomIn',
   '+': 'zoomIn',
   '-': 'zoomOut',
