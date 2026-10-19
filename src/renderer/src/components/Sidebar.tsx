@@ -6,6 +6,7 @@ import {
   BrandMark,
   ChevronIcon,
   CloseIcon,
+  DownloadIcon,
   FolderIcon,
   FolderPlusIcon,
   GearIcon,
@@ -19,6 +20,7 @@ import { ago, groupByProject, type AgentSummary, type ListedWorkspace } from '..
 import { SHORTCUTS, keysLabel, type Shortcut } from '../shortcuts'
 import type { Project } from '../../../shared/types'
 import { ariaKeys, tip } from '../tip'
+import { useUpdate } from '../useUpdate'
 
 // The column on the left: the app's actions, the projects with their workspaces, then the loose
 // workspaces. An open workspace stays mounted, with its terminals running, until it's closed here;
@@ -191,6 +193,7 @@ export default function Sidebar({
           )}
         </div>
         <div className="sidebar-footer">
+          <UpdateRow />
           <NavItem
             icon={<GearIcon />}
             label="Settings"
@@ -200,6 +203,33 @@ export default function Sidebar({
         </div>
       </div>
     </aside>
+  )
+}
+
+// A new version of the app, once it's downloaded: one click restarts into it. While it downloads,
+// how far along it is.
+function UpdateRow(): JSX.Element | null {
+  const update = useUpdate()
+  if (update?.state === 'downloading') {
+    return (
+      <div className="nav-row update-row" role="status">
+        <DownloadIcon />
+        <span className="row-name">Downloading {update.version}</span>
+        <span className="update-progress">{update.percent}%</span>
+      </div>
+    )
+  }
+  if (update?.state !== 'ready') return null
+  return (
+    <button
+      className="nav-row update-row ready"
+      title={`Nara ${update.version} is ready: restart to use it`}
+      onClick={() => window.api.update.install()}
+    >
+      <DownloadIcon />
+      <span className="row-name">Restart to update</span>
+      <span className="update-progress">{update.version}</span>
+    </button>
   )
 }
 

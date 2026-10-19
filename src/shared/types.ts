@@ -390,6 +390,14 @@ export interface AppInfo {
   data: string
 }
 
+// Where the app's own update is (main/updates.ts). 'unsupported' is a build that can't update
+// itself: macOS, which only installs signed updates, and a development run.
+export type UpdateState =
+  | { state: 'unsupported' | 'idle' | 'checking' | 'latest' }
+  | { state: 'downloading'; version: string; percent: number }
+  | { state: 'ready'; version: string }
+  | { state: 'error'; message: string }
+
 // A local server a terminal of the workspace printed the address of (main/servers.ts).
 export interface RunningServer {
   url: string

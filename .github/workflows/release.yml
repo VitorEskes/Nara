@@ -1,7 +1,8 @@
 name: Release
 
 # Pushing a tag like v0.2.0 builds Nara for every platform, publishes a GitHub release with the
-# installers, and updates the Homebrew cask in VitorEskes/homebrew-tap.
+# installers, and updates the Homebrew cask in VitorEskes/homebrew-tap. The latest*.yml files and
+# the blockmaps go up too: the installed apps read them to update themselves (main/updates.ts).
 on:
   push:
     tags: ['v*']
@@ -41,6 +42,8 @@ jobs:
             dist/*.AppImage
             dist/*.deb
             dist/*-setup.exe
+            dist/*.blockmap
+            dist/latest*.yml
           if-no-files-found: error
 
   release:

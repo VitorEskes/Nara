@@ -10,6 +10,7 @@ import {
   BrandMark,
   CheckIcon,
   CloseIcon,
+  DownloadIcon,
   FolderIcon,
   InfoIcon,
   KeyboardIcon,
@@ -40,6 +41,7 @@ import { AGENTS } from '../../../shared/agents'
 import type { Theme } from '../../../preload'
 import type { AppInfo, NodeStyle, PetInfo, Role, SavedRole } from '../../../shared/types'
 import type { Prefs } from '../App'
+import { useUpdate } from '../useUpdate'
 
 interface Section {
   key: string
@@ -81,7 +83,7 @@ const SECTIONS: Section[][] = [
       Icon: KeyboardIcon,
       keywords: 'shortcuts keys mouse pan zoom'
     },
-    { key: 'about', label: 'About', Icon: InfoIcon, keywords: 'version data folder' }
+    { key: 'about', label: 'About', Icon: InfoIcon, keywords: 'version data folder update' }
   ]
 ]
 

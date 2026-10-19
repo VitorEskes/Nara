@@ -28,6 +28,7 @@ import type {
   RunningServer,
   SavedRole,
   Session,
+  UpdateState,
   Workspace,
   WorkspaceLayout,
   WorkspaceSummary,
