@@ -58,7 +58,7 @@ export function agentLaunch({
   const parts = agentParts({ agent, session, resuming, ...options, model })
   if (powershell) {
     return {
-      command: powershellCommand(command, parts.args),
+      command: powershellCommand(command, parts.args, parts.env),
       env: parts.env,
       message: parts.message
     }
@@ -69,29 +69,37 @@ export function agentLaunch({
   return { command: [command, ...words].join(' '), env: parts.env, message: parts.message }
 }
 
-// The same command for PowerShell. Words are quoted, so PowerShell doesn't read a comma as a list
-// or swallow `--`. Windows PowerShell passes an argument with quotes in it to a program as it is,
-// and the program splits it there: the quotes are escaped by hand, the legacy way, which
-// PowerShell 7 is told to keep. A CLI that isn't installed exits with 127, as in a POSIX shell, so
-// the node says so (Terminal.tsx).
-function powershellCommand(command: string, args: Arg[]): string {
-  const quote = (word: string): string => `'${word.replace(/'/g, "''")}'`
-  const escaped = (name: string): string =>
-    `($env:${name} -replace '(\\\\*)"', '$1$1\\"' -replace '(\\\\+)$', '$1$1')`
-  const words = args.map((arg) =>
-    typeof arg === 'string'
-      ? quote(arg)
-      : arg.prefix
-        ? `(${quote(arg.prefix)} + ${escaped(arg.env)})`
-        : escaped(arg.env)
-  )
-  const program = quote(command.split(/\s+/)[0])
+// The same command for PowerShell. PowerShell's own quoting can't be trusted with an argument that
+// has quotes in it: Windows PowerShell counts the escaped ones too, leaves an argument with spaces
+// unquoted, and the program splits it there (Claude Code then took half its --settings for a
+// file). So Nara writes the arguments' command line itself, the way Windows programs read it, into
+// NARA_ARGS, and `--%` hands it on untouched. `--%` only does that for a program: the CLI is looked
+// up as one, which skips the PowerShell script npm installs next to its .cmd. The lines end at
+// newlines, since `--%` takes the rest of its line. A CLI that isn't installed exits with 127, as
+// in a POSIX shell, so the node says so (Terminal.tsx).
+function powershellCommand(command: string, args: Arg[], env: Env): string {
+  const program = `'${command.split(/\s+/)[0].replace(/'/g, "''")}'`
+  const call = [command.replace(/^\S+/, '& $cli.Source')]
+  if (args.length) {
+    env.NARA_ARGS = args
+      .map((arg) => windowsArg(typeof arg === 'string' ? arg : (arg.prefix ?? '') + env[arg.env]))
+      .join(' ')
+    call.push('--%', '%NARA_ARGS%')
+  }
   return [
-    `$PSNativeCommandArgumentPassing = 'Legacy'`,
-    `if (-not (Get-Command ${program} -ErrorAction SilentlyContinue)) { exit 127 }`,
-    `${command} ${words.join(' ')}`,
+    `$cli = Get-Command ${program} -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1`,
+    'if (-not $cli) { exit 127 }',
+    call.join(' '),
     'exit $LASTEXITCODE'
-  ].join('; ')
+  ].join('\n')
+}
+
+// One argument as a Windows program reads it from its command line: in quotes when it has spaces
+// or quotes, its quotes escaped, and the backslashes before a quote, or before the closing one,
+// doubled.
+function windowsArg(arg: string): string {
+  if (arg && !/[\s"]/.test(arg)) return arg
+  return `"${arg.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/, '$1$1')}"`
 }
 
 // The same for an agent typed in a plain terminal (`nara run`, shell.ts). Nara's arguments go
