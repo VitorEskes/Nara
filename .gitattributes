@@ -1,0 +1,3 @@
+# The `nara` command is a sh script, and on Windows Git Bash runs it (Claude Code's shell): a
+# checkout with CRLF line endings, as on the Windows build machine, would break its #! line.
+resources/bin/nara text eol=lf

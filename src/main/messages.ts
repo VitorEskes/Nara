@@ -2,7 +2,7 @@ import type { BrowserWindow } from 'electron'
 import { createHash } from 'crypto'
 import { createServer } from 'net'
 import { basename, delimiter, dirname, join } from 'path'
-import nara from '../../resources/bin/nara?asset'
+import nara from '../../resources/bin/nara?asset&asarUnpack'
 import { browse, pageUrl } from './browser'
 import {
   currentCwd,
@@ -90,7 +90,8 @@ export function registerMessages(win: BrowserWindow): Record<string, string> {
 
   win.on('closed', () => server.close())
 
-  // What every terminal needs in its environment for `nara` to work inside it.
+  // What every terminal needs in its environment for `nara` to work inside it. The command's
+  // folder is the one unpacked from app.asar (asarUnpack): a shell can't run a file inside it.
   return {
     PATH: `${dirname(nara)}${delimiter}${process.env.PATH}`,
     NARA_SOCK: SOCKET,
