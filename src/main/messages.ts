@@ -68,13 +68,15 @@ const SHELLS = new Set([
 ])
 
 export function registerMessages(win: BrowserWindow): Record<string, string> {
-  // One request per connection: `nara` writes the JSON and ends its write side; the response
-  // goes back after 'end'. allowHalfOpen lets the server write after the client closed its side.
+  // One request per connection: `nara` writes the JSON on one line, and the response goes back
+  // before the connection closes. The line ends the request, not the end of `nara`'s write side:
+  // a named pipe (Windows) can't stay open one way, and the response would be lost.
   const server = createServer({ allowHalfOpen: true }, (conn) => {
     let request = ''
-    conn.setEncoding('utf8')
-    conn.on('data', (chunk) => (request += chunk))
-    conn.on('end', async () => {
+    let answered = false
+    const answer = async (): Promise<void> => {
+      if (answered) return
+      answered = true
       let response
       try {
         response = await handle(JSON.parse(request), win)
@@ -82,7 +84,16 @@ export function registerMessages(win: BrowserWindow): Record<string, string> {
         response = { error: (error as Error).message }
       }
       conn.end(JSON.stringify(response))
+    }
+    conn.setEncoding('utf8')
+    conn.on('data', (chunk) => {
+      request += chunk
+      const end = request.indexOf('\n')
+      if (end < 0) return
+      request = request.slice(0, end)
+      answer()
     })
+    conn.on('end', answer)
     conn.on('error', () => {})
   })
   clearSocket(SOCKET)

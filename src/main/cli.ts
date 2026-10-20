@@ -407,12 +407,19 @@ function request(body: object): Promise<Answer> {
     socket.setEncoding('utf8')
     socket.on('data', (chunk) => (response += chunk))
     socket.on('end', () => {
-      const { error, ...rest } = JSON.parse(response)
+      let answer
+      try {
+        answer = JSON.parse(response)
+      } catch {
+        return reject(new Error('Nara did not respond (was the app closed?)'))
+      }
+      const { error, ...rest } = answer
       if (error) reject(new Error(error))
       else resolve(rest)
     })
     socket.on('error', () => reject(new Error('Nara did not respond (was the app closed?)')))
-    // Ending the write side tells the server the request is complete.
-    socket.end(JSON.stringify({ from: process.env.NARA_PTY, ...body }))
+    // The line ends the request; the server answers and closes the connection. JSON has no line
+    // breaks of its own, so the line is the whole request.
+    socket.write(`${JSON.stringify({ from: process.env.NARA_PTY, ...body })}\n`)
   })
 }
