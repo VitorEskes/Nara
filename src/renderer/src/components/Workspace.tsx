@@ -10,7 +10,7 @@ import {
   type ReactNode,
   type SetStateAction
 } from 'react'
-import { tell } from '../dialogs'
+import { ask, tell } from '../dialogs'
 import { createPortal } from 'react-dom'
 import Canvas, { ZOOM_MAX, ZOOM_MIN } from './Canvas'
 import Links, { LinkPins, type LinkDraft } from './Links'
@@ -62,7 +62,9 @@ import type {
   AgentStatus,
   Box,
   Camera,
+  CanvasAnswer,
   CanvasNode as NodeData,
+  CanvasRequest,
   CodeState,
   Limits,
   Link,
@@ -318,6 +320,26 @@ export default function Workspace({
         if (id !== workspaceId) return
         setNodes((current) =>
           current.map((node) => (node.id === nodeId ? { ...node, ...changes } : node))
+        )
+      }),
+    [workspaceId]
+  )
+
+  // An agent whose role delegates asked to change the canvas (`nara new`, `nara link`, main's
+  // messages.ts). The user allows it or not, and main hears what came of it. The listener reads
+  // the handler through a ref, so it sees the canvas as it is when the request comes.
+  const canvasRequest = useRef(answerCanvasRequest)
+  useEffect(() => {
+    canvasRequest.current = answerCanvasRequest
+  })
+  useEffect(
+    () =>
+      window.api.canvas.onRequest((id, requestId, request) => {
+        if (id !== workspaceId) return
+        canvasRequest.current(request).then(
+          (answer) => window.api.canvas.answer(requestId, answer),
+          (error: Error) =>
+            window.api.canvas.answer(requestId, { allowed: false, error: error.message })
         )
       }),
     [workspaceId]
@@ -948,6 +970,87 @@ export default function Workspace({
 
   function removeLink(id: number): void {
     setLinks((current) => current.filter((l) => l.id !== id))
+  }
+
+  // Asks the user whether to make the change an agent asked for, and makes it if they allow it.
+  // Main has checked the request already: the agent, role and model exist, and so do the nodes.
+  async function answerCanvasRequest(request: CanvasRequest): Promise<CanvasAnswer> {
+    const asker = nodes.find((n) => n.id === request.from)
+    if (!asker) return { allowed: false, error: 'your node is no longer on the canvas' }
+    const allowed = await ask({
+      ...describeRequest(request, asker, nodes, roles),
+      confirm: 'Allow',
+      cancel: 'Deny'
+    })
+    if (!allowed) return { allowed }
+
+    if (request.kind === 'link') {
+      addLink(request.a, request.b)
+      return { allowed }
+    }
+    if (request.kind === 'unlink') {
+      const { a, b } = request
+      setLinks((current) =>
+        current.filter((l) => !((l.from === a && l.to === b) || (l.from === b && l.to === a)))
+      )
+      return { allowed }
+    }
+    if (request.kind === 'note') {
+      const nodeId = openNear(request.from, 'note', {
+        ...(request.title && { title: request.title }),
+        text: request.text ?? '',
+        style: { paper: 'graphite' }
+      })
+      return { allowed, nodeId }
+    }
+    if (request.kind === 'browser') {
+      const fields = { ...(request.title && { title: request.title }), url: request.url ?? '' }
+      return { allowed, nodeId: openNear(request.from, 'browser', fields) }
+    }
+
+    // A terminal, the way the new terminal dialog opens one (launch): in the agent's own folder,
+    // or the repository its worktree was made from, named after its role or its agent.
+    const { agent, role, model } = request
+    const title = request.title ?? (role ? roles[role]?.label : agent && AGENTS[agent].label)
+    let dir = asker.worktree?.root ?? asker.cwd ?? folder
+    if (agent && !dir) return { allowed, error: 'this workspace has no folder to open an agent in' }
+    let worktree: Worktree | undefined
+    if (request.worktree && dir) {
+      const made = await window.api.git.worktree(dir, title ?? 'agent')
+      if (made.error !== undefined) return { allowed, error: made.error }
+      worktree = made
+      dir = made.path
+    }
+    const command = agent && commands[agent]
+    const nodeId = openNear(request.from, 'terminal', {
+      ...(title && { title }),
+      ...(dir && { cwd: dir }),
+      ...(worktree && { worktree }),
+      ...(role && { role }),
+      ...(agent && { agent, session: crypto.randomUUID() }),
+      ...(agent && model && { model }),
+      ...(command && command !== AGENTS[agent].command && { command })
+    })
+    return { allowed, nodeId }
+  }
+
+  // Opens a node next to `near`, where it overlaps nothing, linked to it. Unlike createNode it
+  // leaves the selection alone: the user is busy with something else.
+  function openNear(near: NodeId, type: NodeType, fields: Partial<NodeData>): NodeId {
+    const id = nextId.current++
+    const size = SIZES[type]
+    const layer = ++topLayer.current
+    setNodes((current) => {
+      const spot = spotNear(
+        current.find((n) => n.id === near),
+        size,
+        current
+      )
+      const node = { id, type, ...spot, ...size, layer, title: defaultTitle(type, id), ...fields }
+      return [...current, node]
+    })
+    addLink(near, id)
+    return id
   }
 
   // Glides the camera until the node sits in the middle of the screen, at the same zoom, and
@@ -1666,4 +1769,77 @@ function ToolButton({
 
 function highest<T>(items: T[], key: keyof T): number {
   return items.reduce((max, item) => Math.max(max, Number(item[key] ?? 0)), 0)
+}
+
+// Room kept between a node opened by an agent and the nodes around it, in world units.
+const NEAR_GAP = 40
+
+// Where a node of `size` goes next to `near`: in the columns to its right, top to bottom, at the
+// first spot that overlaps no node. Without `near`, at the origin's right.
+function spotNear(near: Box | undefined, size: { w: number; h: number }, nodes: Box[]): Point {
+  const from = near ?? { x: 0, y: 0, w: 0, h: 0 }
+  const free = (x: number, y: number): boolean =>
+    !nodes.some(
+      (n) =>
+        x < n.x + n.w + NEAR_GAP &&
+        n.x < x + size.w + NEAR_GAP &&
+        y < n.y + n.h + NEAR_GAP &&
+        n.y < y + size.h + NEAR_GAP
+    )
+  for (let column = 0; column < 6; column++) {
+    const x = from.x + from.w + NEAR_GAP + column * (size.w + NEAR_GAP)
+    for (let row = 0; row < 6; row++) {
+      const y = from.y + row * (size.h + NEAR_GAP)
+      if (free(x, y)) return { x, y }
+    }
+  }
+  return { x: from.x + from.w + NEAR_GAP, y: from.y }
+}
+
+// What the user is asked when an agent wants to change the canvas: who asks, and for what.
+function describeRequest(
+  request: CanvasRequest,
+  asker: NodeData,
+  nodes: NodeData[],
+  roles: Record<string, Role>
+): { title: string; message: string } {
+  const role = asker.role && roles[asker.role]?.label
+  const who = `${nodeLabel(asker)}${role ? ` (${role})` : ''}`
+  if (request.kind === 'link' || request.kind === 'unlink') {
+    const name = (id: NodeId): string => {
+      const node = nodes.find((n) => n.id === id)
+      return node ? nodeLabel(node) : `node ${id}`
+    }
+    const { kind, a, b } = request
+    const pair =
+      a === asker.id || b === asker.id
+        ? `${name(a === asker.id ? b : a)} ${kind === 'link' ? 'to' : 'from'} itself`
+        : `${name(a)} and ${name(b)}`
+    const title = kind === 'link' ? 'Link nodes?' : 'Unlink nodes?'
+    return { title, message: `${who} wants to ${kind} ${pair}.` }
+  }
+  const named = request.title ? `, named “${request.title}”,` : ''
+  if (request.kind === 'note') {
+    return { title: 'Add a note?', message: `${who} wants to add a note${named} linked to it.` }
+  }
+  if (request.kind === 'browser') {
+    const page = request.url ? ` on ${request.url}` : ''
+    return {
+      title: 'Add a browser?',
+      message: `${who} wants to add a browser${page}${named} linked to it.`
+    }
+  }
+  const { agent, model } = request
+  const parts = agent
+    ? [
+        AGENTS[agent].label,
+        request.role && `as the ${roles[request.role]?.label ?? request.role}`,
+        model && `on ${model}`,
+        request.worktree && 'in a worktree of its own'
+      ]
+    : ['a plain terminal']
+  return {
+    title: 'Open a terminal?',
+    message: `${who} wants to open ${parts.filter(Boolean).join(' ')}${named} next to it, linked to it.`
+  }
 }

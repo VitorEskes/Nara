@@ -64,6 +64,21 @@ export function findRole(key: string | undefined): Role | undefined {
   return custom.get(key)
 }
 
+// Every role's key and name, built-in first, for an agent naming one (`nara new terminal`).
+export function roleNames(): { key: string; label: string }[] {
+  const all = [...Object.entries(ROLES), ...custom.entries()]
+  return all.map(([key, role]) => ({ key, label: role.label }))
+}
+
+// The key of the role an agent named, by its key or by its name in any case; null if none is.
+export function roleKey(name: string): string | null {
+  const wanted = name.trim().toLowerCase()
+  const found = roleNames().find(
+    ({ key, label }) => key.toLowerCase() === wanted || label.toLowerCase() === wanted
+  )
+  return found?.key ?? null
+}
+
 function clean(text: unknown, limit: number): string {
   return typeof text === 'string' ? text.trim().slice(0, limit) : ''
 }

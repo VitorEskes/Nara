@@ -5,7 +5,9 @@ import type {
   AgentStatus,
   AppInfo,
   BrowserKey,
+  CanvasAnswer,
   CanvasNode,
+  CanvasRequest,
   ChangesOwner,
   CodeListing,
   ConsoleLine,
@@ -92,6 +94,13 @@ const api = {
         changes: Pick<CanvasNode, 'model' | 'conversation'>
       ) => void
     ) => listen('workspace:node-changed', fn)
+  },
+  // An agent whose role delegates asking to change the canvas (`nara new`, `nara link`): the
+  // renderer asks the user, and answers with what came of it.
+  canvas: {
+    onRequest: (fn: (workspaceId: string, id: string, request: CanvasRequest) => void) =>
+      listen('canvas:request', fn),
+    answer: (id: string, answer: CanvasAnswer) => ipcRenderer.send('canvas:answer', id, answer)
   },
   theme: {
     // 'light', 'dark' or 'system'.

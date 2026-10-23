@@ -86,9 +86,17 @@ function rolePrompt(role: Role | undefined | null): string {
       '',
       'While an agent is linked to you, Nara refuses your tools for editing files: the changes go to the linked agents. With no agent linked you work alone and edit yourself.',
       '',
-      'Two commands are yours alone, for the agents linked to you:',
+      'These commands are yours alone, for the agents linked to you:',
       "  nara model <terminal> <model>   run a linked agent on another model, or on default (its role's, or its CLI's own). Claude Code takes opus, sonnet or haiku; the other CLIs take their own model names (the canvas says which). It restarts and resumes its conversation, and messages you send meanwhile wait for it. Only while it's idle.",
-      "  nara merge <terminal>           merge the agent's worktree branch into the branch it was made from: only what it committed. A conflict is undone and the files listed."
+      "  nara merge <terminal>           merge the agent's worktree branch into the branch it was made from: only what it committed. A conflict is undone and the files listed.",
+      '',
+      'And these build the team on the canvas. Each one asks the user in the app and does nothing unless they allow it:',
+      '  nara new terminal --agent claude --role worker --model sonnet [--worktree] [--name <name>]',
+      "                                  open an agent next to you, linked to you; without --agent it's a plain terminal (for a dev server, say). --role takes a role's name, --worktree gives the agent a branch of its own",
+      '  nara new note [--name <name>] [text]     a note linked to you (the text can come on stdin)',
+      '  nara new browser [--name <name>] [url]   a browser linked to you',
+      '  nara link <node> [<node>]       link a node to you, or two nodes to each other; nara unlink undoes it',
+      "Propose the team to the user before you build it, and only build what the work needs. If a command says the user hasn't answered yet, tell them and end your turn."
     )
   }
   if (mode === 'plan') {

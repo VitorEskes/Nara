@@ -1,5 +1,5 @@
-import type { BrowserWindow } from 'electron'
-import { createHash } from 'crypto'
+import { ipcMain, type BrowserWindow } from 'electron'
+import { createHash, randomUUID } from 'crypto'
 import { createServer } from 'net'
 import { basename, delimiter, dirname, join } from 'path'
 import nara from '../../resources/bin/nara?asset&asarUnpack'
@@ -22,9 +22,17 @@ import { git, mergeWorktree } from './git'
 import { clearSocket, socketPath } from './socket'
 import { agentHook, agentState } from './status'
 import { reportClaude } from './usage'
-import { findRole } from './roles'
+import { findRole, roleKey, roleNames } from './roles'
 import { updateNode, workspaces } from './workspaces'
-import type { AgentState, CanvasNode, Link, NodeId, Role } from '../shared/types'
+import type {
+  AgentState,
+  CanvasAnswer,
+  CanvasNode,
+  CanvasRequest,
+  Link,
+  NodeId,
+  Role
+} from '../shared/types'
 
 // What the `nara` command sends (cli.ts): which terminal it runs in, and what it asks for.
 interface Request {
@@ -43,6 +51,9 @@ interface Request {
   }
   agent?: string
   args?: unknown
+  // `nara new`'s options, and the second node of `nara link` and `nara unlink`.
+  options?: Record<string, unknown>
+  other?: NodeId
 }
 
 // Agents talk by running `nara` in their terminal. The command reaches this server over a socket,
@@ -99,7 +110,16 @@ export function registerMessages(win: BrowserWindow): Record<string, string> {
   clearSocket(SOCKET)
   server.listen(SOCKET)
 
-  win.on('closed', () => server.close())
+  // The user's answer to a change an agent asked for (canvasChange), from the renderer.
+  ipcMain.on('canvas:answer', (_ev, id: string, answer: CanvasAnswer) => {
+    asked.get(id)?.(answer)
+    asked.delete(id)
+  })
+
+  win.on('closed', () => {
+    server.close()
+    ipcMain.removeAllListeners('canvas:answer')
+  })
 
   // What every terminal needs in its environment for `nara` to work inside it. The command's
   // folder is the one unpacked from app.asar (asarUnpack): a shell can't run a file inside it.
@@ -114,7 +134,7 @@ export function registerMessages(win: BrowserWindow): Record<string, string> {
 }
 
 async function handle(
-  { from, command, action, to, text, event, payload, agent, args }: Request,
+  { from, command, action, to, text, event, payload, agent, args, options, other }: Request,
   win: BrowserWindow
 ): Promise<object> {
   const sender = terminals.get(Number(from))
@@ -336,7 +356,113 @@ async function handle(
     return browse(workspaceId, to, action ?? '', text)
   }
 
+  // A new node next to the agent, linked to it, or a link made or undone, for an agent whose role
+  // delegates: it builds its own team. Each one waits on the user, who allows it or not in the app.
+  if (command === 'new') {
+    coordinator(workspaceId, nodeId)
+    return { text: await canvasChange(win, workspaceId, newNode(nodeId, action, text, options)) }
+  }
+
+  if (command === 'link' || command === 'unlink') {
+    coordinator(workspaceId, nodeId)
+    const a = Number(to)
+    const b = other === undefined ? nodeId : Number(other)
+    if (a === b) throw new Error("a node can't be linked to itself")
+    for (const id of [a, b]) {
+      if (!nodeOf(id)) throw new Error(`there's no node ${id} on this canvas: see nara canvas`)
+    }
+    const names = `${nodeName(peerInfo(workspaceId, a, nodeOf(a)))} and ${nodeName(peerInfo(workspaceId, b, nodeOf(b)))}`
+    const linked = links.some((l) => (l.from === a && l.to === b) || (l.from === b && l.to === a))
+    if (command === 'link' && linked) return { text: `${names} are already linked` }
+    if (command === 'unlink' && !linked) return { text: `${names} aren't linked` }
+    return { text: await canvasChange(win, workspaceId, { kind: command, from: nodeId, a, b }) }
+  }
+
   throw new Error(`unknown command: ${command}`)
+}
+
+// The changes waiting on the user, by request id: each resolves with the renderer's answer.
+const asked = new Map<string, (answer: CanvasAnswer) => void>()
+
+// How long `nara` waits for the user to answer, in ms: less than the two minutes an agent's
+// command usually gets. The dialog stays open after that, and an answer still counts.
+const ASK_WAIT = 100_000
+
+// Asks the user, through the renderer (Workspace.tsx), to allow a change to the canvas, which the
+// renderer then makes; returns what came of it, for the agent.
+async function canvasChange(
+  win: BrowserWindow,
+  workspaceId: string,
+  request: CanvasRequest
+): Promise<string> {
+  const id = randomUUID()
+  const answer = await new Promise<CanvasAnswer | null>((resolve) => {
+    const timer = setTimeout(() => resolve(null), ASK_WAIT)
+    asked.set(id, (answer) => {
+      clearTimeout(timer)
+      resolve(answer)
+    })
+    win.webContents.send('canvas:request', workspaceId, id, request)
+  })
+  if (!answer) {
+    return "asked the user in Nara, and they haven't answered yet. The dialog stays open: once they allow it, the change shows on your canvas. Tell them, and end your turn."
+  }
+  if (answer.error) throw new Error(answer.error)
+  if (!answer.allowed) throw new Error("the user didn't allow it")
+  if (request.kind === 'link') return `linked ${request.a} and ${request.b}`
+  if (request.kind === 'unlink') return `unlinked ${request.a} and ${request.b}`
+  const made = `${request.kind} ${answer.nodeId}`
+  if (request.kind !== 'terminal' || !request.agent) return `opened ${made}, linked to you`
+  return `opened ${made}, linked to you: ${AGENTS[request.agent].label} is starting there. Send it its task once the canvas shows it idle.`
+}
+
+// What `nara new <kind>` asks for, checked: an agent Nara knows, a role that exists, a model its
+// CLI takes.
+function newNode(
+  from: NodeId,
+  kind: string | undefined,
+  text: string | undefined,
+  options: Record<string, unknown> = {}
+): CanvasRequest {
+  const option = (key: string): string | undefined =>
+    typeof options[key] === 'string'
+      ? stripControlChars(options[key]).trim() || undefined
+      : undefined
+  const title = option('name')
+  if (kind === 'note') return { kind, from, title, text: stripControlChars(text) }
+  if (kind === 'browser') return { kind, from, title, url: stripControlChars(text).trim() }
+  if (kind !== 'terminal') throw new Error(`nara new takes terminal, note or browser`)
+
+  const typed = option('agent')
+  const agent = typed && (Object.hasOwn(AGENTS, typed) ? typed : agentForCommand(typed))
+  if (typed && !agent) {
+    throw new Error(`unknown agent "${typed}": one of ${Object.keys(AGENTS).join(', ')}`)
+  }
+  const named = option('role')
+  const role = named ? roleKey(named) : undefined
+  if (named && !role) {
+    const all = roleNames().map(({ label }) => label.toLowerCase())
+    throw new Error(`unknown role "${named}": one of ${all.join(', ')}`)
+  }
+  const word = option('model')
+  const model = word && agent === 'claude' ? word.toLowerCase() : word
+  if (model && !agent) throw new Error('a model needs an agent: add --agent, e.g. --agent claude')
+  if (model && agent && !pickedModel(agent, model)) {
+    const cli = AGENTS[agent]
+    if (!cli.model) throw new Error(`${cli.label} takes no model`)
+    throw new Error(`unknown model "${word}": ${cli.label} takes ${cli.model.names}`)
+  }
+  const worktree = options.worktree === true
+  if (worktree && !agent) throw new Error('a worktree is for an agent: add --agent')
+  return {
+    kind,
+    from,
+    ...(agent && { agent }),
+    ...(role && { role }),
+    ...(model && { model }),
+    ...(worktree && { worktree }),
+    title
+  }
 }
 
 // The conversation an agent's CLI reported from its hooks, saved with its node so the node resumes
@@ -566,7 +692,7 @@ function roleReminder(workspaceId: string, nodeId: NodeId, role: Role): string {
   }
   const agents = linkedAgents(workspaceId, nodeId)
   if (!agents.length) {
-    return `You are the ${role.label} and no agent is linked to you: do the work yourself.`
+    return `You are the ${role.label} and no agent is linked to you: do the work yourself, or, if it's big enough to split, propose a team to the user and open it with nara new once they agree.`
   }
   const list = agents.map((id) => `terminal ${id}`).join(', ')
   const lines = [

@@ -57,6 +57,14 @@ const HELP = `usage:
 For an agent whose role delegates (the Orchestrator):
   nara model <terminal> <model>     run a linked agent on another model, or its default
   nara merge <terminal>             merge a linked agent's worktree branch into its base
+  nara new terminal [options]       open a terminal next to this one, linked to it
+      --agent <cli>  --role <role>  --model <model>  --worktree  --name <name>
+      (without --agent, a plain shell; --model and --worktree need one)
+  nara new note [--name <name>] [text]       a note linked to this terminal
+  nara new browser [--name <name>] [url]     a browser linked to this terminal
+  nara link <node> [<node>]         link a node to this terminal, or two nodes to each other
+  nara unlink <node> [<node>]       undo a link
+  Each one asks the user first, in the app, and does nothing unless they allow it.
 
 Without <text>, send, write and append read it from stdin.
 
@@ -64,6 +72,10 @@ A message arrives in the target terminal as if someone had typed it and pressed 
 The reply, if any, arrives in this terminal the same way: no need to wait or check for it.
 A note is shared text on the canvas: anyone linked to it can read it, and so can the user.
 A browser is a web page on the canvas that the user sees too: open your dev server in it.`
+
+// The options `nara new terminal` takes; --worktree is the one without a value. Declared above
+// the call to main() below, which reads it before its first await.
+const NEW_TERMINAL = ['agent', 'role', 'model', 'name', 'worktree']
 
 // `nara hook <event> <cli>` is run by the agents' hooks (main/hooks.ts) and fails silently, since an
 // error would show up in the agent. What the app answers (the canvas, or a refused edit) is printed
@@ -380,7 +392,58 @@ async function main(): Promise<void> {
     return
   }
 
+  if (command === 'new') {
+    const [kind, ...rest] = args
+    if (!kind || !['terminal', 'note', 'browser'].includes(kind)) {
+      throw new Error('usage: nara new <terminal|note|browser> [options]')
+    }
+    const { options, words } = parseOptions(rest, kind === 'terminal' ? NEW_TERMINAL : ['name'])
+    if (kind === 'terminal' && words.length) throw new Error(`unexpected: ${words.join(' ')}`)
+    // A note's text can come in on stdin too, like `nara note write`.
+    const text =
+      kind === 'note' && !words.length && !process.stdin.isTTY
+        ? await readText([], '')
+        : words.join(' ')
+    console.log((await request({ command, action: kind, text, options })).text)
+    return
+  }
+
+  if (command === 'link' || command === 'unlink') {
+    const hint = `which node? e.g. nara ${command} 4, or nara ${command} 4 5`
+    const a = nodeNumber(args[0], hint)
+    const b = args[1] === undefined ? undefined : nodeNumber(args[1], hint)
+    console.log((await request({ command, to: a, other: b })).text)
+    return
+  }
+
   throw new Error(`unknown command: ${command}\n\n${HELP}`)
+}
+
+// Splits `--key value` (or `--key=value`) options from the other words. Only `known` keys are
+// taken, and --worktree stands alone.
+function parseOptions(
+  args: string[],
+  known: string[]
+): { options: Record<string, string | boolean>; words: string[] } {
+  const options: Record<string, string | boolean> = {}
+  const words: string[] = []
+  for (let i = 0; i < args.length; i++) {
+    const match = args[i].match(/^--([\w-]+)(?:=(.*))?$/)
+    if (!match) {
+      words.push(args[i])
+      continue
+    }
+    const [, key, inline] = match
+    if (!known.includes(key)) throw new Error(`unknown option: --${key}`)
+    if (key === 'worktree') {
+      options[key] = true
+      continue
+    }
+    const value = inline ?? args[++i]
+    if (value === undefined || value === '') throw new Error(`--${key} needs a value`)
+    options[key] = value
+  }
+  return { options, words }
 }
 
 // Accepts "2", "terminal 2" or "note2": the number is what the node title shows.

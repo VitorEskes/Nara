@@ -167,6 +167,14 @@ Every terminal on the canvas has a `nara` command on its `PATH`, and every agent
 
 Without `<text>`, `send`, `write` and `append` read it from stdin.
 
+An agent whose role delegates, like the Orchestrator, can also build its team. Each of these asks you in the app first, and does nothing unless you allow it:
+
+| Command                                                                  | What it does                                                      |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| `nara new terminal --agent <cli> --role <role> --model <m> [--worktree]` | Open an agent (or, without `--agent`, a shell) next to it, linked |
+| `nara new note [text]`, `nara new browser [url]`                         | Add a note or a browser linked to it                              |
+| `nara link <node> [<node>]`, `nara unlink <node> [<node>]`               | Link a node to it, or two nodes to each other, or undo that       |
+
 <br/>
 
 ## Privacy

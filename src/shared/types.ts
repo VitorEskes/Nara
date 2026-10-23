@@ -71,6 +71,31 @@ export interface Link {
   to: NodeId
 }
 
+// A change to the canvas asked for by an agent whose role delegates (`nara new`, `nara link`,
+// `nara unlink`, main/messages.ts). Main checks it first; the renderer asks the user and makes it
+// only if they allow it. `from` is the agent's node: a new node opens near it, linked to it.
+export type CanvasRequest =
+  | {
+      kind: 'terminal'
+      from: NodeId
+      agent?: string
+      role?: string
+      model?: string
+      worktree?: boolean
+      title?: string
+    }
+  | { kind: 'note'; from: NodeId; title?: string; text?: string }
+  | { kind: 'browser'; from: NodeId; title?: string; url?: string }
+  | { kind: 'link'; from: NodeId; a: NodeId; b: NodeId }
+  | { kind: 'unlink'; from: NodeId; a: NodeId; b: NodeId }
+
+// What came of it: `allowed` is false when the user said no; `nodeId` is the node made.
+export interface CanvasAnswer {
+  allowed: boolean
+  nodeId?: NodeId
+  error?: string
+}
+
 export type ShapeType =
   'rect' | 'ellipse' | 'triangle' | 'diamond' | 'line' | 'arrow' | 'draw' | 'text'
 
